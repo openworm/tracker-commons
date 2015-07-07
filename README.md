@@ -1,5 +1,5 @@
 # worm-tracker
-Compilation of information and code bases related to open source trackers for c. elegans
+Compilation of information and code bases related to open source trackers for *C. elegans* and related organisms.
 
 Universal Formats
 -----------------
