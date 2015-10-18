@@ -162,7 +162,6 @@ Knowing the head position and the ventral side, it is possible to infer whether 
           "head":"L", 
           "ventral":"CCW"
         },
-    	...
     ]
 }
 ```
