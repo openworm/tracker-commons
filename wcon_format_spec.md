@@ -11,7 +11,7 @@ A WCON file with single-valued `t` and arrayed `x` and `y`:
 
 ```JSON
 {
-    "tracker-commons":true
+    "tracker-commons":true,
     "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
         { "id":1, "t":1.3, "x":[1215.11, ...], "y":[234.89, ...] },
@@ -29,7 +29,7 @@ A WCON file with arrayed t and corresponding nested arrays for `x` and `y`.
 
 ```JSON
 {
-    "tracker-commons":true
+    "tracker-commons":true,
     "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
         { "id":1, 
@@ -68,7 +68,7 @@ A WCON file with three custom features:
 
 ```JSON
 {
-    "tracker-commons":true
+    "tracker-commons":true,
     "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
         "@OMG": {
@@ -90,7 +90,7 @@ For features that describe an entire plate rather than properties of individual 
 
 ```JSON
 {
-    "tracker-commons":true
+    "tracker-commons":true,
     "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
         { "id":1,
@@ -118,7 +118,7 @@ Information about experimental conditions and software versions is critical for 
 
 ```JSON
 {
-    "tracker-commons":true
+    "tracker-commons":true,
     "metadata": {
            "lab": {"location":"CRB, room 5020", "name":"Behavioural Genomics" },
            "who":"Firstname Lastname",
@@ -142,7 +142,7 @@ Information about experimental conditions and software versions is critical for 
      }
     "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
-    	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...] },
+� 	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...] },
     	...
     ]
 }
@@ -155,10 +155,10 @@ Knowing the head position and the ventral side, it is possible to infer whether 
 
 ```JSON
 {
-    "tracker-commons":true
+    "tracker-commons":true,
     "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
-    	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...],
+� 	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...],
           "head":"L", 
           "ventral":"CCW"
         },
@@ -172,10 +172,10 @@ The origin used to define the worm's xy-coordinates can change over time to redu
 
 ```JSON
 {
-    "tracker-commons":true
+    "tracker-commons":true,
     "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
-    	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...],
+ 	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...],
           "ox":320.4, "oy":920.1
         },
     	...
@@ -197,15 +197,15 @@ For example, for a directory containing files labelled filename_1.wcon, filename
 
 ```JSON
 {
-    "tracker-commons":true
+    "tracker-commons":true,
     "files": {
-        "this": "_2",
-        "prev": ["_1", "_0"],
-        "next": "_3",
-    }
+         "this": "_2",
+   �     "prev": ["_1", "_0"],
+         "next": "_3",
+     }
     "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
-    	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...] },
+        { "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...] },
     	...
     ]
 }
