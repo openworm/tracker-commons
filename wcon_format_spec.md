@@ -12,7 +12,7 @@ A WCON file with single-valued `t` and arrayed `x` and `y`:
 ```JSON
 {
     "tracker-commons":true,
-    "units": {"t":"s", "x":"mm", "y":"mm"Â },
+    "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
         { "id":1, "t":1.3, "x":[1215.11, ...], "y":[234.89, ...] },
         { "id":2, ... },
@@ -30,7 +30,7 @@ A WCON file with arrayed t and corresponding nested arrays for `x` and `y`.
 ```JSON
 {
     "tracker-commons":true,
-    "units": {"t":"s", "x":"mm", "y":"mm"Â },
+    "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
         { "id":1, 
           "t": [
@@ -69,7 +69,7 @@ A WCON file with three custom features:
 ```JSON
 {
     "tracker-commons":true,
-    "units": {"t":"s", "x":"mm", "y":"mm"Â },
+    "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
         "@OMG": {
                "feature_names": ["speed", "curvature", "width"],
@@ -78,7 +78,7 @@ A WCON file with three custom features:
         { "id":1,
           "t":1.3,
           "x":[1215.11, ...],
-          "y":[234.89, ...] },
+          "y":[234.89, ...],
           "@OMG": { "feature_values": [0.34, 1.5, 0.873] }
         }
         ...
@@ -91,12 +91,12 @@ For features that describe an entire plate rather than properties of individual 
 ```JSON
 {
     "tracker-commons":true,
-    "units": {"t":"s", "x":"mm", "y":"mm"Â },
+    "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
         { "id":1,
           "t":1.3,
           "x":[1215.11, ...],
-          "y":[234.89, ...] },
+          "y":[234.89, ...],
           "@OMG": { "feature_values": [0.34, 1.5, 0.873] }
         }
         ...
@@ -126,23 +126,23 @@ Information about experimental conditions and software versions is critical for 
            "temperature": { "experiment":22, "cultivation":20, "units":"C" },
            "humidity": { "value":40, "units":"%" },
            "data": { "type":"petri", "size":35, "units":"mm" },
-           "food": "none" or "OP50" or "HB101", ...,
-           "media": "NGM" or "agarose", ...,
-           "sex": "hermaphrodite" or "male",
-           "stage": "L1", "L2", "L3", "L4", "adult", or "dauer"
+           "food": " "none" or "OP50" or "HB101", ... ",
+           "media": " "NGM" or "agarose", ... ",
+           "sex": " "hermaphrodite" or "male" ",
+           "stage": " "L1", "L2", "L3", "L4", "adult", or "dauer" ",
            "age":"18:25:43.511",
-           "strain": "N2", "CB4856", or "JU245", â€¦,
-           "image_orientation": "imaged onto agar" or "imaged through agar",
-           "protocol": "text description of protocolâ€¦",
+           "strain": " "N2", "CB4856", or "JU245", €... ",
+           "image_orientation": " "imaged onto agar" or "imaged through agar" ",
+           "protocol": "text description of protocol€",
            "software": {
                 "tracker": { "name":"Software Name", "version": 1.3 },
                 "featureID": "@OMG"
            },
-           "settings": JSON entry with hardware and software configuration
+           "settings": "Any valid JSON entry with hardware and software configuration can go here",
      }
-    "units": {"t":"s", "x":"mm", "y":"mm"Â },
+    "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
-  	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...] },
+        { "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...] },
     	...
     ]
 }
@@ -156,9 +156,9 @@ Knowing the head position and the ventral side, it is possible to infer whether 
 ```JSON
 {
     "tracker-commons":true,
-    "units": {"t":"s", "x":"mm", "y":"mm"Â },
+    "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
-  	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...],
+         { "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...],
           "head":"L", 
           "ventral":"CCW"
         },
@@ -173,7 +173,7 @@ The origin used to define the worm's xy-coordinates can change over time to redu
 ```JSON
 {
     "tracker-commons":true,
-    "units": {"t":"s", "x":"mm", "y":"mm"Â },
+    "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
  	{ "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...],
           "ox":320.4, "oy":920.1
@@ -203,7 +203,7 @@ For example, for a directory containing files labelled filename_1.wcon, filename
          "prev": ["_1", "_0"],
          "next": "_3",
      }
-    "units": {"t":"s", "x":"mm", "y":"mm"Â },
+    "units": {"t":"s", "x":"mm", "y":"mm" },
     "data": [
         { "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...] },
     	...
