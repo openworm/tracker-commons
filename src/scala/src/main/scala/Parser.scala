@@ -6,6 +6,7 @@ import json._
 object Parser {
 
   import Parts.{W, Digit => D}
+  
   val Date = P(
     (D ~ D ~ D ~ D).! ~ "-" ~ (D ~ D).! ~ "-" ~ (D ~ D).! ~ "T" ~                   // Date
     (D ~ D).! ~         ":" ~ (D ~ D).! ~ ":" ~ (D ~ D ~ ("." ~ D.rep(1)).?).! ~    // Time
