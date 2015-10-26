@@ -33,8 +33,18 @@ package units {
     }
   }
   object Units {
+    private[this] val myCachedSingletons = new java.util.concurrent.ConcurrentHashMap[String, Units]
+    
     val shiftLeftBy = (0 to 15).map(i => ("1e"+i).toDouble).toArray
     val shiftRightBy = (0 to 15).map(i => ("1e-"+i).toDouble).toArray
+
+    def apply(uname: String) = Option(myCachedSingletons.get(uname)).orElse {
+      for { u <- NamedUnits get uname } yield {
+        myCachedSingletons  put (uname, u)
+        u
+      }
+    }
+
   }
 
   trait Distance extends Units { final def kind = "distance (mm)" }
@@ -256,12 +266,12 @@ package object units {
     Seq("%", "percent").map(name => new Percent(name))
   ).map(u => u.name -> u).toMap
 
-  val NamedTemperature = (
+  val NamedTemperatures = (
     Seq("Celsius", "Centigrade", "C").map(name => new Celsius(name)) ++
     Seq("Fahrenheit", "F").map(name => new Fahrenheit(name))
   ).map(u => u.name -> u).toMap
 
-  val NamedUnits = NamedDistances ++ NamedTimes ++ NamedDimensionless ++ NamedTemperature
+  val NamedUnits = NamedDistances ++ NamedTimes ++ NamedDimensionless ++ NamedTemperatures
 
   private[this] val myCachedPairs = new java.util.concurrent.ConcurrentHashMap[(String, String), Converter]
 
