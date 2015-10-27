@@ -5,12 +5,17 @@ import fastparse.all._
 class Indented(val text: String) {
   private var myIndent: Int = 0
   def indent = myIndent
-  def indent_=(i: Int) { myIndent = math.max(indent, 0) }
-  def textFn(f: String => String) = { val ans = new Indented(f(text)); ans.indent = i; ans }
+  def indent_=(i: Int) { myIndent = math.max(i, 0) }
+  def textFn(f: String => String) = { val ans = new Indented(f(text)); ans.indent = myIndent; ans }
   def in(i: Int): this.type = { indent = indent + i; this }
+  override def toString = 
+    if (myIndent < 1) text
+    else if (myIndent < 100) Indented.spaces(myIndent) + text
+    else " "*myIndent + text
 }
 object Indented {
   def apply(text: String) = new Indented(text)
+  val spaces = (0 until 100).map(i => " "*i).toVector
 }
 
 trait JsonOut {
@@ -67,10 +72,10 @@ case class StrJ(value: String) extends JSON {
             case '\t' => ac(n+1) = 't'; n += 2
             case _ =>
               ac(n+1) = 'u'
-              ac(n+2) = (c >> 12) match { case x if x < 10 => ('0' + x).toChar; case _ => ('A' + (x-10)).toChar }
-              ac(n+3) = ((c >> 8) & 0xF) match { case x if x < 10 => ('0' + x).toChar; case _ => ('A' + (x-10)).toChar }
-              ac(n+4) = ((c >> 4) & 0xF) match { case x if x < 10 => ('0' + x).toChar; case _ => ('A' + (x-10)).toChar }
-              ac(n+5) = (c & 0xF) match { case x if x < 10 => ('0' + x).toChar; case _ => ('A' + (x-10)).toChar }
+              ac(n+2) = (c >> 12) match { case x if x < 10 => ('0' + x).toChar; case x => ('A' + (x-10)).toChar }
+              ac(n+3) = ((c >> 8) & 0xF) match { case x if x < 10 => ('0' + x).toChar; case x => ('A' + (x-10)).toChar }
+              ac(n+4) = ((c >> 4) & 0xF) match { case x if x < 10 => ('0' + x).toChar; case x => ('A' + (x-10)).toChar }
+              ac(n+5) = (c & 0xF) match { case x if x < 10 => ('0' + x).toChar; case x => ('A' + (x-10)).toChar }
               n += 6
           }
         }
@@ -86,8 +91,8 @@ case class NumJ(value: Double) extends JSON {
 }
 
 case class ANumJ(values: Array[Double]) extends JSON {
-  def toJson = values.map(x => if (value.isNaN || value.isInfinite) "null" else "%.4f".format(value)).mkString("[", ", ", "]")
-  def toJsons =
+  def toJson = values.map(value => if (value.isNaN || value.isInfinite) "null" else "%.4f".format(value)).mkString("[", ", ", "]")
+  override def toJsons =
     if (values.length < 20) Vector(Indented(toJson))
     else {
       val vb = Vector.newBuilder[Indented]
@@ -108,8 +113,8 @@ case class ANumJ(values: Array[Double]) extends JSON {
     }
 }
 case class AANumJ(valuess: Array[Array[Double]]) extends JSON {
-  def toJson = valuess.map(x => ANumJ(x).toJson).mkString("[ ", ", ", " ]")
-  def toJsons = {
+  def toJson = valuess.map(values => ANumJ(values).toJson).mkString("[ ", ", ", " ]")
+  override def toJsons = {
     val vb = Vector.newBuilder[Indented]
     vb += Indented("[")
     var it = valuess.iterator
@@ -123,7 +128,11 @@ case class AANumJ(valuess: Array[Array[Double]]) extends JSON {
 }
 case class ArrJ(values: Array[JSON]) extends JSON {
   def toJson = values.map(_.toJson).mkString("[ ", ", ", "]")
-  def toJsons = {
+  override def toJsons: Vector[Indented] = {
+    if (values.length < 2) {
+      val j = toJson
+      if (j.length < 120) return Vector(Indented(toJson))
+    }
     val vb = Vector.newBuilder[Indented]
     vb += Indented("[")
     val it = values.iterator
@@ -139,15 +148,42 @@ case class ArrJ(values: Array[JSON]) extends JSON {
 }
 case class ObjJ(keyvals: Map[String, Vector[JSON]]) extends JSON {
   def toJson = keyvals.toVector.sortBy(_._1).flatMap{ case (k,vs) => vs.map(v => "\"" + k + "\": " + v.toJson) }.mkString("{ ", ", ", " }")
-  def toJsons =
-    if (keyvals.forall{ case (_, vs) => vs.length == 1 && vs match { case NullJ | _: BoolJ | _: NumJ | _: StrJ => true; case _ => false } }) Vector(Indented(toJson))
+  override def toJsons = {
+    if (
+      keyvals.iterator.
+      flatMap{ case (k,vs) =>
+        val kn = k.length
+        vs.iterator.map(_ match { 
+          case NullJ | _: BoolJ | _: NumJ => 5L + kn
+          case s: StrJ => s.value.length.toLong + kn
+          case x: ANumJ => 5L*x.values.length + kn
+          case _ => 1000L
+        })
+      }.
+      dropWhile(_ < 100).
+      isEmpty
+    ) {
+      Vector(Indented(toJson))
+    }
     else {
       val vb = Vector.newBuilder[Indented]
       vb += Indented("{")
-      keyvals.toVector.sortBy(_._1).foreach{ case (k,vs) => vs.map(v => ???) }
+      val it = keyvals.toVector.sortBy(_._1).iterator.flatMap{ case (k,vs) => vs.iterator.map{ k -> _ } }
+      while (it.hasNext) {
+        val (k,v) = it.next
+        val jt = v.toJsons.iterator
+        val h = (if (jt.hasNext) jt.next.text else "null")
+        vb += Indented(StrJ(k).toJson + ": " + (if (jt.hasNext || !it.hasNext) h else h + ",")).in(2)
+        while (jt.hasNext) {
+          val jx = jt.next
+          jx.in(2)
+          vb += (if (jt.hasNext || !it.hasNext) jx else jx.textFn(_ + ","))
+        }
+      }
       vb += Indented("}")
       vb.result()
     }
+  }
 }
 case class TextJ(unparsed: String) extends JSON {
   def toJson = unparsed
