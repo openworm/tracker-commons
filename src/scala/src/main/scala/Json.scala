@@ -18,6 +18,10 @@ object Indented {
   val spaces = (0 until 100).map(i => " "*i).toVector
 }
 
+trait Jsonable {
+  def toObjJ: ObjJ
+}
+
 trait JsonOut {
   def toJson: String
   def toJsons: Vector[Indented] = Vector(Indented(toJson))
@@ -146,7 +150,7 @@ case class ArrJ(values: Array[JSON]) extends JSON {
     vb.result()
   }
 }
-case class ObjJ(keyvals: Map[String, Vector[JSON]]) extends JSON {
+case class ObjJ(keyvals: Map[String, List[JSON]]) extends JSON {
   def toJson = keyvals.toVector.sortBy(_._1).flatMap{ case (k,vs) => vs.map(v => "\"" + k + "\": " + v.toJson) }.mkString("{ ", ", ", " }")
   override def toJsons = {
     if (
@@ -258,7 +262,7 @@ object Data {
   val Arr = P("[" ~ All.rep(sep = ",").map(x => ArrJ(x.toArray)) ~ "]")
 
   val KeyVal = P(W(Str.map(_.value) ~ W(":") ~! Val))
-  val Obj = "{" ~ KeyVal.rep(sep = ",").map(x => ObjJ(x.groupBy(_._1).map{ case (k,xs) => k -> xs.map(_._2).toVector })) ~ "}"
+  val Obj = "{" ~ KeyVal.rep(sep = ",").map(x => ObjJ(x.groupBy(_._1).map{ case (k,xs) => k -> xs.map(_._2).toList })) ~ "}"
 
   val Val: P[JSON] = P( Obj | NoCut(ANum) | NoCut(AANum) | Arr | Str | Num | Bool | Null )
 

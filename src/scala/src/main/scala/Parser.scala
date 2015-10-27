@@ -39,4 +39,6 @@ object Parser {
     map(_ => u: collection.Map[String, units.Units]).
     filter(u => Seq("t", "x", "y").forall(u contains _))
   }
+
+  def durationFormat(jtd: java.time.Duration) = "%d:%02d:%07.4f".format(jtd.getSeconds/3600, (jtd.getSeconds % 3600)/60, (jtd.getSeconds % 60) + 1e-9*jtd.getNano)
 }
