@@ -185,12 +185,75 @@ case class Metadata(
   }
 }
 object Metadata {
+  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid metadata: " + msg) 
   def getCustom(ob: json.ObjJ) =
     if (!ob.keyvals.exists{ case (k,vs) => vs.nonEmpty && (k startsWith "@") }) emptyObjJ
     else ob.keyvals.filter{ case (k,vs) => vs.nonEmpty && (k startsWith "@") } match { case x => json.ObjJ(x) }
   val emptyObjJ = json.ObjJ(Map.empty)
   val empty = new Metadata(Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, None, None, emptyObjJ)
   def from(ob: json.ObjJ): Either[String, Metadata] = {
-    ???
+    def allOrBad[A](key: String, extract: json.JSON => Either[String, A]): Either[String, Vector[A]] = ob.keyvals.get(key) match {
+      case None => Right(Vector.empty[A])
+      case Some(vs) => Right(
+        vs.flatMap{
+          case json.ArrJ(js) => js
+          case j => j :: Nil
+        }.map(j => extract(j) match {
+          case Left(l) => return Left(l)
+          case Right(r) => r
+        }).toVector
+      )
+    }
+    def allObjOrBad[A](key: String, extract: json.ObjJ => Either[String, A]) =
+      allOrBad(key, { case ob: json.ObjJ => extract(ob); case _ => Left(key + " should be an object")})
+    def allString(key: String) = allOrBad(key, { case json.StrJ(s) => Right(s); case _ => Left("non-text " + key) })
+
+    def optionOrBad[A](key: String, extract: json.JSON => Either[String, A]): Either[String, Option[A]] = ob.keyvals.get(key) match {
+      case None => Right(None)
+      case Some(Nil) => Right(None)
+      case Some(j :: Nil) => extract(j).right.map(r => Option(r))
+      case _ => Left("more than one entry for " + key)
+    }
+    def optObjOrBad[A](key: String, extract: json.ObjJ => Either[String, A]) =
+      optionOrBad(key, { case ob: json.ObjJ => extract(ob); case _ => Left(key + " should be an object")})
+    def optString(key: String) = optionOrBad(key, { case json.StrJ(s) => Right(s); case _ => Left("non-text " + key) })
+
+    val lab = allObjOrBad("lab", Laboratory from _) match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val who = allString("who") match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val time = optString("timestamp") match {
+      case Left(msg) => return BAD(msg)
+      case Right(None) => None
+      case Right(Some(str)) => Parser.Date.parse(str) match {
+        case fastparse.core.Result.Success(ltd, _) => Some(ltd)
+        case _ => return BAD("improper format in timestamp")
+      }
+    }
+    val temp = optObjOrBad("temperature", Temperature from _) match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val humidity =
+      optionOrBad("humidity", { case json.Dbl(d) => Right(d); case _ => Left("non-numeric humidity") }) match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val arena = optObjOrBad("arena", Arena from _) match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val food = optString("food") match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val media = optString("media") match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val sex = optString("sex") match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val stage = optString("stage") match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val age = optString("age") match {
+      case Left(msg) => return BAD(msg)
+      case Right(None) => None
+      case Right(Some(str)) => Parser.Age.parse(str) match {
+        case fastparse.core.Result.Success(dur, _) => Some(dur)
+        case _ => return BAD("improper format in age")
+      }      
+    }
+    val strain = optString("strain") match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val protocol = allString("protocol") match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val software = optObjOrBad("software", Software from _) match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val settings = optionOrBad("setting", {j => Right(j)}) match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val custom = getCustom(ob)
+    Right(new Metadata(
+      lab, who, time, temp, humidity,
+      arena, food, media, sex, stage,
+      age, strain, protocol, software, settings,
+      custom
+    ))
   }
 }
