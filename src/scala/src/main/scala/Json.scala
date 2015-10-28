@@ -95,6 +95,7 @@ case class NumJ(value: Double) extends JSON {
 }
 
 case class ANumJ(values: Array[Double]) extends JSON {
+  def length = values.length
   def toJson = values.map(value => if (value.isNaN || value.isInfinite) "null" else "%.4f".format(value)).mkString("[", ", ", "]")
   override def toJsons =
     if (values.length < 20) Vector(Indented(toJson))
@@ -117,6 +118,7 @@ case class ANumJ(values: Array[Double]) extends JSON {
     }
 }
 case class AANumJ(valuess: Array[Array[Double]]) extends JSON {
+  def length = valuess.length
   def toJson = valuess.map(values => ANumJ(values).toJson).mkString("[ ", ", ", " ]")
   override def toJsons = {
     val vb = Vector.newBuilder[Indented]
@@ -131,6 +133,7 @@ case class AANumJ(valuess: Array[Array[Double]]) extends JSON {
   }
 }
 case class ArrJ(values: Array[JSON]) extends JSON {
+  def length = values.length
   def toJson = values.map(_.toJson).mkString("[ ", ", ", "]")
   override def toJsons: Vector[Indented] = {
     if (values.length < 2) {
@@ -151,6 +154,7 @@ case class ArrJ(values: Array[JSON]) extends JSON {
   }
 }
 case class ObjJ(keyvals: Map[String, List[JSON]]) extends JSON {
+  def isEmpty = keyvals.isEmpty
   def toJson = keyvals.toVector.sortBy(_._1).flatMap{ case (k,vs) => vs.map(v => "\"" + k + "\": " + v.toJson) }.mkString("{ ", ", ", " }")
   override def toJsons = {
     if (
@@ -267,4 +271,25 @@ object Data {
   val Val: P[JSON] = P( Obj | NoCut(ANum) | NoCut(AANum) | Arr | Str | Num | Bool | Null )
 
   val All = W(Val)
+}
+
+object Dbl {
+  private val someNaN = Some(Double.NaN)
+  private val somePosInf = Some(Double.PositiveInfinity)
+  private val someNegInf = Some(Double.NegativeInfinity)
+
+  def unapply(j: JSON): Option[Double] = j match {
+    case NumJ(d) => Some(d)
+    case NullJ => someNaN
+    case ANumJ(ds) if ds.length == 1 => Some(ds(0))
+    case StrJ(s) => s.toLowerCase match {
+      case "nan" => someNaN
+      case "inf" => somePosInf
+      case "-inf" => someNegInf
+      case "infinity" => somePosInf
+      case "-infinity" => someNegInf
+      case _ => None
+    }
+    case _ => None
+  }
 }

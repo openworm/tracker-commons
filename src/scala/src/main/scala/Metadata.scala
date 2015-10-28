@@ -9,6 +9,32 @@ case class Laboratory(pi: String, name: String, location: String, custom: json.O
     json.ObjJ(m ++ custom.keyvals)
   }
 }
+object Laboratory {
+  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid laboratory: " + msg)
+  def from(ob: json.ObjJ): Either[String, Laboratory] = {
+    val pi = ob.keyvals.get("pi").
+      flatMap(x => if (x.length > 1) return BAD("multiple entries for head investigator (PI)") else x.headOption).
+      map{
+        case json.StrJ(s) => s
+        case _ => return BAD("head investigator entry is not text")
+      }
+    val name = ob.keyvals.get("name").
+      flatMap(x => if (x.length > 1) return BAD("multiple entries for lab name") else x.headOption).
+      map{
+        case json.StrJ(s) => s
+        case _ => return BAD("lab name is not text")
+      }
+    val loc = ob.keyvals.get("location").
+      flatMap(x => if (x.length > 1) return BAD("multiple entries for location") else x.headOption).
+      map{
+        case json.StrJ(s) => s
+        case _ => return BAD("lab location is not text")
+      }
+    val custom = Metadata.getCustom(ob)
+    if (pi.isEmpty && name.isEmpty && loc.isEmpty && custom.isEmpty) BAD("no PI, name, location, or custom fields")
+    else Right(new Laboratory(pi getOrElse "", name getOrElse "", loc getOrElse "", custom))
+  }
+}
 
 case class Temperature(experimental: Double, cultivation: Double, custom: json.ObjJ) extends json.Jsonable {
   def toObjJ = {
@@ -18,27 +44,105 @@ case class Temperature(experimental: Double, cultivation: Double, custom: json.O
     json.ObjJ(m ++ custom.keyvals)
   }
 }
-
-case class Arena(kind: String, diameter: Double, otherDiameter: Double, custom: json.ObjJ) extends json.Jsonable {
-  def toObjJ = {
-    var m = Map.empty[String, List[json.JSON]]
-    if (kind.length > 0) m = m + ("type" -> (json.StrJ(kind) :: Nil))
-    if (!diameter.isNaN) m = m + ("diameter" -> (json.NumJ(diameter) :: Nil))
-    if (!otherDiameter.isNaN) m = m + ("axis2_diameter" -> (json.NumJ(otherDiameter) :: Nil))
-    json.ObjJ(m ++ custom.keyvals)
+object Temperature {
+  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid temperature: " + msg)
+  def from(ob: json.ObjJ): Either[String, Temperature] = {
+    val expt = ob.keyvals.get("experimental").
+      flatMap(x => if (x.length > 1) return BAD("multiple experimental temperatures") else x.headOption).
+      map{
+        case json.Dbl(d) => d
+        case _ => return BAD("experimental temperature is not numeric")
+      }
+    val cult = ob.keyvals.get("cultivation").
+      flatMap(x => if (x.length > 1) return BAD("multiple cultivation temperatures are not supported") else x.headOption).
+      map{
+        case json.Dbl(d) => d
+        case _ => return BAD("cultivation temperature is not numeric")
+      }
+    val custom = Metadata.getCustom(ob)
+    if (expt.isEmpty && cult.isEmpty && custom.isEmpty) BAD("no experimental or cultivation temperatures, or custom fields")
+    else Right(new Temperature(expt getOrElse Double.NaN, cult getOrElse Double.NaN, custom))
   }
 }
 
-case class Software(name: String, version: String, featureID: String, custom: json.ObjJ) extends json.Jsonable {
+case class Arena(kind: String, diameter: Either[(Double, Double), Double], custom: json.ObjJ) extends json.Jsonable {
+  def toObjJ = {
+    var m = Map.empty[String, List[json.JSON]]
+    if (kind.length > 0) m = m + ("type" -> (json.StrJ(kind) :: Nil))
+    diameter match {
+      case Left((d1, d2)) => m = m + ("diameter" -> (json.ANumJ(Array(d1, d2)) :: Nil))
+      case Right(d) if !d.isNaN => m = m + ("diameter" -> (json.NumJ(d) :: Nil))
+      case _ =>
+    }
+    json.ObjJ(m ++ custom.keyvals)
+  }
+}
+object Arena {
+  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid arena: " + msg)
+  def from(ob: json.ObjJ): Either[String, Arena] = {
+    val kind = ob.keyvals.get("type").
+      flatMap(x => if (x.length > 1) return BAD("multiple type entries") else x.headOption).
+      map{
+        case json.StrJ(s) => s
+        case _ => return BAD("type is not expressed as text")
+      }
+    val diam = ob.keyvals.get("diameter").
+      flatMap(x => if (x.length > 1) return BAD("multiple diameter entries (two entries should be in an array)") else x.headOption).
+      map {
+        case json.Dbl(d) => Right(d)
+        case json.ANumJ(ds) if ds.length == 2 => Left((ds(0), ds(1)))
+        case _ => return BAD("diameter is not numeric")
+      }
+    val custom = Metadata.getCustom(ob)
+    if (kind.isEmpty && diam.isEmpty && custom.isEmpty) BAD("no type or diameter or custom fields")
+    else Right(new Arena(kind getOrElse "", diam getOrElse Right(Double.NaN), custom))
+  }
+}
+
+case class Software(name: String, version: String, featureID: Set[String], custom: json.ObjJ) extends json.Jsonable {
   def toObjJ = {
     var m = Map[String, List[json.JSON]]("name" -> (json.StrJ(name) :: Nil))
     if (version.length > 0) m = m + ("version" -> (json.StrJ(version) :: Nil))
-    if (featureID.length > 0) m = m + ("featureID" -> (json.StrJ("@" + featureID) :: Nil))
+    if (featureID.size > 0) m = m + ("featureID" -> (
+      if (featureID.size == 1) json.StrJ(featureID.head) :: Nil
+      else json.ArrJ(featureID.toArray.sorted.map(x => json.StrJ(x): json.JSON)) :: Nil
+    ))
     json.ObjJ(m ++ custom.keyvals)
   }
 }
 object Software {
-  def default = new Software("Tracker Commons", "1.0-scala", "", Metadata.emptyObjJ)
+  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid software metadata: " + msg)
+  def default = new Software("Tracker Commons", "1.0-scala", Set.empty, Metadata.emptyObjJ)
+  def from(ob: json.ObjJ): Either[String, Software] = {
+    val name = ob.keyvals.get("name").
+      flatMap(x => if (x.length > 1) return BAD("multiple name entries") else x.headOption).
+      map{
+        case json.StrJ(s) => s
+        case _ => return BAD("name is not text")
+      }
+    val ver = ob.keyvals.get("version").
+      flatMap(x => if (x.length > 1) return BAD("multiple version entries") else x.headOption).
+      flatMap{
+        case json.NullJ => None
+        case json.StrJ(s) => Some(s)
+        case json.Dbl(d) => if (d.isInfinite || d.isNaN) None else Some("%.4f".format(d))
+        case _ => return BAD("name is not text")
+      }
+    val feat = ob.keyvals.get("featureID").
+      flatMap{ vs =>
+        val labels = vs.flatMap{
+          case json.StrJ(s) => s :: Nil
+          case json.ArrJ(ss) => ss.map{ case json.StrJ(s) => s; case _ => return BAD("non-text featureID") }
+          case _ => return BAD("non-text featureID")
+        }
+        labels.foreach{ l => if (!(l startsWith "@")) return BAD("featureID '" + l + "' does not start with @") }
+        if (labels.isEmpty) None
+        else Some(labels.toSet)
+      }
+    val custom = Metadata.getCustom(ob)
+    if (name.isEmpty && ver.isEmpty && feat.isEmpty && custom.isEmpty) BAD("no name, version, features, or custom fields")
+    else Right(new Software(name getOrElse "", ver getOrElse "", feat getOrElse Set.empty, custom))
+  }
 }
 
 case class Metadata(
@@ -81,6 +185,9 @@ case class Metadata(
   }
 }
 object Metadata {
+  def getCustom(ob: json.ObjJ) =
+    if (!ob.keyvals.exists{ case (k,vs) => vs.nonEmpty && (k startsWith "@") }) emptyObjJ
+    else ob.keyvals.filter{ case (k,vs) => vs.nonEmpty && (k startsWith "@") } match { case x => json.ObjJ(x) }
   val emptyObjJ = json.ObjJ(Map.empty)
   val empty = new Metadata(Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, None, None, emptyObjJ)
   def from(ob: json.ObjJ): Either[String, Metadata] = {
