@@ -315,3 +315,15 @@ object Data extends json.Jsonic[Data] {
     Right(new Data(nid, sid, t, Data.singly(x), Data.singly(y), cx, cy, Metadata.getCustom(ob)))
   }
 }
+
+object DatX extends json.Jsonic[Either[Datum, Data]] {
+  def from(ob: json.ObjJ): Either[String, Either[Datum, Data]] = {
+    Datum.from(ob) match {
+      case Right(x) => Right(Left(x))
+      case Left(e) => if (e.endsWith("!")) Left(e) else Data.from(ob) match {
+        case Right(x) => Right(Right(x))
+        case Left(e) => Left(e)
+      }
+    }
+  }
+}

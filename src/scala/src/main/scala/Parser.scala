@@ -29,15 +29,43 @@ object Parser {
 
   val UnitKV = Struct.Str ~ W(":" ~! Pass) ~ Struct.Str
 
-  val Units = {
+  def Units = {
     val u = new collection.mutable.AnyRefMap[String, units.Units]
     P(
       "\"units\"" ~ W(":") ~ "{" ~ 
       W(UnitKV.filter{ case (k,v) => units.Units(v.value) match { case None => false; case Some(vi) => u += ((k.value, vi)); true }}).rep(sep = W(",")) ~
-      "}" 
+      "}"
     ).
     map(_ => u: collection.Map[String, units.Units]).
     filter(u => Seq("t", "x", "y").forall(u contains _))
+  }
+
+  val Meta = P("\"metadata\"" ~ W(":") ~! Struct.Obj)
+
+  val Dat = P(
+    "\"data\"" ~ W(":") ~! (
+      Struct.Obj.map(x => Array(x)) |
+      Struct.Arr.filter{ case ArrJ(xs) => xs.forall{ case ob: ObjJ => true; case _ => false } }.map{ case ArrJ(xs) => xs.collect{ case ob: ObjJ => ob } }
+    )
+  )
+
+  def Single = {
+    var u: Option[Either[String, collection.Map[String, units.Units]]] = None
+    var m: Option[Either[String, ObjJ]] = None
+    var d: Option[Either[String, Array[ObjJ]]] = None
+    var commons = false
+    val custom = collection.mutable.AnyRefMap.empty[String, List[JSON]]
+    (
+      W("{") ~
+      P(
+        Commons.map{_ => commons = true; println("c"); () } |
+        Units.map{ x => u = if (u.isEmpty) Some(Right(x)) else Some(Left("Multiple units blocks not supported")); () } |
+        Meta.map{ x => m = if (m.isEmpty) Some(Right(x)) else Some(Left("Multiple metadata blocks not supported")); () } |
+        Dat.map{ x => d = if (d.isEmpty) Some(Right(x)) else Some(Left("Multiple data blocks not supported (all should be in one array!)")); () } |
+        Struct.KeyVal.map{ case (k,v) => if (k startsWith "@") { custom += (k, v :: custom.get(k).getOrElse(Nil)) }; () }
+      ).rep(sep = W("," ~! Pass)) ~
+      W("}")
+    ).map(_ => (u, m, d, commons, custom))
   }
 
   def durationFormat(jtd: java.time.Duration) = "%d:%02d:%07.4f".format(jtd.getSeconds/3600, (jtd.getSeconds % 3600)/60, (jtd.getSeconds % 60) + 1e-9*jtd.getNano)
