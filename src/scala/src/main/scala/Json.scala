@@ -93,7 +93,8 @@ case class StrJ(value: String) extends JSON {
   }
 }
 
-case class NumJ(value: Double) extends JSON {
+case class NumJ(var value: Double) extends JSON {
+  // Note--value is var to support unit conversion!
   def toJson = if (value.isNaN || value.isInfinite) "null" else "%.4f".format(value)
 }
 
@@ -235,7 +236,7 @@ object Text {
   val All = W(Val.!)
 }
 
-object Data {
+object Struct {
   import Parts._
 
   val Null = Text.Null.map(_ => NullJ)

@@ -27,7 +27,7 @@ object Parser {
     java.time.Duration.ZERO.withSeconds(h.toLong*3600L + m.toInt*60 + ssi).withNanos(ssns)
   }
 
-  val UnitKV = Data.Str ~ W(":" ~! Pass) ~ Data.Str
+  val UnitKV = Struct.Str ~ W(":" ~! Pass) ~ Struct.Str
 
   val Units = {
     val u = new collection.mutable.AnyRefMap[String, units.Units]
