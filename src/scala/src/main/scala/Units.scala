@@ -167,6 +167,17 @@ package units {
     def change(x: Float) = out from (in of x)
     def change(x: Double) = out from (in of x)
   }
+
+  case class UnitMap(lookup: Map[String, String]) extends json.Jsonable {
+    val toObjJ = json.ObjJ(lookup.map{ case (k,v) => k -> (json.StrJ(v) :: Nil) })
+  }
+  object UnitMap extends json.Jsonic[UnitMap] {
+    def from(ob: json.ObjJ): Either[String, UnitMap] =
+      ob.keyvals.collect{ case (k, json.StrJ(v) :: Nil) => k -> v } match {
+        case x if x.size == ob.keyvals.size => Right(new UnitMap(x))
+        case _ => Left("Invalid units: all units must be given as text")
+      }
+  }
 }
 
 package object units {

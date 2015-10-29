@@ -9,7 +9,7 @@ case class Laboratory(pi: String, name: String, location: String, custom: json.O
     json.ObjJ(m ++ custom.keyvals)
   }
 }
-object Laboratory {
+object Laboratory extends json.Jsonic[Laboratory] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid laboratory: " + msg)
   def from(ob: json.ObjJ): Either[String, Laboratory] = {
     val pi = ob.keyvals.get("pi").
@@ -44,7 +44,7 @@ case class Temperature(experimental: Double, cultivation: Double, custom: json.O
     json.ObjJ(m ++ custom.keyvals)
   }
 }
-object Temperature {
+object Temperature extends json.Jsonic[Temperature] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid temperature: " + msg)
   def from(ob: json.ObjJ): Either[String, Temperature] = {
     val expt = ob.keyvals.get("experimental").
@@ -77,7 +77,7 @@ case class Arena(kind: String, diameter: Either[(Double, Double), Double], custo
     json.ObjJ(m ++ custom.keyvals)
   }
 }
-object Arena {
+object Arena extends json.Jsonic[Arena] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid arena: " + msg)
   def from(ob: json.ObjJ): Either[String, Arena] = {
     val kind = ob.keyvals.get("type").
@@ -110,7 +110,7 @@ case class Software(name: String, version: String, featureID: Set[String], custo
     json.ObjJ(m ++ custom.keyvals)
   }
 }
-object Software {
+object Software extends json.Jsonic[Software] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid software metadata: " + msg)
   def default = new Software("Tracker Commons", "1.0-scala", Set.empty, Metadata.emptyObjJ)
   def from(ob: json.ObjJ): Either[String, Software] = {
@@ -184,7 +184,7 @@ case class Metadata(
     json.ObjJ(m.toMap)
   }
 }
-object Metadata {
+object Metadata extends json.Jsonic[Metadata] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid metadata: " + msg) 
   def getCustom(ob: json.ObjJ) =
     if (!ob.keyvals.exists{ case (k,vs) => vs.nonEmpty && (k startsWith "@") }) emptyObjJ

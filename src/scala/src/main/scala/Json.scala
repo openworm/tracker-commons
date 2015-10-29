@@ -21,6 +21,9 @@ object Indented {
 trait Jsonable {
   def toObjJ: ObjJ
 }
+trait Jsonic[A] {
+  def from(ob: ObjJ): Either[String, A]
+}
 
 trait JsonOut {
   def toJson: String
