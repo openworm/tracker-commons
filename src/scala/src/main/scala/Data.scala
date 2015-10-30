@@ -315,29 +315,3 @@ object Data extends json.Jsonic[Data] {
     Right(new Data(nid, sid, t, Data.singly(x), Data.singly(y), cx, cy, Metadata.getCustom(ob)))
   }
 }
-
-object DatX extends json.Jsonic[Either[Datum, Data]] {
-  def from(ob: json.ObjJ): Either[String, Either[Datum, Data]] = {
-    Datum.from(ob) match {
-      case Right(x) => Right(Left(x))
-      case Left(e) => if (e.endsWith("!")) Left(e) else Data.from(ob) match {
-        case Right(x) => Right(Right(x))
-        case Left(e) => Left(e)
-      }
-    }
-  }
-}
-
-case class DataSet(meta: Metadata, unitmap: UnitMap, data: Array[Either[Datum, Data]], files: FileSet, custom: json.ObjJ)
-extends json.Jsonable {
-  def toObjJ = unitmap.unfix(json.ObjJ({
-    var m = Map(
-      "tracker-commons" -> (json.TrueJ :: Nil),
-      "units" -> (unitmap.toObjJ :: Nil),
-      "data" -> (json.ArrJ(data.map{ case Left(dm) => dm.toObjJ; case Right(da) => da.toObjJ }) :: Nil)
-    )
-    if (meta != Metadata.empty) m = m + ("metadata" -> (meta.toObjJ :: Nil))
-    if (files != FileSet.empty) m = m + ("files" -> (files.toObjJ :: Nil))
-    m ++ custom.keyvals
-  }))
-}

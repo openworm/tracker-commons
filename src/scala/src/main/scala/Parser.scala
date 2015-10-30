@@ -89,7 +89,7 @@ object Parser {
             case Right(r) => r
           }
         }
-        val datas = d.map{ di => (DatX from uni.fix(di)) match {
+        val datas = d.map{ di => (DataSet dataEntry uni.fix(di)) match {
           case Left(l) => return Left(l)
           case Right(d)=> d
         }}
