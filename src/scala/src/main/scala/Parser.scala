@@ -31,16 +31,7 @@ object Parser {
 
   val UnitKV = Struct.Str ~ W(":" ~! Pass) ~ Struct.Str
 
-  def Units = {
-    val u = new collection.mutable.AnyRefMap[String, units.Units]
-    P(
-      "\"units\"" ~ W(":") ~ "{" ~ 
-      W(UnitKV.filter{ case (k,v) => units.Units(v.value) match { case None => false; case Some(vi) => u += ((k.value, vi)); true }}).rep(sep = W(",")) ~
-      "}"
-    ).
-    map(_ => u: collection.Map[String, units.Units]).
-    filter(u => Seq("t", "x", "y").forall(u contains _))
-  }
+  val Units = P("\"units\"" ~ W(":") ~! Struct.Obj)
 
   val Meta = P("\"metadata\"" ~ W(":") ~! Struct.Obj)
 
@@ -55,7 +46,7 @@ object Parser {
 
   val Single = {
     // Kludgy var-based method to parse something at most once
-    var u: Option[Either[String, collection.Map[String, units.Units]]] = None
+    var u: Option[Either[String, ObjJ]] = None
     var m: Option[Either[String, ObjJ]] = None
     var d: Option[Either[String, Array[ObjJ]]] = None
     var f: Option[Either[String, ObjJ]] = None
@@ -80,27 +71,37 @@ object Parser {
       case (None, _) => Left("Not valid WCON--no units.")
       case (_, None) => Left("Not valid WCON--no data.")
       case (Some(Right(u)), Some(Right(d))) =>
+        val uni: UnitMap = (UnitMap from u) match {
+          case Left(l) => return Left(l)
+          case Right(um) =>
+            Seq("t", "x", "y").foreach{ e => if (um missing e) return Left("Units data does not contain entry for " + e) }
+            var um2 = um
+            Seq("ox", "oy", "cx", "cy").foreach{ e =>
+              if (um2 missing e) um2 = um2.copy(lookup = um2.lookup + (e -> um.lookup(e.substring(1))))
+            }
+            um2
+        }
         val meta = om match {
           case None => Metadata.empty
           case Some(Left(l)) => return Left(l)
-          case Some(Right(m)) => (Metadata from m) match {
+          case Some(Right(m)) => (Metadata from uni.fix(m)) match {
             case Left(l) => return Left(l)
             case Right(r) => r
           }
         }
-        val datas = d.map{ di => (DatX from di) match {
+        val datas = d.map{ di => (DatX from uni.fix(di)) match {
           case Left(l) => return Left(l)
           case Right(d)=> d
         }}
         val fs = ofs match {
           case None => FileSet.empty
           case Some(Left(l)) => return Left(l)
-          case Some(Right(f)) => (FileSet from f) match {
+          case Some(Right(f)) => (FileSet from uni.fix(f)) match {
             case Left(l) => return Left(l)
             case Right(r) => r
           }
         }
-        Right(DataSet(meta, u, datas, fs, json.ObjJ(cust.toMap)))
+        Right(DataSet(meta, uni, datas, fs, uni.fix(json.ObjJ(cust.toMap))))
       case (Some(Left(l)), _) => Left(l)
       case (_, Some(Left(l))) => Left(l)
     }
