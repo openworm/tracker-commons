@@ -10,7 +10,7 @@ case class FileSet(me: String, before: List[String], after: List[String], custom
 }
 object FileSet extends json.Jsonic[FileSet] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid files specification: " + msg)
-  def empty = new FileSet("", Nil, Nil, Metadata.emptyObjJ)
+  def empty = new FileSet("", Nil, Nil, json.ObjJ.empty)
   def from(ob: json.ObjJ): Either[String, FileSet] = {
     val me = ob.keyvals.get("this") match {
       case None => return BAD("extension for this file not specifed")

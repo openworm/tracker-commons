@@ -29,8 +29,6 @@ object Parser {
     java.time.Duration.ZERO.withSeconds(h.toLong*3600L + m.toInt*60 + ssi).withNanos(ssns)
   }
 
-  val UnitKV = Struct.Str ~ W(":" ~! Pass) ~ Struct.Str
-
   val Units = P("\"units\"" ~ W(":") ~! Struct.Obj)
 
   val Meta = P("\"metadata\"" ~ W(":") ~! Struct.Obj)
@@ -63,7 +61,7 @@ object Parser {
         Struct.KeyVal.map{ case (k,v) => if (k startsWith "@") { custom += (k, v :: custom.get(k).getOrElse(Nil)) }; () }
       ).rep(sep = W("," ~! Pass)) ~
       W("}")
-    ).map(_ => (u, m, d, f, commons, custom))
+    ).map(_ => (u, m, d, f, commons, custom.map{ case (k,vs) => k -> vs.reverse }))
   }
 
   def apply(s: String): Either[String, DataSet] = Single.parse(s) match {

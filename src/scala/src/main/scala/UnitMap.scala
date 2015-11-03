@@ -20,7 +20,7 @@ case class UnitMap(lookup: Map[String, units.Units], custom: json.ObjJ) extends 
       case n @ json.NumJ(x) => known match { case Some(u) => n.value = u from x; case None => }
       case json.ANumJ(xs) => known match { case Some(u) => u unfix xs; case None => }
       case json.AANumJ(xss) => known match { case Some(u) => u unfix xss; case None => }
-      case json.ArrJ(js) => var i = 0; while (i < js.length) { unfix(js(i), known); i +=1 }
+      case json.ArrJ(js) => var i = 0; while (i < js.length) { unfix(js(i), known); i += 1 }
       case json.ObjJ(kv) => kv.foreach{ case (k,vs) => vs.foreach(v => unfix(v, lookup.get(k) orElse known)) }
       case _ =>
     }

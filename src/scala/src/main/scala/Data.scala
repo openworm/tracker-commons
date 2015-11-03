@@ -125,11 +125,11 @@ extends HasId with json.Jsonable {
   def toObjJ = json.ObjJ(
     Map[String, List[json.JSON]](
       "id" -> (idJSON :: Nil),
-      "t" -> (json.ANumJ(ts) :: Nil),
+      "t" -> (json.ANumJ(ts.clone) :: Nil),
       "x" -> (json.AANumJ(Data.doubly(xs)) :: Nil),
       "y" -> (json.AANumJ(Data.doubly(ys)) :: Nil),
-      "cx" -> (json.ANumJ(cxs) :: Nil),
-      "cy" -> (json.ANumJ(cys) :: Nil)
+      "cx" -> (json.ANumJ(cxs.clone) :: Nil),
+      "cy" -> (json.ANumJ(cys.clone) :: Nil)
     ) ++ custom.keyvals
   )
 }
@@ -301,16 +301,19 @@ object Data extends json.Jsonic[Data] {
         while (j < xi.length) { val xij = xi(j); if (!xij.isNaN) { xS += xij; xN +=1 }; j += 1 }
         if (xN > 0) xS/xN else Double.NaN
       }
+      cx(i) = cxi
       val cyi = if (cy.length > 0) cy(i) else {
         var yS = 0.0
         var yN, j = 0
         while (j < yi.length) { val yij = yi(j); if (!yij.isNaN) { yS += yij; yN +=1 }; j += 1 }
         if (yN > 0) yS/yN else Double.NaN
       }
+      cy(i) = cyi
       rx -= cxi
       ry -= cyi
       if (!rx.isNaN && math.abs(rx) >= 1e-9) { var j = 0; while (j < xi.length) { xi(j) += rx; j += 1 } }
       if (!ry.isNaN && math.abs(ry) >= 1e-9) { var j = 0; while (j < yi.length) { yi(j) += ry; j += 1 } }
+      i += 1
     }
     Right(new Data(nid, sid, t, Data.singly(x), Data.singly(y), cx, cy, Metadata.getCustom(ob)))
   }

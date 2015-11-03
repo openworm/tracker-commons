@@ -11,6 +11,7 @@ case class Laboratory(pi: String, name: String, location: String, custom: json.O
 }
 object Laboratory extends json.Jsonic[Laboratory] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid laboratory: " + msg)
+  def empty = new Laboratory("", "", "", json.ObjJ.empty)
   def from(ob: json.ObjJ): Either[String, Laboratory] = {
     val pi = ob.keyvals.get("pi").
       flatMap(x => if (x.length > 1) return BAD("multiple entries for head investigator (PI)") else x.headOption).
@@ -112,7 +113,7 @@ case class Software(name: String, version: String, featureID: Set[String], custo
 }
 object Software extends json.Jsonic[Software] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid software metadata: " + msg)
-  def default = new Software("Tracker Commons", "1.0-scala", Set.empty, Metadata.emptyObjJ)
+  def default = new Software("Tracker Commons", "1.0-scala", Set.empty, json.ObjJ.empty)
   def from(ob: json.ObjJ): Either[String, Software] = {
     val name = ob.keyvals.get("name").
       flatMap(x => if (x.length > 1) return BAD("multiple name entries") else x.headOption).
@@ -177,7 +178,7 @@ case class Metadata(
     stage match { case Some(s) if s.length > 0 => m += ("stage", json.StrJ(s) :: Nil); case _ => }
     age match { case Some(t) => m += ("age", json.StrJ(Parser.durationFormat(t)) :: Nil ); case _ => }
     strain match { case Some(s) if s.length > 0 => m += ("strain", json.StrJ(s) :: Nil); case _ => }
-    if (protocol.nonEmpty) m += ("protocol", (if (who.length == 1) json.StrJ(protocol.head) else json.ArrJ(protocol.toArray.map(p => json.StrJ(p): json.JSON))) :: Nil)
+    if (protocol.nonEmpty) m += ("protocol", (if (protocol.length == 1) json.StrJ(protocol.head) else json.ArrJ(protocol.toArray.map(p => json.StrJ(p): json.JSON))) :: Nil)
     software match { case Some(s) => m += ("software", s.toObjJ :: Nil); case _ => }
     settings match { case Some(s) => m += ("settings", s :: Nil); case _ => }
     custom.keyvals.foreach{ case (k,vs) => m += (k, vs) }
@@ -187,10 +188,9 @@ case class Metadata(
 object Metadata extends json.Jsonic[Metadata] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid metadata: " + msg) 
   def getCustom(ob: json.ObjJ) =
-    if (!ob.keyvals.exists{ case (k,vs) => vs.nonEmpty && (k startsWith "@") }) emptyObjJ
+    if (!ob.keyvals.exists{ case (k,vs) => vs.nonEmpty && (k startsWith "@") }) json.ObjJ.empty
     else ob.keyvals.filter{ case (k,vs) => vs.nonEmpty && (k startsWith "@") } match { case x => json.ObjJ(x) }
-  val emptyObjJ = json.ObjJ(Map.empty)
-  val empty = new Metadata(Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, None, None, emptyObjJ)
+  val empty = new Metadata(Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, None, None, json.ObjJ.empty)
   def from(ob: json.ObjJ): Either[String, Metadata] = {
     def allOrBad[A](key: String, extract: json.JSON => Either[String, A]): Either[String, Vector[A]] = ob.keyvals.get(key) match {
       case None => Right(Vector.empty[A])
@@ -247,7 +247,7 @@ object Metadata extends json.Jsonic[Metadata] {
     val strain = optString("strain") match { case Left(msg) => return BAD(msg); case Right(x) => x }
     val protocol = allString("protocol") match { case Left(msg) => return BAD(msg); case Right(x) => x }
     val software = optObjOrBad("software", Software from _) match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val settings = optionOrBad("setting", {j => Right(j)}) match { case Left(msg) => return BAD(msg); case Right(x) => x }
+    val settings = optionOrBad("settings", {j => Right(j)}) match { case Left(msg) => return BAD(msg); case Right(x) => x }
     val custom = getCustom(ob)
     Right(new Metadata(
       lab, who, time, temp, humidity,

@@ -7,14 +7,13 @@ import org.junit.Test
 import org.junit.Assert._
 
 class TestWcon {
+  private val Accuracy = 1.001e-3
+
   def same(a: BoolJ, b: BoolJ, where: String): String =
     if (a.value == b.value) ""
     else " " + where + ":unequal-bools(" + a.value + "," + b.value + ") "
 
-  def same(a: NumJ, b: NumJ, where: String): String =
-    if (a.value.isNaN && b.value.isNaN) ""
-    else if (math.abs(a.value-b.value) < 1e-9) ""
-    else " " + where + ":unequal-nums(" + a.value + "," + b.value + ") "
+  def same(a: NumJ, b: NumJ, where: String): String = same(a.value, b.value, where)
 
   def same(a: StrJ, b: StrJ, where: String): String = 
     if (a.value == b.value) ""
@@ -27,7 +26,8 @@ class TestWcon {
       while (i < a.values.length) {
         val ai = a.values(i)
         val bi = b.values(i)
-        if (!((ai.isNaN && bi.isNaN) || (math.abs(ai - bi) < 1e-9))) return " " + where + "["+i+"]:unequal-nums(" + ai + "," + bi + ") "
+        val ans = same(ai, bi, where + "[" + i + "]")
+        if (ans.nonEmpty) return ans
         i += 1
       }
       ""
@@ -45,7 +45,8 @@ class TestWcon {
         while (j < ai.length) {
           val aij = ai(j)
           val bij = bi(j)
-          if (!((aij.isNaN && bij.isNaN) || (math.abs(aij - bij) < 1e-9))) return " " + where + "["+i+","+j+"]:unequal-nums(" + aij + "," + bij + ") "
+          val ans = same(aij, bij, where + "[" + i + ", " + j + "]")
+          if (ans.nonEmpty) return ans
           j += 1
         }
         i += 1
@@ -65,12 +66,31 @@ class TestWcon {
       ""
     }
 
-  def same(a: ObjJ, b: ObjJ, where: String): String = ???
+  def same(a: ObjJ, b: ObjJ, where: String): String = {
+    val ks = a.keyvals.keySet | b.keyvals.keySet
+    ks.foreach{ k =>
+      val va = (a.keyvals get k).map(_.filterNot(j => EmptyJson(j))) getOrElse Nil
+      val vb = (b.keyvals get k).map(_.filterNot(j => EmptyJson(j))) getOrElse Nil
+      val ans = (va, vb) match {
+        case (Nil, Nil) => ""
+        case (Nil, _) => s" $where{$k}:absent(_, $vb) "
+        case (_, Nil) => s" $where{$k}:absent($va, _) "
+        case (ai :: Nil, bi :: Nil) => same(ai, bi, where + "{" + k + "}")
+        case _ => 
+          val aa = if (va.length > 1) ArrJ(va.toArray) else va.head
+          val bb = if (vb.length > 1) ArrJ(vb.toArray) else vb.head
+          same(aa, bb, where + "{" + k + "}" )
+      }
+      if (ans.nonEmpty) return ans
+    }
+    ""
+  }
 
   object EmptyJson {
     def apply(j: JSON): Boolean = j match {
       case NullJ => true
       case StrJ("") => true
+      case NumJ(x) => x.isNaN || x.isInfinite
       case ANumJ(v) if v.length == 0 => true
       case ArrJ(v) if v.length == 0 => true
       case ObjJ(kv) if kv.size == 0 => true
@@ -111,7 +131,7 @@ class TestWcon {
       case aas: ArrJ => b match {
         case bas: ArrJ => same(aas, bas, where)
         case x if aas.length == 1 => same(b, aas, where)
-        case _ => " " + where + ":type-mismatch(arr, "+b.toJson+") "
+        case _ => " " + where + ":type-mismatch(arr=<<<" + aas.toJson + ">>>, "+b.kind+"=<<<" +b.toJson+">>>) "
       }
       case aob: ObjJ => b match {
         case bob: ObjJ =>
@@ -119,7 +139,9 @@ class TestWcon {
           val bka = bob.keyvals.keySet diff aob.keyvals.keySet
           if (akb.nonEmpty || bka.nonEmpty) " " + where + ":key-mismatch(" + akb.toList.sorted.mkString(", ") + "; " + bka.toList.sorted.mkString(", ") + ") "
           else aob.keyvals.iterator.
-            map{ case (k,avs) => same(ArrJ(avs.toArray), ArrJ(bob.keyvals(k).toArray), where+"."+k) }.
+            map{ case (k,avs) => 
+              same(ArrJ(avs.toArray.filter(_ ne NullJ)), ArrJ(bob.keyvals(k).toArray.filter(_ ne NullJ)), where+"."+k) 
+            }.
             dropWhile(_.nonEmpty).
             take(1).toList.headOption.getOrElse("")
         case _ => " " + where + ":type-mismatch(obj, "+b.toJson+") "
@@ -144,11 +166,17 @@ class TestWcon {
 
   def same(a: Double, b: Double, where: String): String = {
     if (a.isNaN && b.isNaN) ""
-    else if (math.abs(a-b) < 1e-9) ""
+    else if (a.isInfinite && b.isNaN) ""
+    else if (a.isNaN && b.isInfinite) ""
+    else if (math.abs(a-b) < Accuracy) ""
     else " "+where+":unequal-numbers(" + a + ", " + b + ") "
   }
 
-  def same(a: Laboratory, b: Laboratory, where: String): String = ???
+  def same(a: Laboratory, b: Laboratory, where: String): String = 
+    same(a.pi, b.pi, where + ".pi") +
+    same(a.name, b.name, where + ".name") +
+    same(a.location, b.location, where + ".location") +
+    same(a.custom, b.custom, where + ".custom")
 
   def same(a: Seq[Laboratory], b: Seq[Laboratory]): String = {
     if (a.length != b.length) " unequal-lab-lengths(" + a.length + ", " + b.length + ") "
@@ -222,9 +250,20 @@ class TestWcon {
 
   def same(a: UnitMap, b: UnitMap): String = same(a.toObjJ, b.toObjJ, "unitmap")
 
-  def same(a: Datum, b: Datum, where: String): String = ???
+  def same(a: Datum, b: Datum, where: String): String = same(
+    Data(a.nid, a.sid, Array(a.t), Array(a.x), Array(a.y), Array(a.cx), Array(a.cy), a.custom),
+    Data(b.nid, b.sid, Array(b.t), Array(b.x), Array(b.y), Array(b.cx), Array(b.cy), b.custom),
+    where
+  )
 
-  def same(a: Data, b: Data, where: String): String = ???
+  def same(a: Data, b: Data, where: String): String =
+    same(a.idJSON, b.idJSON, where + ".id") +
+    same(ANumJ(a.ts), ANumJ(b.ts), where + ".ts") +
+    same(AANumJ(Data.doubly(a.xs)), AANumJ(Data.doubly(b.xs)), where + ".xs") +
+    same(AANumJ(Data.doubly(a.ys)), AANumJ(Data.doubly(b.ys)), where + ".ys") +
+    same(ANumJ(a.cxs), ANumJ(b.cxs), where + ".cxs") +
+    same(ANumJ(a.cys), ANumJ(b.cys), where + ".cys") +
+    same(a.custom, b.custom, where + ".custom")
 
   def same(a: Array[Either[Datum, Data]], b: Array[Either[Datum, Data]]): String = {
     if (a.length != b.length) " unequal-data-length(" + a.length + ", " + b.length + ") "
@@ -256,29 +295,98 @@ class TestWcon {
 
   def opt[A](r: R)(f: => A) = if (r.nextDouble < 0.5) None else Some(f)
 
-  def genObjJ(r: R, depth: Int): ObjJ = if (depth > 5) Metadata.emptyObjJ else ???
+  def genDbl(r: R): Double = r.nextInt(20) match {
+    case 0 => Double.PositiveInfinity
+    case 1 => Double.NegativeInfinity
+    case 2 | 3 => Double.NaN
+    case _ => 10*(r.nextDouble - 0.3)
+  }
 
-  def genJSON(r: R, depth: Int): JSON = if (depth > 5) NullJ else ???
+  def genANumJ(r: R): ANumJ = ANumJ((0 to r.nextInt(30)).map(_ => genDbl(r)).toArray)
 
-  def genCustom(r: R): ObjJ = genObjJ(r, 0)
+  def genAANumJ(r: R): AANumJ = AANumJ((0 to r.nextInt(6)).map(_ => (0 to r.nextInt(7)).map(_ => genDbl(r)).toArray).toArray)
 
-  val fish = Array("", "salmon", "cod", "herring", "halibut", "perch", "minnow", "bass", "trout", "pike")
+  def genArrJ(r: R, depth: Int): ArrJ =
+    if (depth > 5) ArrJ.empty
+    else {
+      var arrj = ArrJ.empty
+      var regen = true
+      while (regen) {
+        // Don't generate things that are just a numeric array--those should be ANumJ or AANumJ
+        val arrj = ArrJ((1 to r.nextInt(6)).map(_ => genJSON(r,depth)).toArray)
+        if (arrj.values.forall{ case NullJ => true; case _: NumJ => true; case _ => false }) regen = true
+        else if (arrj.values.forall{ case _: ANumJ => true; case _ => false }) regen = true
+        else regen = false
+      }
+      arrj
+    }
+
+  def genObjJ(r: R, depth: Int): ObjJ =
+    if (depth > 5) ObjJ.empty
+    else ObjJ(
+      (1 to r.nextInt(6)).map{ _ => 
+        r.nextInt(3) match {
+          case 0 => genFish(r) -> (genJSON(r, depth) :: Nil)
+          case 1 => ("@" + genFish(r)) -> (1 to math.floor(1.2 + r.nextDouble).toInt).map(_ => genJSON(r, depth)).toList
+          case _ => ("q" * (1 + r.nextInt(12)) -> ((r.nextInt(2) match { case 0 => genANumJ(r); case _ => genAANumJ(r) }) :: Nil))
+        }
+      }.toMap
+    )
+
+  def genJSON(r: R, depth: Int): JSON = if (depth > 5) NullJ else r.nextInt(10) match {
+    case 0 => NullJ
+    case 1 => if (r.nextBoolean) TrueJ else FalseJ
+    case 2 => StrJ(genFish(r))
+    case 3 => NumJ(r.nextInt(5) match { case 0 => Double.PositiveInfinity; case 1 => Double.NegativeInfinity; case _ => Double.NaN })
+    case 4 => NumJ(r.nextDouble - 0.5)
+    case 5 => genANumJ(r)
+    case 6 => genAANumJ(r)
+    case 7 => genArrJ(r, depth + 1)
+    case _ => genObjJ(r, depth + 1)
+  }
+
+  def genCustom(r: R): ObjJ = genObjJ(r, 0) match { case ObjJ(kvs) => ObjJ(kvs.map{ case (k, vs) => (if (k startsWith "@") k else "@"+k) -> vs }) }
+
+  val fish = Array("", "", "", "salmon", "cod", "herring", "halibut", "perch", "minnow", "bass", "trout", "pike")
   def genFish(r: R) = fish(r.nextInt(fish.length))
 
-  def genLab(r: R): Laboratory = ???
+  def genLab(r: R): Laboratory = Iterator.continually(Laboratory(genFish(r), genFish(r), genFish(r), genCustom(r))).dropWhile(_ == Laboratory.empty).next
 
-  def genLDT(r: R): (java.time.LocalDateTime, String) = ???
+  def genLDT(r: R): (java.time.LocalDateTime, String) = (
+    { 
+      val now = java.time.LocalDateTime.now
+      r.nextInt(3) match { case 0 => now.minusNanos(r.nextInt(100000)*1000000L); case 1 => now.minusSeconds(r.nextInt(10000000)); case _ => now }
+    },
+    r.nextInt(4) match { case 0 => "Z"; case 1 => "+08:00"; case _ => "" }
+  )
 
-  def genTemp(r: R): Temperature = ???
+  def genTemp(r: R): Temperature = Iterator.continually{ 
+    Temperature(
+      r.nextInt(2) match { case 0 => Double.NaN; case _ => 273.15 + 33*r.nextDouble },
+      r.nextInt(2) match { case 0 => Double.NaN; case _ => 273.15 + 33*r.nextDouble },
+      genCustom(r)
+    )
+  }.dropWhile(x => x.experimental.isNaN && x.cultivation.isNaN && x.custom.keyvals.isEmpty).next
 
-  def genArena(r: R): Arena = ???
+  def genArena(r: R): Arena = Iterator.continually{
+    Arena(
+      genFish(r),
+      {
+        val a, b = (r.nextInt(100000)+100)/1000.0
+        r.nextInt(4) match { case 0 => Right(a); case 1 => Left((a, a)); case 2 => Left((a, b)); case _ => Right(Double.NaN) }
+      },
+      genCustom(r)
+    )
+  }.dropWhile(x => x.kind.isEmpty && x.diameter.fold(y => y._1.isNaN && y._2.isNaN, _.isNaN) && x.custom.keyvals.isEmpty).next
 
   def genDur(r: R): java.time.Duration = r.nextBoolean match {
     case false => java.time.Duration.ofMillis(r.nextInt(1000))
     case true => java.time.Duration.ofSeconds(r.nextInt(100))
   }
 
-  def genSoft(r: R): Software = Software(genFish(r), genFish(r), Vector.fill(r.nextInt(4))(genFish(r)).toSet, genCustom(r))
+  def genSoft(r: R): Software = Iterator.continually{
+    Software(genFish(r), genFish(r), Vector.fill(r.nextInt(4))("@" + genFish(r)).toSet, genCustom(r))
+    }.dropWhile(x => x.name.isEmpty && x.version.isEmpty && x.featureID.isEmpty && x.custom.keyvals.isEmpty).next
 
   def genJson(r: R): JSON = genJSON(r, 0)
 
@@ -302,7 +410,7 @@ class TestWcon {
   )
 
   def genUnitMap(r: R): UnitMap = {
-    val dur = r.nextInt(6) match { case 0 => "min"; case 1 => "h"; case 2 => "ms"; case _ => "s" }
+    val dur = r.nextInt(6) match { case 0 => "ms"; case 1 => "h"; case 2 => "min"; case _ => "s" }
     val dist = r.nextInt(6) match { case 0 => "cm"; case 1 => "um"; case 2 => "inch"; case _ => "mm" }
     var m = Map(
       "t" -> units.Units(dur).get,
@@ -317,7 +425,7 @@ class TestWcon {
       val qs = "q" * (r.nextInt(10) + 1)
       m += (qs -> (units.NamedUnits.map(_._2).toArray match { case x => x(r.nextInt(x.length)) }))
     }
-    UnitMap(m, Metadata.emptyObjJ)
+    UnitMap(m, ObjJ.empty)
   }
 
   def genDatum(r: R): Datum = genData(r) match {
@@ -354,4 +462,31 @@ class TestWcon {
   }
 
   def genDataSet(r: R) = DataSet(genMetadata(r), genUnitMap(r), genDataA(r), genFiles(r), genCustom(r))
+
+  @Test
+  def test_OutIn() {
+    val r = new scala.util.Random(1522)
+    for (i <- 1 to 1000) {
+      val ds = genDataSet(r)
+      val ser = ds.toObjJ.toJsons.mkString("\n")
+      val des = Parser(ser) match {
+        case Right(x) => x
+        case Left(x) =>
+          println(ser)
+          println(x)
+          throw new IllegalArgumentException(x)
+      }
+      assertEquals("", same(ds, des) match {
+        case x if x.length > 0 =>
+         println(ser)
+         println("###############################")
+         println(des.toObjJ.toJsons.mkString("\n"))
+         println(x)
+         // println(ds.data(1).fold(_.custom, _.custom).keyvals.get("@halibut").get.map(_.toJson).mkString(" :: "))
+         // println(des.data(1).fold(_.custom, _.custom).keyvals.get("@halibut").get.map(_.toJson).mkString(" :: "))  
+          x
+        case x => x
+      })      
+    }
+  }
 }

@@ -30,11 +30,11 @@ trait JsonOut {
   def toJsons: Vector[Indented] = Vector(Indented(toJson))
 }
 
-sealed trait JSON extends JsonOut {}
+sealed trait JSON extends JsonOut { def kind: String }
 
-case object NullJ extends JSON { def toJson = "null" }
+case object NullJ extends JSON { def kind = "null"; def toJson = "null" }
 
-sealed trait BoolJ extends JSON { def value: Boolean }
+sealed trait BoolJ extends JSON { final def kind = "bool"; def value: Boolean }
 case object TrueJ extends BoolJ { 
   def value = true
   def toJson = "true" 
@@ -45,6 +45,7 @@ case object FalseJ extends BoolJ {
 }
 
 case class StrJ(value: String) extends JSON {
+  final def kind = "str"
   def toJson: String = {
     var n = 0
     var i = 0
@@ -60,14 +61,15 @@ case class StrJ(value: String) extends JSON {
     }
     if (n == i) "\"" + value + "\""
     else {
-      var ac = new Array[Char](n)
+      var ac = new Array[Char](n+2)
       i = 0
-      n = 0
+      n = 1
+      ac(0) = '"'
       while (i < value.length) {
         val c = value.charAt(i)
         if (c >= 32 && c < 127) {
-          if (c != '"' && c != '\\') { ac(n) = '\\'; ac(n+1) = c; n += 2 }
-          else { ac(n) = c; n += 1 }
+          if (c != '"' && c != '\\') { ac(n) = c; n += 1 }
+          else { ac(n) = '\\'; ac(n+1) = c; n += 2 }
         }
         else {
           ac(n) = '\\'
@@ -88,19 +90,22 @@ case class StrJ(value: String) extends JSON {
         }
         i += 1
       }
+      ac(n) = '"'
       new String(ac)
     }
   }
 }
 
 case class NumJ(var value: Double) extends JSON {
+  final def kind = "num"
   // Note--value is var to support unit conversion!
-  def toJson = if (value.isNaN || value.isInfinite) "null" else "%.4f".format(value)
+  def toJson = Dbl.toJson(value)
 }
 
 case class ANumJ(values: Array[Double]) extends JSON {
+  final def kind = "num[]"
   def length = values.length
-  def toJson = values.map(value => if (value.isNaN || value.isInfinite) "null" else "%.4f".format(value)).mkString("[", ", ", "]")
+  def toJson = values.map(value => Dbl.toJson(value)).mkString("[", ", ", "]")
   override def toJsons =
     if (values.length < 20) Vector(Indented(toJson))
     else {
@@ -112,8 +117,9 @@ case class ANumJ(values: Array[Double]) extends JSON {
         var sb = new StringBuilder
         while (i < k && i < values.length) {
           val vi = values(i)
-          sb ++= (if (vi.isNaN || vi.isInfinite) "null" else "%.4f".format(vi))
+          sb ++= Dbl.toJson(vi)
           if (i+1 < values.length) sb ++= ", "
+          i += 1
         }
         if (k-i < 20) vb += Indented(sb.result()).in(2)
       }
@@ -121,7 +127,14 @@ case class ANumJ(values: Array[Double]) extends JSON {
       vb.result()
     }
 }
+object ANumJ {
+  def empty = new ANumJ(emptyAD)
+  val emptyAD = new Array[Double](0)
+  val emptyAF = new Array[Float](0)
+}
+
 case class AANumJ(valuess: Array[Array[Double]]) extends JSON {
+  final def kind = "num[][]"
   def length = valuess.length
   def toJson = valuess.map(values => ANumJ(values).toJson).mkString("[ ", ", ", " ]")
   override def toJsons = {
@@ -136,7 +149,14 @@ case class AANumJ(valuess: Array[Array[Double]]) extends JSON {
     vb.result()
   }
 }
+object AANumJ {
+  def empty = new AANumJ(emptyAAD)
+  val emptyAAD = new Array[Array[Double]](0)
+  val emptyAAF = new Array[Array[Float]](0)
+}
+
 case class ArrJ(values: Array[JSON]) extends JSON {
+  final def kind = "arr"
   def length = values.length
   def toJson = values.map(_.toJson).mkString("[ ", ", ", "]")
   override def toJsons: Vector[Indented] = {
@@ -154,10 +174,17 @@ case class ArrJ(values: Array[JSON]) extends JSON {
         if (!jt.hasNext && it.hasNext) vb += x.textFn(_ + ",") else vb += x
       }
     }
+    vb += Indented("]")
     vb.result()
   }
 }
+object ArrJ {
+  def empty = new ArrJ(emptyAJ)
+  val emptyAJ = new Array[JSON](0)
+}
+
 case class ObjJ(keyvals: Map[String, List[JSON]]) extends JSON {
+  final def kind = "obj"
   def isEmpty = keyvals.isEmpty
   def toJson = keyvals.toVector.sortBy(_._1).flatMap{ case (k,vs) => vs.map(v => "\"" + k + "\": " + v.toJson) }.mkString("{ ", ", ", " }")
   override def toJsons = {
@@ -197,7 +224,12 @@ case class ObjJ(keyvals: Map[String, List[JSON]]) extends JSON {
     }
   }
 }
+object ObjJ {
+  def empty = new ObjJ(Map.empty[String, List[JSON]])
+}
+
 case class TextJ(unparsed: String) extends JSON {
+  final def kind = "txt"
   def toJson = unparsed
 }
 
@@ -227,10 +259,10 @@ object Text {
 
   val Num = ("-".? ~ ("0" ~! Pass | Digits) ~! ("." ~ Digits).? ~ (CharIn("eE") ~ CharIn("+-").? ~ Digits).?)
 
-  val Arr = P( "[" ~ W(Val.rep(sep = W(","))) ~ "]" )
+  val Arr = P( "[" ~ W(Val.rep(sep = W("," ~! Pass))) ~! W("]") )
 
   val KeyVal = P( Str ~ W(":") ~! Val )
-  val Obj = P( "{" ~ W(KeyVal.rep(sep = W(","))) ~ "}" )
+  val Obj = P( "{" ~ W(KeyVal.rep(sep = W("," ~! Pass))) ~! W("}") )
 
   val Val: P[Unit] = P( Obj | Arr | Str | Num | Bool | Null )
   val All = W(Val.!)
@@ -250,6 +282,7 @@ object Struct {
 
   val Dbl = 
     Text.Num.!.map(_.toDouble) |
+    Null.map(_ => Double.NaN) |                   // Recommended--use null!
     IgnoreCase("\"nan\"").map(_ => Double.NaN) |  // Not recommended, but valid JSON
     IgnoreCase("nan").!.map(_ => Double.NaN) |    // Not even valid JSON, don't do this
     (IgnoreCase("\"inf") ~ IgnoreCase("inity").? ~ "\"").map(_ => Double.PositiveInfinity) |   // Not recommended, but valid JSON
@@ -259,18 +292,18 @@ object Struct {
 
   val Num = Dbl.map(x => NumJ(x))
 
-  val ADbl = "[" ~ W(Dbl).rep(sep = "," ~! Pass).map(_.toArray) ~ "]"
+  val ADbl = "[" ~ W(Dbl).rep(sep = "," ~! Pass).map(_.toArray) ~! W("]")
 
   val ANum = ADbl.map(x => ANumJ(x))
 
-  val AADbl = "[" ~ W(ADbl).rep(1, sep = "," ~! Pass).map(_.toArray) ~ "]"
+  val AADbl = "[" ~ W(ADbl).rep(1, sep = "," ~! Pass).map(_.toArray) ~! W("]")
 
   val AANum = AADbl.map(x => AANumJ(x))
 
-  val Arr = P("[" ~ All.rep(sep = ",").map(x => ArrJ(x.toArray)) ~ "]")
+  val Arr = P("[" ~ All.rep(sep = "," ~! Pass).map(x => ArrJ(x.toArray)) ~! W("]"))
 
-  val KeyVal = P(W(Str.map(_.value) ~ W(":") ~! Val))
-  val Obj = "{" ~ KeyVal.rep(sep = ",").map(x => ObjJ(x.groupBy(_._1).map{ case (k,xs) => k -> xs.map(_._2).toList })) ~ "}"
+  val KeyVal = P(W(Str.map(_.value) ~! W(":") ~! Val))
+  val Obj = "{" ~ KeyVal.rep(sep = "," ~! Pass).map(x => ObjJ(x.groupBy(_._1).map{ case (k,xs) => k -> xs.map(_._2).toList })) ~! W("}")
 
   val Val: P[JSON] = P( Obj | NoCut(ANum) | NoCut(AANum) | Arr | Str | Num | Bool | Null )
 
@@ -281,6 +314,20 @@ object Dbl {
   private val someNaN = Some(Double.NaN)
   private val somePosInf = Some(Double.PositiveInfinity)
   private val someNegInf = Some(Double.NegativeInfinity)
+
+  def toJson(d: Double): String =
+    if (d.isNaN || d.isInfinite) "null"
+    else if (d == 0) "0"
+    else math.abs(d) match {
+      case x if x > Long.MaxValue => "%e".format(d)
+      case x if x > 1e7 => d.toLong.toString
+      case x if x > 10 => "%.3f".format(d)
+      case x if x > 1 => "%.4f".format(d)
+      case x if x > 0.1 => "%.5f".format(d)
+      case x if x > 1e-3  => "%.7f".format(d)
+      case x if x > 1e-5 => "%.9f".format(d)
+      case x => "%7.4e".format(d)
+    }
 
   def unapply(j: JSON): Option[Double] = j match {
     case NumJ(d) => Some(d)
