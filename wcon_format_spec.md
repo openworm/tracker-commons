@@ -1,8 +1,8 @@
 # Introduction
 
-WCON (Wormtracker Commons object notation) is a text-based data interchange format that is a constrained subset of JSON (see http://www.json.org/ for details).  It is designed to be both human and machine readable and to facilitate data exchange and inter-operability for worm tracking data that is independent of platform and the language used for implementation.  Our hope is that working in a common format will also encourage code sharing and development within the community.
+WCON (Worm tracker Commons Object Notation) is a text-based data interchange format for *C. elegans* trackers.  It is a constrained subset of [JSON](http://www.json.org/).  It is designed to be both human and machine readable and to facilitate data exchange and inter-operability for worm tracking data that is independent of platform and the language used for implementation.  Our hope is that working in a common format will also encourage code sharing and development within the community.
 
-WCON has a minimal core description so that the basic data from a tracking experiment can be parsed by any software that is WCON compatible regardless of resolution or whether the file is from a single- or multi-worm tracker.  At the same time, we recognise that most groups that develop and use worm trackers have particular features they are interested in that can depend on the specifics of their experiments.  We have included recommendations for how such custom features should be included that can accommodate a wide range of custom features while preserving interchange of the basic tracking data.  Therefore, like JSON itself, we expect other lab- or tracker-specific documentation to refer to this standard in introducing restricted formats.
+WCON has a minimal core description so that the basic data from a tracking experiment can be parsed by any software that is WCON-compatible, regardless of resolution or whether the file is from a single- or multi-worm tracker.  At the same time, we recognise that most groups that develop and use worm trackers have particular features they are interested in that can depend on the specifics of their experiments.  We have included recommendations for how such custom features should be included that can accommodate a wide range of custom features while preserving interchange of the basic tracking data.  Therefore, like JSON itself, we expect other lab- or tracker-specific documentation to refer to this standard in introducing restricted formats.
 
 
 ## Basic implementation
@@ -23,7 +23,7 @@ A particular value may be _required_ or _optional_.  Optional values may simply 
 
 ### File structure
 
-A WCON file contains a single JSON object with a minimum of two key-value pairs: `units` and `data`.  The value for `units` is an object that defines the temporal and spatial dimensions of the experiment as strings.  `data` specifies the tracking information, including time and position information, for the animal or animals tarcked.
+A WCON file contains a single JSON object with a minimum of two key-value pairs: `units` and `data`.  The value for `units` is an object that defines the temporal and spatial dimensions of the experiment as strings.  `data` specifies the tracking information, including time and position information, for the animal or animals tracked.
 
 We recommend that you include the key-value pair `"tracker-commons":true` as the first entry in the WCON file to aid easy identification.  A WCON parser should not rely on the presence of this tag, so you may omit it (or not put it first) if you wish, but if the tag is present and the file is not valid WCON, a parser may choose to give more detailed error messages.
 
@@ -57,7 +57,7 @@ Any numeric quantity followed on a per-animal or per-timepoint basis must have i
 }
 ```
 
-We recommend that time values be in seconds (specified as one of `"s"`, `"second"`, or `"seconds"`), and that spatial values be in millimeters (specified as one of `"mm"`, `"millimeter"`, or `"millimeters"`) or higher-dimensional versions thereof as appropriate (e.g. `"mm^2"`).
+We recommend that time values be in seconds (specified as one of `"s"`, `"second"`, or `"seconds"`), and that spatial values be in millimetres (specified as one of `"mm"`, `"millimetre"`, or `"millimetres"`) or higher-dimensional versions thereof as appropriate (e.g. `"mm^2"`).
 
 `"units"` is required and must be single-valued.
 
@@ -121,7 +121,7 @@ If possible, the best solution is to simply leave out non-finite numbers.  Howev
 
 ## Including custom features
 
-Even seemingly primitive features such as speed can have many variants (centroid vs. midbody vs. head; calculated over a window vs. frame-by-frame; etc).  Therefore, having a standard feature called "speed" is not sufficiently flexible for wide use.  Instead, custom features are included in a WCON file using group-specific tags that are easily identifiable by `@` followed by a unique identifier.  For software developed in worm labs, use the lab's strain designation as a unique identifier.  A current list of lab strain designations (the first code in capital letters) is available from the CGC (http://cbs.umn.edu/cgc/lab-code) or WormBase (https://www.wormbase.org/resources/laboratory).  If a single group has multiple incompatible feature sets, the strain designation can be followed by a suffix separated from the lab code by a non-letter character (e.g. `"@CF Vikram"` or `"@OMG_1.5"`).  For groups without a strain designation, choose an identifier that is not already on the list of lab strain identifiers.
+Even seemingly primitive features such as speed can have many variants (centroid vs. midbody vs. head; calculated over a window vs. frame-by-frame; etc.)  Therefore, having a standard feature called "speed" is not sufficiently flexible for wide use.  Instead, custom features are included in a WCON file using group-specific tags that are easily identifiable by `@` followed by a unique identifier.  For software developed in worm labs, use the lab's strain designation as a unique identifier.  A current list of lab strain designations (the first code in capital letters) is available from the CGC (http://cbs.umn.edu/cgc/lab-code) or WormBase (https://www.wormbase.org/resources/laboratory).  If a single group has multiple incompatible feature sets, the strain designation can be followed by a suffix separated from the lab code by a non-letter character (e.g. `"@CF Vikram"` or `"@OMG_1.5"`).  For groups without a strain designation, choose an identifier that is not already on the list of lab strain identifiers.
 
 A WCON file with three custom features:
 
@@ -152,7 +152,11 @@ For features that describe an entire plate rather than properties of individual 
     "tracker-commons":true,
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[
-        { "id":1,
+        "@OMG":{
+               "feature_names":["speed", "curvature", "width"],
+               "feature_units":["mm/s", "1/mm", "mm"]
+        },
+		{ "id":1,
           "t":1.3,
           "x":[1215.11, ...],
           "y":[234.89, ...],
@@ -173,7 +177,7 @@ It is expected that users will take advantage of the flexibility of the WCON spe
 
 ### Units
 
-We recommend sticking to seconds and millimeters for time and distance, as denoting those with `"s"` and `"mm"` to make automated parsing as easy as possible.  However, we recognize that these units may not always be natural, so the following should be recognized as common variants for units.
+We recommend sticking to seconds and millimetres for time and distance, as denoting those with `"s"` and `"mm"` to make automated parsing as easy as possible.  However, we recognize that these units may not always be natural, so the following should be recognized as common variants for units.
 
 A WCON parser should, if it's going to interpret units, handle the following SI prefixes:
 
@@ -188,12 +192,12 @@ _Note: JSON must be unicode, so the micro-symbol must be encoded as unicode.  Th
 
 The following units should be handled:
 
-| Unit   | Abbrevations | | Unit    | Abbreviations | | Unit    | Abbrevations |
-|--------|--------------|-|---------|---------------|-|---------|--------------|
-| second | s sec        | | meter   | m             | | celsius | C            |
-| minute | m min        | | inch    | in            | | centigrade |           |
-| hour   | h            | | micron  |               | | fahrenheit | F         |
-| day    | d            | |         |               | | percent | %            |
+| Unit   | Abbrevations | | Unit    | Abbreviations | | Unit       | Abbrevations |
+|--------|--------------|-|---------|---------------|-|------------|--------------|
+| second | s sec        | | metre   | m             | | celsius    | C            |
+| minute | m min        | | inch    | in            | | centigrade |              |
+| hour   | h            | | micron  |               | | fahrenheit | F            |
+| day    | d            | |         |               | | percent    | %            |
 
 Abbreviated and full versions must not be mixed.  For instance, both `"ms"` and `"milliseconds"` are okay, but `"msecond"` and `"millis"` are not.  Words may be pluralized or not.  Capitalization is significant: `"mM"` and `"Mm"` are not the same!
 
