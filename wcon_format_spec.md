@@ -181,12 +181,15 @@ We recommend sticking to seconds and millimetres for time and distance, as denot
 
 A WCON parser should, if it's going to interpret units, handle the following SI prefixes:
 
-| Prefix   | Abbreviations | Value     | | Prefix     | Abbrevations  | Value |
-|----------|---------------|-----------|-|------------|---------------|-------|
-| centi    | c       | 10<sup>-2</sup> | |            |      |                |
-| milli    | m       | 10<sup>-3</sup> | | kilo       | k K  | 10<sup>3</sup> |
-| micro    | u µ μ   | 10<sup>-6</sup> | | mega       | M    | 10<sup>6</sup> |
-| nano     | n       | 10<sup>-9</sup> | | giga       | G    | 10<sup>9</sup> |
+| Prefix   | Abbreviations | Value     |
+| -------- | ------------- | --------- |
+| centi    | c       | 10<sup>-2</sup> |
+| milli    | m       | 10<sup>-3</sup> | 
+| micro    | u µ μ   | 10<sup>-6</sup> |
+| nano     | n       | 10<sup>-9</sup> |
+| kilo     | k K     | 10<sup>3</sup>  |
+| mega     | M       | 10<sup>6</sup>  |
+| giga     | G       | 10<sup>9</sup>  |
 
 _Note: JSON must be unicode, so the micro-symbol must be encoded as unicode.  There are two choices: "micro symbol" `U+00B5` or "greek mu" `U+03BC`.  Both should be handled.  Some software does not understand unicode, however, so writing `u` is preferred._
 
