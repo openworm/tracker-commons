@@ -195,13 +195,20 @@ _Note: JSON must be unicode, so the micro-symbol must be encoded as unicode.  Th
 
 The following units should be handled:
 
-| Unit   | Abbrevations | | Unit    | Abbreviations | | Unit       | Abbrevations |
-|--------|--------------|-|---------|---------------|-|------------|--------------|
-| second | s sec        | | metre   | m             | | celsius    | C            |
-| minute | m min        | | inch    | in            | | centigrade |              |
-| hour   | h            | | micron  |               | | fahrenheit | F            |
-| day    | d            | |         |               | | percent    | %            |
-
+| Unit       | Abbrevations |
+| ---------- | ------------ |
+| second     | s sec        |
+| minute     | m min        |
+| hour       | h            |
+| day        | d            |
+| metre      | m            |
+| inch       | in           |
+| micron     |              |
+| fahrenheit | F            |
+| centigrade |              |
+| celsius    | C            |
+| percent    | %            |
+ 
 Abbreviated and full versions must not be mixed.  For instance, both `"ms"` and `"milliseconds"` are okay, but `"msecond"` and `"millis"` are not.  Words may be pluralized or not.  Capitalization is significant: `"mM"` and `"Mm"` are not the same!
 
 If a numeric quantity is dimensionless, specify the units as an empty string `""`.
