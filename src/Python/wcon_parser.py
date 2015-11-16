@@ -22,6 +22,16 @@ assert()
 """
 
 import json
+import numpy as np
+import pandas as pd
+import scipy.constants
+
+def C2C(x):
+    """
+    An identity function, to convert Celsius to Celsius
+
+    """
+    return x
 
 
 def isnamedtuple(obj):
@@ -123,12 +133,13 @@ class JSON_Serializer():
 
 
 
-class WCONWorm(JSON_Serializer):
+class WCONWorm_old(JSON_Serializer):
 
     @classmethod
     def load(cls, JSON_path):
         """
-        Factory method to create a WCONWorm instance
+        Factory method to create a WCONWorm_old instance
+
         """
         w = cls()
         w.load_from_JSON(JSON_path)
@@ -136,20 +147,212 @@ class WCONWorm(JSON_Serializer):
         return w
 
 
-class WCONWorm1(JSON_Serializer):
+class MeasurementUnit():
+    temporal_units = {'s':1, 'sec':1, 'second':1, 'seconds':1,
+                      'h':60*60, 'hr':60*60, 'hour':60*60, 'hours':60*60,
+                      'd':60*60*24, 'day':60*60*24, 'days':60*60*24}
 
+    spatial_units = {'i': 0.0254, 'in': 0.0254, 'inch': 0.0254, 'inches': 0.0254,
+                     'm': 1, 'metre': 1, 'meter': 1, 'metres': 1, 'meters': 1}
+
+
+
+    temperature_units = {'F': scipy.constants.F2C,
+                         'fahrenheit': scipy.constants.F2C,
+                         'K': scipy.constants.K2C,
+                         'kelvin': scipy.constants.K2C,
+                         'C': C2C,
+                         'celsius': C2C,
+                         'centigrade': C2C}
+
+    dimensionless_units = {'percent': 0.01, '%': 0.01, 
+                           '': 1}
+
+    SI_prefixes = {'': 1,
+                   'c': 1e-2, 'centi': 1e-2,
+                   'm': 1e-3, 'milli': 1e-3,
+                   # Two ways to get the Greek Mu character in unicode:
+                   'u': 1e-6, '\u00B5': 1e-6, '\u03BC': 1e-6, 'micro': 1e-6,
+                   'n': 1e-9, 'nano': 1e-9,
+                   'k': 1e+3, 'K': 1e+3, 'kilo': 1e+3,
+                   'M': 1e+6, 'mega': 1e+6,
+                   'G': 1e+9, 'giga': 1e+9}
+
+    def __init__(self, unit_string):
+        """
+        Standard units: 
+           time: 's', 
+           space: 'um', 
+           temperature: 'C'
+
+        """
+        self.unit_string = unit_string
+
+        all_suffixes = (list(self.temporal_units.keys()) + 
+                        list(self.spatial_units.keys()) + 
+                        list(self.temperature_units.keys()) +
+                        list(self.dimensionless_units.keys()))
+
+        all_prefixes = list(self.SI_prefixes.keys())
+
+        # We can't have any ambiguous unit names or SI prefixes, so first we 
+        # confirm that there are no duplicate unit names
+        assert(len(all_suffixes) == len(set(all_suffixes)))
+        assert(len(all_prefixes) == len(set(all_prefixes)))
+
+        # CASE 1: unit_string is just a suffix
+        if unit_string in all_suffixes:
+            # e.g. Careful to avoid ripping off the 'm' of 'metre' 
+            #      thinking it's the SI prefix milli, leaving us with 
+            #      a suffix of 'etre', which will not be found.
+            prefix = ''
+            suffix = unit_string
+        else:
+            # CASE 2: unit_string starts with an SI prefix
+            # We must have a prefix, otherwise the unit_string is invalid
+            found_prefix = False
+            for candidate_prefix in list(self.SI_prefixes.keys()):
+                # If this candidate_prefix is at the beginning of the 
+                # unit_string, we are done
+                if unit_string.find(candidate_prefix) == 0:
+                    prefix = candidate_prefix
+                    suffix = unit_string[len(prefix):]
+                    found_prefix = True
+        
+            # CASE 3: unit_string is invalid.  
+            # (It not a valid suffix, nor does it start with a valid prefix)
+            if not found_prefix:
+                raise AssertionError("Error: '" + unit_string + "' is not a "
+                                     "valid unit")
+        
+        # Now obtain the standard form of the prefix & suffix, and 
+        # the conversion factor needed.
+        if suffix in list(self.temporal_units.keys()):
+            self.standard_prefix = ''
+            self.standard_suffix = 's'
+            suffix_func = lambda x: x * self.temporal_units[suffix]
+
+        elif suffix in list(self.spatial_units.keys()):
+            self.standard_prefix = 'u'
+            self.standard_suffix = 'm'
+            suffix_func = lambda x: x * self.spatial_units[suffix]
+
+        elif suffix in list(self.temperature_units.keys()):
+            self.standard_prefix = ''
+            self.standard_suffix = 'C'
+            suffix_func = lambda x: self.temperature_units[suffix](x)
+
+        else:
+            self.standard_prefix = ''
+            self.standard_suffix = ''
+            suffix_func = lambda x: x * self.dimensionless_units[suffix]
+
+        # Obtain the conversion it will take to make the units standard
+        self.prefix_conversion_constant = \
+            self.SI_prefix_conversion_constant(prefix, self.standard_prefix)
+
+        self.conversion_func = \
+            lambda x: suffix_func(x) * self.prefix_conversion_constant
+    
+        self.prefix = prefix
+        self.suffix = suffix
+
+    @property
+    def standard_unit_string(self):
+        """
+        Return one of 's', 'um', 'C', or '' (for dimensionless)
+
+        """
+        return self.standard_prefix + self.standard_suffix
+        
+    def convert_to_standard_value(self, value):
+        """
+        Depending on the unit:
+        If time, use 's' (seconds)
+        If length, use 'u' (microns)
+        If temperature, use 'c' (celsius)
+        If percent, just convert the value to be dimensionless 
+            (i.e. divide by 100)
+        If dimensionless, return the value again
+        
+        Parameters
+        ------------
+        value: float
+            The value to be converted
+        
+        Returns
+        ------------
+        standard_value: float
+        
+        """
+        return self.conversion_func(value)
+ 
+    def __eq__(self, other):
+        return self.standard_unit_string == other.standard_unit_string
+
+    def __ne__(self, other):
+        return self.standard_unit_string != other.standard_unit_string
+ 
+    def SI_prefix_conversion_constant(self, from_prefix, to_prefix='u'):
+        """
+        Get the conversion constant to convert from any SI prefix to any other
+    
+        Actually converts inches, which are not technically SI
+    
+        """
+        if from_prefix is None:
+            from_prefix = ''
+        # Make sure we are using valid prefixes
+        for prefix in [from_prefix, to_prefix]:
+            if not prefix in self.SI_prefixes:
+                raise AssertionError("Error: " + prefix + " is not a valid "
+                                     "SI prefix")
+    
+        return self.SI_prefixes[from_prefix] / self.SI_prefixes[to_prefix]       
+
+
+class WCONWorm():
+
+    temporal_units = ['s', 'sec', 'second', 'seconds',
+                      'm', 'min', 'minute', 'minutes',
+                      'h', 'hr', 'hour', 'hours',
+                      'd', 'day', 'days']
+    
     @classmethod
     def load(cls, JSON_path):
         """
         Factory method to create a WCONWorm instance
+
         """
         w = cls()
-        w.load_from_JSON(JSON_path)
+        with open(JSON_path, 'r') as infile:
+            serialized_data = infile.read()
         
+        root = json.loads(serialized_data, object_hook=restore)
+    
+        if not ('tracker-commons' in root and root['tracker-commons']):
+            raise AssertionError("'tracker-commons':true was not present")
+    
+        # Check for empty tracker file?
+    
+        if not ('units' in root):
+            raise AssertionError("'units' is required")
+        else:
+            w.units = root['units']
+
+        if 'metadata' in root:
+            # TODO
+            pass
+        
+        if 'data' in root:
+            # TODO
+            pass
+
         return w
 
+    
 
-w1 = WCONWorm.load('../../tests/hello_world.wcon')
+JSON_path = '../../tests/hello_world.wcon'
+#w1 = WCONWorm_old.load(JSON_path)
+w1 = WCONWorm.load(JSON_path)
 
-import pdb
-pdb.set_trace()
