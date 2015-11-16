@@ -153,7 +153,8 @@ class MeasurementUnit():
                       'd':60*60*24, 'day':60*60*24, 'days':60*60*24}
 
     spatial_units = {'i': 0.0254, 'in': 0.0254, 'inch': 0.0254, 'inches': 0.0254,
-                     'm': 1, 'metre': 1, 'meter': 1, 'metres': 1, 'meters': 1}
+                     'm': 1, 'metre': 1, 'meter': 1, 'metres': 1, 'meters': 1,
+                     'micron': 1e-6}
 
     temperature_units = {'F': scipy.constants.F2C,
                          'fahrenheit': scipy.constants.F2C,
