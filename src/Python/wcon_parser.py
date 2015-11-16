@@ -155,8 +155,6 @@ class MeasurementUnit():
     spatial_units = {'i': 0.0254, 'in': 0.0254, 'inch': 0.0254, 'inches': 0.0254,
                      'm': 1, 'metre': 1, 'meter': 1, 'metres': 1, 'meters': 1}
 
-
-
     temperature_units = {'F': scipy.constants.F2C,
                          'fahrenheit': scipy.constants.F2C,
                          'K': scipy.constants.K2C,
@@ -211,7 +209,11 @@ class MeasurementUnit():
             # CASE 2: unit_string starts with an SI prefix
             # We must have a prefix, otherwise the unit_string is invalid
             found_prefix = False
-            for candidate_prefix in list(self.SI_prefixes.keys()):
+            candidate_prefixes = list(self.SI_prefixes.keys())
+            # This prefix will apply in all cases so get rid of it
+            candidate_prefixes.remove('')
+
+            for candidate_prefix in candidate_prefixes:
                 # If this candidate_prefix is at the beginning of the 
                 # unit_string, we are done
                 if unit_string.find(candidate_prefix) == 0:
@@ -221,7 +223,7 @@ class MeasurementUnit():
         
             # CASE 3: unit_string is invalid.  
             # (It not a valid suffix, nor does it start with a valid prefix)
-            if not found_prefix:
+            if not found_prefix or not suffix in all_suffixes:
                 raise AssertionError("Error: '" + unit_string + "' is not a "
                                      "valid unit")
         
@@ -288,10 +290,18 @@ class MeasurementUnit():
         return self.conversion_func(value)
  
     def __eq__(self, other):
-        return self.standard_unit_string == other.standard_unit_string
+        """
+        Returns if the units are the same.
+        
+        That is 'm' and 'metre' will return True
+        But 'um' and 'm' will return False
+        """
+        # Any value would work except the point where Celsius == Fahrenheit,
+        # i.e. 0 or 32
+        return self.conversion_func(10) == other.conversion_func(10)
 
     def __ne__(self, other):
-        return self.standard_unit_string != other.standard_unit_string
+        return self.conversion_func(10) != other.conversion_func(10)
  
     def SI_prefix_conversion_constant(self, from_prefix, to_prefix='u'):
         """
