@@ -211,7 +211,7 @@ class MeasurementUnit():
             # We must have a prefix, otherwise the unit_string is invalid
             found_prefix = False
             candidate_prefixes = list(self.SI_prefixes.keys())
-            # This prefix will apply in all cases so get rid of it
+            # This prefix will always be found so remove it from consideration
             candidate_prefixes.remove('')
 
             for candidate_prefix in candidate_prefixes:
@@ -307,8 +307,6 @@ class MeasurementUnit():
     def SI_prefix_conversion_constant(self, from_prefix, to_prefix='u'):
         """
         Get the conversion constant to convert from any SI prefix to any other
-    
-        Actually converts inches, which are not technically SI
     
         """
         if from_prefix is None:
