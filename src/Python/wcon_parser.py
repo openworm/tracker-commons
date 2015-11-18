@@ -149,6 +149,7 @@ class WCONWorm_old(JSON_Serializer):
 
 class MeasurementUnit():
     temporal_units = {'s':1, 'sec':1, 'second':1, 'seconds':1,
+                             'min':60*60, 'minute':60*60, 'minutes':60*60,
                       'h':60*60, 'hr':60*60, 'hour':60*60, 'hours':60*60,
                       'd':60*60*24, 'day':60*60*24, 'days':60*60*24}
 
@@ -187,6 +188,73 @@ class MeasurementUnit():
         """
         self.unit_string = unit_string
 
+        self.prefix, self.suffix = self.parse_unit_string(unit_string)
+        
+        # CHECK: (from the WCON spec:)
+        # Abbreviated and full versions must not be mixed. 
+        # For instance, both "ms" and "milliseconds" are okay, but 
+        #                    "msecond" and "millis" are not.
+        plen = len(self.prefix)
+        slen = len(self.suffix)
+        if slen > 3:
+            if (0 < plen < 3) and self.prefix != 'day':
+                raise AssertionError("Error with '" + unit_string +"': "
+                                     "suffix is a full word but prefix "
+                                     "is not.")
+        else:
+            if plen > 3 or self.prefix == 'day':
+                raise AssertionError("Error with '" + unit_string +"': "
+                                     "suffix is an abbreviation but prefix "
+                                     "is the full word.")
+        
+        # Now obtain the standard form of the prefix & suffix, and 
+        # the conversion factor needed.
+        if self.suffix in list(self.temporal_units.keys()):
+            self.standard_prefix = ''
+            self.standard_suffix = 's'
+            suffix_func = lambda x: x * self.temporal_units[self.suffix]
+
+        elif self.suffix in list(self.spatial_units.keys()):
+            self.standard_prefix = 'u'
+            self.standard_suffix = 'm'
+            suffix_func = lambda x: x * self.spatial_units[self.suffix]
+
+        elif self.suffix in list(self.temperature_units.keys()):
+            self.standard_prefix = ''
+            self.standard_suffix = 'C'
+            suffix_func = lambda x: self.temperature_units[self.suffix](x)
+
+        else:
+            self.standard_prefix = ''
+            self.standard_suffix = ''
+            suffix_func = lambda x: x * self.dimensionless_units[self.suffix]
+
+        # Obtain the conversion it will take to make the units standard
+        self.prefix_conversion_constant = \
+            self.SI_prefix_conversion_constant(self.prefix, 
+                                               self.standard_prefix)
+
+        self.conversion_func = \
+            lambda x: suffix_func(x) * self.prefix_conversion_constant
+
+
+    def parse_unit_string(self, unit_string):
+        """
+        Parse a unit_string into a valid prefix and suffix:
+
+            prefix + suffix = unit_string
+        
+        If no prefix / suffix combination works, raise an AssertionError.
+        
+        Parameters
+        -------------
+        unit_string: str
+        
+        Returns
+        -------------
+        (prefix, suffix): A duple of strings
+        
+        """
         all_suffixes = (list(self.temporal_units.keys()) + 
                         list(self.spatial_units.keys()) + 
                         list(self.temperature_units.keys()) +
@@ -209,57 +277,34 @@ class MeasurementUnit():
         else:
             # CASE 2: unit_string starts with an SI prefix
             # We must have a prefix, otherwise the unit_string is invalid
-            found_prefix = False
             candidate_prefixes = list(self.SI_prefixes.keys())
             # This prefix will always be found so remove it from consideration
             candidate_prefixes.remove('')
-
+            # We wish to find the LONGEST prefix at start of unit_string
+            longest_prefix_len = -1
+            
             for candidate_prefix in candidate_prefixes:
-                # If this candidate_prefix is at the beginning of the 
-                # unit_string, we are done
+                # If this prefix isn't at least longer than the current 
+                # longest, there is no point in even considering it.
+                if len(candidate_prefix) <= longest_prefix_len:
+                    continue
+
+                # If we find the candidate prefix at the start of unit_string,
+                # this is our new prefix.
                 if unit_string.find(candidate_prefix) == 0:
                     prefix = candidate_prefix
                     suffix = unit_string[len(prefix):]
-                    found_prefix = True
+                    longest_prefix_len = len(prefix)
         
             # CASE 3: unit_string is invalid.  
             # (It not a valid suffix, nor does it start with a valid prefix)
-            if not found_prefix or not suffix in all_suffixes:
+            if longest_prefix_len == -1 or not suffix in all_suffixes:
                 raise AssertionError("Error: '" + unit_string + "' is not a "
                                      "valid unit")
         
-        # Now obtain the standard form of the prefix & suffix, and 
-        # the conversion factor needed.
-        if suffix in list(self.temporal_units.keys()):
-            self.standard_prefix = ''
-            self.standard_suffix = 's'
-            suffix_func = lambda x: x * self.temporal_units[suffix]
+        return prefix, suffix
 
-        elif suffix in list(self.spatial_units.keys()):
-            self.standard_prefix = 'u'
-            self.standard_suffix = 'm'
-            suffix_func = lambda x: x * self.spatial_units[suffix]
-
-        elif suffix in list(self.temperature_units.keys()):
-            self.standard_prefix = ''
-            self.standard_suffix = 'C'
-            suffix_func = lambda x: self.temperature_units[suffix](x)
-
-        else:
-            self.standard_prefix = ''
-            self.standard_suffix = ''
-            suffix_func = lambda x: x * self.dimensionless_units[suffix]
-
-        # Obtain the conversion it will take to make the units standard
-        self.prefix_conversion_constant = \
-            self.SI_prefix_conversion_constant(prefix, self.standard_prefix)
-
-        self.conversion_func = \
-            lambda x: suffix_func(x) * self.prefix_conversion_constant
     
-        self.prefix = prefix
-        self.suffix = suffix
-
     @property
     def standard_unit_string(self):
         """
