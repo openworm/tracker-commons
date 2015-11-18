@@ -153,7 +153,7 @@ class MeasurementUnit():
                       'h':60*60, 'hr':60*60, 'hour':60*60, 'hours':60*60,
                       'd':60*60*24, 'day':60*60*24, 'days':60*60*24}
 
-    spatial_units = {'i': 0.0254, 'in': 0.0254, 'inch': 0.0254, 'inches': 0.0254,
+    spatial_units = {'in': 0.0254, 'inch': 0.0254, 'inches': 0.0254,
                      'm': 1, 'metre': 1, 'meter': 1, 'metres': 1, 'meters': 1,
                      'micron': 1e-6}
 
@@ -197,7 +197,8 @@ class MeasurementUnit():
         plen = len(self.prefix)
         slen = len(self.suffix)
         if slen > 3:
-            if (0 < plen < 3) and self.prefix != 'day':
+            # (all prefixes <= 3 chars other than 'day' are abbreviations)
+            if (0 < plen <= 3) and self.prefix != 'day':
                 raise AssertionError("Error with '" + unit_string +"': "
                                      "suffix is a full word but prefix "
                                      "is not.")
