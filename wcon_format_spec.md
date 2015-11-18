@@ -210,7 +210,7 @@ The following units should be handled:
 | celsius    | C             |
 | percent    | %             |
  
-Abbreviated and full versions must not be mixed.  For instance, both `"ms"` and `"milliseconds"` are okay, but `"msecond"` and `"millis"` are not.  Words may be pluralized or not.  Capitalization is significant: `"mM"` and `"Mm"` are not the same!
+Abbreviated and full versions must not be mixed.  For instance, both `"ms"` and `"milliseconds"` are okay, but `"msecond"` and `"millis"` are not.  Words may be pluralized or not.  Capitalization is significant: `"mm"` and `"Mm"` are not the same (millimetre vs megametre)!
 
 If a numeric quantity is dimensionless, specify the units as an empty string `""`.
 
