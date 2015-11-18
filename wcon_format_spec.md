@@ -203,9 +203,9 @@ The following units should be handled:
 | day        | d             |
 | metre      | m             |
 | inch       | in            |
-| micron     |               |
+| micron     | *(none)*      |
 | fahrenheit | F             |
-| centigrade |               |
+| centigrade | *(none)*      |
 | kelvin     | K             |
 | celsius    | C             |
 | percent    | %             |
