@@ -206,6 +206,7 @@ The following units should be handled:
 | micron     |              |
 | fahrenheit | F            |
 | centigrade |              |
+| kelvin     | K            |
 | celsius    | C            |
 | percent    | %            |
  
