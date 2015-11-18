@@ -366,6 +366,12 @@ class MeasurementUnit():
         return self.SI_prefixes[from_prefix] / self.SI_prefixes[to_prefix]       
 
 
+def test_measurement_units():
+    assert(MeasurementUnit('mm') == MeasurementUnit('millimetre'))
+    assert(MeasurementUnit('Mm') == MeasurementUnit('megametre'))
+    assert(MeasurementUnit('mm') != MeasurementUnit('Mm'))
+
+
 class WCONWorm():
 
     temporal_units = ['s', 'sec', 'second', 'seconds',
