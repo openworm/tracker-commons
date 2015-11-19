@@ -182,8 +182,7 @@ class WCONWorm():
         # Check for empty tracker file?
     
         if not ('units' in root):
-            pass
-            #raise AssertionError("'units' is required")
+            raise AssertionError("'units' is required")
         else:
             w.units = root['units']
             
