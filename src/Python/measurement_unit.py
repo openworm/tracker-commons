@@ -128,6 +128,19 @@ class MeasurementUnit():
         
         self._obtain_canonical_representation()
         
+    def __repr__(self):
+        """
+        Pretty-print a nice summary of this unit.
+
+        """
+        unit_types = {'m': 'spatial', 's': 'temporal', 'C': 'temperature',
+                      '': 'dimensionless'}
+
+        cur_type = unit_types[self.canonical_suffix]
+        
+        return ("MeasurementUnit type:" + cur_type + " " +
+                "original form:'" + self.unit_string + "' canonical "
+                "form:'" + self.canonical_unit_string + "'")
 
     def _validate_no_mixed_abbreviations(self):
         """
