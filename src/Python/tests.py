@@ -4,9 +4,11 @@ Unit tests for the Python WCON parser
 
 """
 import unittest
+from io import StringIO
 
 from measurement_unit import MeasurementUnit
-    
+from wcon_parser import WCONWorm
+
 class TestMeasurementUnit(unittest.TestCase):
     def test(self):
         self.assertTrue(MeasurementUnit('mm') == MeasurementUnit('millimetre'))
@@ -44,6 +46,27 @@ class TestMeasurementUnit(unittest.TestCase):
         # This form, on the other hand, should be fine, since both prefix
         # and suffix are long-form.
         MeasurementUnit('milliseconds')
+
+
+class TestWCONParser(unittest.TestCase):
+    def test(self):
+        with self.assertRaises(ValueError):
+            # The JSON parser shouldn't accept this as valid JSON
+            # "ValueError: Expecting ',' delimiter: line 1 column 25 (char 24)"
+            WCONWorm.load(StringIO('{"tracker-commons":blahblah}'))
+        
+        # Errors because "tracker-commons":true is not present
+        with self.assertRaises(AssertionError):
+            WCONWorm.load(StringIO('{"tracker-blah":true}'))
+        with self.assertRaises(AssertionError):
+            WCONWorm.load(StringIO('{"tracker-commons":false}'))
+
+        # This should fail because "units" is required
+        with self.assertRaises(AssertionError):
+            WCONWorm.load(StringIO('{"tracker-commons":true}'))
+
+        # The smallest valid WCON file
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}}'))
 
 
 

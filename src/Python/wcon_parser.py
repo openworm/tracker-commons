@@ -142,26 +142,48 @@ class WCONWorm_old(JSON_Serializer):
 
 
 class WCONWorm():
+    """
+    A worm as specified by the WCON standard
+
+    Usage
+    -------------
+    # From a file:
+    with open('my_worm.wcon', 'r') as infile:
+        w1 = WCONWorm.load(infile)
+    
+    # From a string literal:
+    from io import StringIO
+    w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}}'))
+    
+    """
 
     @classmethod
-    def load(cls, JSON_path):
+    def load(cls, JSON_stream):
         """
         Factory method to create a WCONWorm instance
+        
+        Parameters
+        -------------
+        JSON_stream: a text stream implementing .read()
+            e.g. an object inheriting from TextIOBase
+        
 
         """
         w = cls()
-        with open(JSON_path, 'r') as infile:
-            serialized_data = infile.read()
+        serialized_data = JSON_stream.read()
         
         root = json.loads(serialized_data, object_hook=restore)
     
+        # TODO: ensure it's the first thing, not just that it's present
+        # if it's not the first thing, raise a warning
         if not ('tracker-commons' in root and root['tracker-commons']):
             raise AssertionError("'tracker-commons':true was not present")
     
         # Check for empty tracker file?
     
         if not ('units' in root):
-            raise AssertionError("'units' is required")
+            pass
+            #raise AssertionError("'units' is required")
         else:
             w.units = root['units']
             
@@ -176,12 +198,17 @@ class WCONWorm():
             # TODO
             pass
 
+        # DEBUG: temporary
+        w.root = root
+
         return w
 
     
 
 JSON_path = '../../tests/hello_world.wcon'
+f = open(JSON_path, 'r')
 #w1 = WCONWorm_old.load(JSON_path)
-w1 = WCONWorm.load(JSON_path)
+with open(JSON_path, 'r') as infile:
+    w1 = WCONWorm.load(infile)
 
 u = MeasurementUnit('cm')
