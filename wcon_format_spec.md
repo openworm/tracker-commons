@@ -198,7 +198,7 @@ The following units should be handled:
 | Unit       | Abbreviations |
 | ---------- | ------------- |
 | second     | s sec         |
-| minute     | m min         |
+| minute     | min           |
 | hour       | h             |
 | day        | d             |
 | metre      | m             |
