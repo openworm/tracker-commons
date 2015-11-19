@@ -164,6 +164,9 @@ class WCONWorm():
             raise AssertionError("'units' is required")
         else:
             w.units = root['units']
+            
+            for key in w.units:
+                w.units[key] = MeasurementUnit(w.units[key])
 
         if 'metadata' in root:
             # TODO
