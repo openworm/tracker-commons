@@ -193,9 +193,28 @@ class WCONWorm():
             # TODO
             pass
         
-        if 'data' in root:
-            # TODO
-            pass
+        if 'data' in root and len(root['data']) > 0:
+            data = root['data']
+
+            # Load data into a Pandas DataFrame
+            # The dataframe will have t as index, and multilevel columns
+            # with id at the first level and all other keys at second level.
+            worm_df = pd.DataFrame()
+
+            time_free_indexes = []
+            timeframes = []
+            for (data_index, data_segment) in enumerate(root['data']):
+                if not 't' in data_segment:
+                    # Grab the locations of the time-free data
+                    time_free_indexes.append(data_index)
+                else:
+                    # Find all time segments, adding them to our dataframe
+                    if(type(data_segment['t']) == list):
+                        timeframes.extend(data_segment['t'])
+                    else:
+                        timeframes.append(data_segment['t'])
+
+            
 
         # DEBUG: temporary
         w.root = root
