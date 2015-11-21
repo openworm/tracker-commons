@@ -203,7 +203,7 @@ class WCONWorm():
 
             time_free_indexes = []
             timeframes = []
-            for (data_index, data_segment) in enumerate(root['data']):
+            for (data_index, data_segment) in enumerate(data):
                 if not 't' in data_segment:
                     # Grab the locations of the time-free data
                     time_free_indexes.append(data_index)
@@ -214,7 +214,18 @@ class WCONWorm():
                     else:
                         timeframes.append(data_segment['t'])
 
-            
+                # Get a list of all ids in data
+                ids = list(set([x['id'] for x in data if 'id' in x]))
+                
+
+                if not 'id' in data_segment:
+                    # PLATE FEATURE
+                    pass
+                else:
+                    # WORM FEATURE
+                    pass
+
+                #list(set([x['id'] for x in w1.root['data'] if 'id' in x]))
 
         # DEBUG: temporary
         w.root = root
