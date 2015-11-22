@@ -156,7 +156,7 @@ For features that describe an entire plate rather than properties of individual 
                "feature_names":["speed", "curvature", "width"],
                "feature_units":["mm/s", "1/mm", "mm"]
         }},
-	{ "id":1,
+		{ "id":1,
           "t":1.3,
           "x":[1215.11, ...],
           "y":[234.89, ...],
