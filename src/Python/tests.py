@@ -10,18 +10,21 @@ from measurement_unit import MeasurementUnit
 from wcon_parser import WCONWorm
 
 class TestMeasurementUnit(unittest.TestCase):
-    def test(self):
+    def test_unit_equivalence(self):
         self.assertTrue(MeasurementUnit('mm') == MeasurementUnit('millimetre'))
         self.assertTrue(MeasurementUnit('Mm') == MeasurementUnit('megametre'))
         self.assertTrue(MeasurementUnit('mm') != MeasurementUnit('Mm'))
         self.assertTrue(MeasurementUnit('d') == MeasurementUnit('day'))
         self.assertTrue(MeasurementUnit('min') == MeasurementUnit('minutes'))
         self.assertTrue(MeasurementUnit('%') != MeasurementUnit('K'))
-    
+
+
+    def test_canon_conversion(self):
         self.assertTrue(MeasurementUnit('cm').to_canon(1) == 10)
         self.assertTrue(MeasurementUnit('m').to_canon(1) == 1000)
         self.assertTrue(MeasurementUnit('F').from_canon(0) == 32)
         self.assertTrue(MeasurementUnit('microns').to_canon(1800) == 1.8)
+        self.assertTrue(MeasurementUnit('F').to_canon(32) == 0)
 
         for suf in MeasurementUnit('m').all_suffixes:
             # Taking the value 10 to the canonical value, then back again,
@@ -32,8 +35,6 @@ class TestMeasurementUnit(unittest.TestCase):
                         MeasurementUnit(suf).to_canon(10)) - 10
                       ) < 1e-8)
             
-        self.assertTrue(MeasurementUnit('F').to_canon(32) == 0)
-
 
     def test_bad_units(self):
         # Verify that combining the full name with an abbreviation causes
@@ -47,6 +48,11 @@ class TestMeasurementUnit(unittest.TestCase):
         # This form, on the other hand, should be fine, since both prefix
         # and suffix are long-form.
         MeasurementUnit('milliseconds')
+
+
+    @unittest.skip("Unit combinations are currently not implemented")
+    def test_unit_combos(self):
+        MeasurementUnit('m^2') == MeasurementUnit('metres^2')
 
 
 class TestWCONParser(unittest.TestCase):

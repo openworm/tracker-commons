@@ -79,7 +79,7 @@ class MeasurementUnit():
                    # Two ways to get the Greek Mu character in unicode:
                    'u': 1e-6, '\u00B5': 1e-6, '\u03BC': 1e-6, 'micro': 1e-6,
                    'n': 1e-9, 'nano': 1e-9,
-                   'k': 1e+3, 'K': 1e+3, 'kilo': 1e+3,
+                   'k': 1e+3, 'kilo': 1e+3,
                    'M': 1e+6, 'mega': 1e+6,
                    'G': 1e+9, 'giga': 1e+9}
 
@@ -88,7 +88,7 @@ class MeasurementUnit():
                            '': 1}
 
     temporal_units = {'s':1, 'sec':1, 'second':1, 'seconds':1,
-                             'min':60*60, 'minute':60*60, 'minutes':60*60,
+                             'min':60, 'minute':60, 'minutes':60,
                       'h':60*60, 'hr':60*60, 'hour':60*60, 'hours':60*60,
                       'd':60*60*24, 'day':60*60*24, 'days':60*60*24}
 
