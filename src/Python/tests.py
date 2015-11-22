@@ -19,9 +19,10 @@ class TestMeasurementUnit(unittest.TestCase):
         self.assertTrue(MeasurementUnit('%') != MeasurementUnit('K'))
     
         self.assertTrue(MeasurementUnit('cm').to_canon(1) == 10)
-        
         self.assertTrue(MeasurementUnit('m').to_canon(1) == 1000)
-        
+        self.assertTrue(MeasurementUnit('F').from_canon(0) == 32)
+        self.assertTrue(MeasurementUnit('microns').to_canon(1800) == 1.8)
+
         for suf in MeasurementUnit('m').all_suffixes:
             # Taking the value 10 to the canonical value, then back again,
             # should come back to 10 for all units (up to floating point 
@@ -67,6 +68,10 @@ class TestWCONParser(unittest.TestCase):
 
         # The smallest valid WCON file
         WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}}'))
+
+        # Duplicate keys should cause the parser to fail
+        with self.assertRaises(KeyError):
+            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s", "t":"s"}}'))
 
 
 

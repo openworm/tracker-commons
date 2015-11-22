@@ -94,7 +94,7 @@ class MeasurementUnit():
 
     spatial_units = {'in': 0.0254, 'inch': 0.0254, 'inches': 0.0254,
                      'm': 1, 'metre': 1, 'meter': 1, 'metres': 1, 'meters': 1,
-                     'micron': 1e-6}
+                     'micron': 1e-6, 'microns': 1e-6}
 
     # Converting between temperature units requires an affine function rather
     # than just a linear (scalar) multiple in the case of the temporal, 

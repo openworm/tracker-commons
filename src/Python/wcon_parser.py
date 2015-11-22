@@ -27,45 +27,17 @@ import pandas as pd
 
 from measurement_unit import MeasurementUnit
 
-def isnamedtuple(obj):
-    """
-    Heuristic check if an object is a namedtuple.
+def reject_duplicates(ordered_pairs):
+    """Reject duplicate keys."""
+    unique_dict = {}
+    for key, val in ordered_pairs:
+        if key in unique_dict:
+           raise KeyError("Duplicate key: %r" % (key,))
+        else:
+           unique_dict[key] = val
 
-    """
-    return isinstance(obj, tuple) \
-           and hasattr(obj, "_fields") \
-           and hasattr(obj, "_asdict") \
-           and callable(obj._asdict)
+    return unique_dict
 
-def serialize(data):
-    """
-    """
-
-    if data is None or isinstance(data, (bool, int, float, str)):
-        return data
-    if isinstance(data, list):
-        return [serialize(val) for val in data]
-    if isinstance(data, OrderedDict):
-        return {"py/collections.OrderedDict":
-                [[serialize(k), serialize(v)] for k, v in data.items()]}
-    if isnamedtuple(data):
-        return {"py/collections.namedtuple": {
-            "type":   type(data).__name__,
-            "fields": list(data._fields),
-            "values": [serialize(getattr(data, f)) for f in data._fields]}}
-    if isinstance(data, dict):
-        if all(isinstance(k, str) for k in data):
-            return {k: serialize(v) for k, v in data.items()}
-        return {"py/dict": [[serialize(k), serialize(v)] for k, v in data.items()]}
-    if isinstance(data, tuple):
-        return {"py/tuple": [serialize(val) for val in data]}
-    if isinstance(data, set):
-        return {"py/set": [serialize(val) for val in data]}
-    if isinstance(data, np.ndarray):
-        return {"py/numpy.ndarray": {
-            "values": data.tolist(),
-            "dtype":  str(data.dtype)}}
-    raise TypeError("Type %s not data-serializable" % type(data))
 
 def restore(dct):
     """
@@ -86,59 +58,6 @@ def restore(dct):
     if "py/collections.OrderedDict" in dct:
         return OrderedDict(dct["py/collections.OrderedDict"])
     return dct
-
-def data_to_json(data):
-    """
-    """
-
-    return json.dumps(serialize(data))
-
-def json_to_data(s):
-    """
-    """
-
-    return json.loads(s, object_hook=restore)
-
-
-class JSON_Serializer():
-    """
-    A class that can save all of its attributes to a JSON file, or 
-    load them from a JSON file.
-    
-    """
-    def __init__(self):
-        pass
-    
-    def save_to_JSON(self, JSON_path):
-        serialized_data = data_to_json(list(self.__dict__.items()))
-
-        with open(JSON_path, 'w') as outfile:
-            outfile.write(serialized_data)
-
-    def load_from_JSON(self, JSON_path):
-        with open(JSON_path, 'r') as infile:
-            serialized_data = infile.read()
-
-        member_list = json_to_data(serialized_data)
-        
-        for member in member_list:
-            setattr(self, member[0], member[1])
-
-
-
-class WCONWorm_old(JSON_Serializer):
-
-    @classmethod
-    def load(cls, JSON_path):
-        """
-        Factory method to create a WCONWorm_old instance
-
-        """
-        w = cls()
-        w.load_from_JSON(JSON_path)
-        
-        return w
-
 
 
 class WCONWorm():
@@ -172,7 +91,8 @@ class WCONWorm():
         w = cls()
         serialized_data = JSON_stream.read()
         
-        root = json.loads(serialized_data, object_hook=restore)
+        root = json.loads(serialized_data, object_hook=restore,
+                          object_pairs_hook=reject_duplicates)
     
         # TODO: ensure it's the first thing, not just that it's present
         # if it's not the first thing, raise a warning
@@ -196,14 +116,26 @@ class WCONWorm():
         if 'data' in root and len(root['data']) > 0:
             data = root['data']
 
-            # Load data into a Pandas DataFrame
+            # Time-series data goes into this Pandas DataFrame
             # The dataframe will have t as index, and multilevel columns
             # with id at the first level and all other keys at second level.
-            worm_df = pd.DataFrame()
+            time_df = pd.DataFrame()
 
+            # Get a list of all ids in data
+            ids = list(set([x['id'] for x in data if 'id' in x]))
+
+            # If data is single-valued, wrap it in a list so it will be just
+            # a special case of the array case.
+            if type(data) == dict:
+                data = [data]
+
+            
             time_free_indexes = []
             timeframes = []
-            for (data_index, data_segment) in enumerate(root['data']):
+            # Go through all data segments, flagging the non-time-series data
+            # for later processing, and adding all time-series data to our
+            # dataframe
+            for (data_index, data_segment) in enumerate(data):
                 if not 't' in data_segment:
                     # Grab the locations of the time-free data
                     time_free_indexes.append(data_index)
@@ -214,7 +146,40 @@ class WCONWorm():
                     else:
                         timeframes.append(data_segment['t'])
 
-            
+                    if not 'id' in data_segment:
+                        # TIME-SERIES PLATE FEATURE
+                        pass
+                    else:
+                        # TIME-SERIES WORM FEATURE
+                        segment_id = data_segment['id']
+                        
+                        segment_keys = list(data_segment.keys())
+                        segment_keys.remove('t')
+                        segment_keys.remove('id')
+
+                        # if t is arrayed, validate that all other attributes
+                        # are either single-valued or 
+
+                        """
+
+                        import pdb
+                        pdb.set_trace()
+
+        
+                        # Create our column names as the cartesian product of
+                        # the segment's keys and the id of the segment
+                        cur_columns = pd.MultiIndex.from_tuples(
+                            [x for x in itertools.product(segment_keys, 
+                                                          segment_id)])
+                        
+                        cur_df = pd.DataFrame([data[key] for key in segment_keys],
+                                              columns=cur_columns)
+                        cur_df.set_index(['t',data['t']])
+                        
+                        import pdb
+                        pdb.set_trace()
+                        #time_df.columns.append(cur_columns)
+                        """
 
         # DEBUG: temporary
         w.root = root
