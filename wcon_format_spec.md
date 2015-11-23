@@ -130,10 +130,10 @@ A WCON file with three custom features:
     "tracker-commons":true,
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[
-        "@OMG":{
+        {"@OMG":{
                "feature_names":["speed", "curvature", "width"],
                "feature_units":["mm/s", "1/mm", "mm"]
-        }
+        }},
         { "id":1,
           "t":1.3,
           "x":[1215.11, ...],
@@ -152,10 +152,10 @@ For features that describe an entire plate rather than properties of individual 
     "tracker-commons":true,
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[
-        "@OMG":{
+        {"@OMG":{
                "feature_names":["speed", "curvature", "width"],
                "feature_units":["mm/s", "1/mm", "mm"]
-        },
+        }},
 		{ "id":1,
           "t":1.3,
           "x":[1215.11, ...],
@@ -163,7 +163,7 @@ For features that describe an entire plate rather than properties of individual 
           "@OMG":{ "feature_values":[0.34, 1.5, 0.873] }
         }
         ...
-    ]
+    ],
     "@OMG":{
           "plate_feature_names":["density", "aggregate number"],
           "plate_feature_units":["1/mm^2", null],

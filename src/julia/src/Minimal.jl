@@ -31,8 +31,20 @@ function make_dbl_array(q::Any, n::Int64)
     end
 end
 
-function make_dbl_array_array(q::Any)
-    map(q) do qi; make_dbl_array(qi) end
+function make_dbl_array_array(q::Any, n::Int64)
+    if (n == 1)
+        if (length(q)==1 && typeof(q[1]) <: Array)
+            Array[make_dbl_array(q[1])]
+        else
+            Array[make_dbl_array(q)]
+        end
+    else
+        result = fill(Array{Float64, 1}[], n)
+        for i in 1:length(q)
+            result[i] = make_dbl_array(q[i])
+        end
+        result
+    end
 end
 
 function get_a_worm(data::Dict{String, Any})
@@ -40,9 +52,24 @@ function get_a_worm(data::Dict{String, Any})
     t = make_dbl_array(data["t"])
     ox = haskey(data, "ox") ? make_dbl_array(data["ox"], length(t)) : (haskey(data, "cx") ? make_dbl_array(data["cx"], length(t)) : zeros(length(t)))
     oy = haskey(data, "oy") ? make_dbl_array(data["oy"], length(t)) : (haskey(data, "cy") ? make_dbl_array(data["cy"], length(t)) : zeros(length(t)))
-    x = make_dbl_array_array(data["x"])
-    y = make_dbl_array_array(data["y"])
+    x = make_dbl_array_array(data["x"], length(t))
+    y = make_dbl_array_array(data["y"], length(t))
+    if (length(t) != length(ox))
+        error("Length of t and x-offset or centroid do not match for worm $(id) at $(t[1])")
+    end
+    if (length(t) != length(oy))
+        error("Length of t and y-offset or centroid do not match for worm $(id) at $(t[1])")
+    end
+    if (length(t) != length(x))
+        error("Length of t and x data do not match for worm $(id) at $(t[1]): $(length(t)) vs $(length(x))")
+    end
+    if (length(t) != length(y))
+        error("Length of t and y data do not match for worm $(id) at $(t[1]): $(length(t)) vs $(length(y))")
+    end
     for i in 1:length(t)
+        if (length(x[i]) != length(y[i]))
+            error("Different number of x and y values for data point $(i) at time $(t[i]) for worm $(id)")
+        end
         x[i] = x[i] - ox[i]
         y[i] = y[i] - oy[i]
     end
