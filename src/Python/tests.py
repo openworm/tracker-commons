@@ -62,11 +62,17 @@ class TestWCONParser(unittest.TestCase):
             # "ValueError: Expecting ',' delimiter: line 1 column 25 (char 24)"
             WCONWorm.load(StringIO('{"tracker-commons":blahblah}'))
         
+        #import pdb
+        #pdb.set_trace()
         # Errors because "tracker-commons":true is not present
+        with self.assertWarns(UserWarning):
+            WCONWorm.load(StringIO('{"tracker-blah":true, "units":{}}'))
+        with self.assertWarns(UserWarning):
+            WCONWorm.load(StringIO('{"units":{}}'))
+        # If we're being explicitly told that this is NOT a WCON file,
+        # the parser should raise an error.
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-blah":true}'))
-        with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":false}'))
+            WCONWorm.load(StringIO('{"tracker-commons":false, "units":{}}'))
 
         # This should fail because "units" is required
         with self.assertRaises(AssertionError):
@@ -75,9 +81,33 @@ class TestWCONParser(unittest.TestCase):
         # The smallest valid WCON file
         WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}}'))
 
+        # Empty data array should be fine
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},' 
+                                '"data":[]}'))
+        
+        # Single-valued 't' subelement should be fine
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+                                 '"data":[{"id":3, "t":1.3, '
+                                          '"x":[3,4], "y":[5.4,3]}]}'))
+
+        # Two values for 'x' but four values for 'y': error
+        with self.assertRaises(AssertionError):
+            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+                                     '"data":[{"id":3, "t":1.3, '
+                                              '"x":[3,4], '
+                                              '"y":[5.4,3,1,-3]}]}'))
+
+        # Two values for 't' but 3 for 'x' and 'y': error
+        with self.assertRaises(AssertionError):
+            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+                                     '"data":[{"id":3, "t":[1.3,8], '
+                                              '"x":[3,4], "y":[5.4,3]}]}'))
+
+
         # Duplicate keys should cause the parser to fail
         with self.assertRaises(KeyError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s", "t":"s"}}'))
+            WCONWorm.load(StringIO('{"tracker-commons":true, '
+                                    '"units":{"t":"s", "t":"s"}}'))
 
 
 
