@@ -23,6 +23,7 @@ assert(filecmp.cmp('file1.wcon', file2.wcon'))
 """
 
 import warnings
+import itertools
 import json
 import numpy as np
 import pandas as pd
@@ -254,40 +255,42 @@ class WCONWorm():
                 raise AssertionError("Error: Subelements must all have "
                                      "the same length.")
 
-
-        # Consider only time-series data stamped with an id:
-        for data_segment in data[is_time_series_mask & has_id_mask]:
-            # TODO
-            # add this data_segment to a Pandas dataframe
-            pass
-            """
-
-            import pdb
-            pdb.set_trace()
-
-            segment_id = data_segment['id']
-
-            # Create our column names as the cartesian product of
-            # the segment's keys and the id of the segment
-            cur_columns = pd.MultiIndex.from_tuples(
-                [x for x in itertools.product(segment_keys, 
-                                              segment_id)])
-            
-            cur_df = pd.DataFrame([data[key] for key in segment_keys],
-                                  columns=cur_columns)
-            cur_df.set_index(['t',data['t']])
-            
-            import pdb
-            pdb.set_trace()
-            #time_df.columns.append(cur_columns)
-            """
-
-
         # Obtain a numpy array of all unique timestamps used
         timeframes = []
         for data_segment in data[is_time_series_mask]:
             timeframes.extend(data_segment['t'])
         timeframes = np.array(set(timeframes))
+
+        # Consider only time-series data stamped with an id:
+        for data_segment in data[is_time_series_mask & has_id_mask]:
+            # TODO
+            # Add this data_segment to a Pandas dataframe
+            segment_id = data_segment['id']
+            segment_keys = [k for k in data_segment.keys() 
+                                       if not k in ['t','id']]
+
+
+            import pdb
+            pdb.set_trace()
+
+            # Create our column names as the cartesian product of
+            # the segment's keys and the id of the segment
+            cur_columns = pd.MultiIndex.from_tuples(
+                [x for x in itertools.product(range(5),
+                                              segment_keys, 
+                                              [segment_id])])
+            
+            cur_df = pd.DataFrame([data[key] for key in segment_keys],
+                                  columns=cur_columns)
+            cur_df.set_index(['t', timeframes])
+                                       
+            # TODO
+            #time_df.columns.append(cur_columns)
+
+            import pdb
+            pdb.set_trace()
+            pass
+
         
         
 
