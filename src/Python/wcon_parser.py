@@ -275,10 +275,10 @@ class WCONWorm():
 
             # Create our column names as the cartesian product of
             # the segment's keys and the id of the segment
-            cur_columns = pd.MultiIndex.from_tuples(
-                [x for x in itertools.product(range(5),
-                                              segment_keys, 
-                                              [segment_id])])
+            key_combos = [x for x in itertools.product([segment_id], 
+                                                       segment_keys, 
+                                                       range(5))]
+            cur_columns = pd.MultiIndex.from_tuples(key_combos)
             
             cur_df = pd.DataFrame([data[key] for key in segment_keys],
                                   columns=cur_columns)
