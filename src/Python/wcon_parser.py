@@ -28,6 +28,8 @@ import json
 import numpy as np
 import pandas as pd
 
+from io import StringIO
+
 from measurement_unit import MeasurementUnit
 
 def reject_duplicates(ordered_pairs):
@@ -251,15 +253,36 @@ class WCONWorm():
             # Validate that all sub-elements have the same length
             subelement_lengths = [len(data_segment[key]) 
                                   for key in segment_keys]
+
+
+            #import pdb
+            #pdb.set_trace()
             if len(set(subelement_lengths)) > 1:
                 raise AssertionError("Error: Subelements must all have "
                                      "the same length.")
+
+            # Now we can speak of a subelement_length, as it is 
+            # now well-defined.
+            subelement_length = subelement_lengths[0]
+
+            import pdb
+            pdb.set_trace()
+            
+            for i in range(subelement_length):
+                # The x and y arrays for element i of the data segment
+                # must have the same length
+                if len(data_segment['x'][i]) != len(data_segment['y'][i]):
+                    raise AssertionError("Error: x and y must have same "
+                                         "length for index " + str(i))
+
 
         # Obtain a numpy array of all unique timestamps used
         timeframes = []
         for data_segment in data[is_time_series_mask]:
             timeframes.extend(data_segment['t'])
         timeframes = np.array(set(timeframes))
+
+        return
 
         # Consider only time-series data stamped with an id:
         for data_segment in data[is_time_series_mask & has_id_mask]:
@@ -312,7 +335,7 @@ class WCONWorm():
         """
         pass
 
-if __name__ == '__main__':
+if __name__ == '__main__2':
     JSON_path = '../../tests/hello_world.wcon'
     f = open(JSON_path, 'r')
     #w1 = WCONWorm_old.load(JSON_path)
@@ -320,3 +343,9 @@ if __name__ == '__main__':
         w1 = WCONWorm.load(infile)
     
     u = MeasurementUnit('cm')
+    
+if __name__ == '__main__':
+    WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+                             '"data":[{"id":3, "t":1.3, '
+                                      '"x":[3,4,4,3,5,], '
+                                      '"y":[5.4,3,1,-3]}]}'))
