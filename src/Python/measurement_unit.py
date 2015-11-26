@@ -349,3 +349,21 @@ class MeasurementUnit():
     def __ne__(self, other):
         return self.to_canon(10) != other.to_canon(10)
  
+
+
+
+class MeasurementUnitComposite(MeasurementUnit):
+    """
+    A class that can handle mm^2, mm/s, C/(s*m), etc.
+    
+    """
+    def __init__(self, unit_string):
+        # Trim all whitespace        
+        # Parse the *, ^ and /, ( and ) characters (the operators)
+        
+        # 1. Raise error if the exists a ( without a later )
+        # 2. Parse into atoms separated by operators
+        # 3. Raise error if any atom is empty
+        # 4. 
+        # 1. recursively call this method on any text found between
+        pass
