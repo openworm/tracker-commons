@@ -22,6 +22,7 @@ assert(filecmp.cmp('file1.wcon', file2.wcon'))
 
 """
 
+import pdb
 import warnings
 import itertools
 import json
@@ -237,7 +238,7 @@ class WCONWorm():
         # Time-series data goes into this Pandas DataFrame
         # The dataframe will have t as index, and multilevel columns
         # with id at the first level and all other keys at second level.
-        time_df = pd.DataFrame()
+        time_df = None
 
         # Clean up and validate all time-series data segments
         for data_segment in data[is_time_series_mask]:
@@ -254,9 +255,6 @@ class WCONWorm():
             subelement_lengths = [len(data_segment[key]) 
                                   for key in segment_keys]
 
-
-            #import pdb
-            #pdb.set_trace()
             if len(set(subelement_lengths)) > 1:
                 raise AssertionError("Error: Subelements must all have "
                                      "the same length.")
@@ -265,57 +263,91 @@ class WCONWorm():
             # now well-defined.
             subelement_length = subelement_lengths[0]
 
-            import pdb
-            pdb.set_trace()
-            
             for i in range(subelement_length):
                 # The x and y arrays for element i of the data segment
                 # must have the same length
                 if len(data_segment['x'][i]) != len(data_segment['y'][i]):
                     raise AssertionError("Error: x and y must have same "
                                          "length for index " + str(i))
+                else:
+                    subelement_xylength = len(data_segment['x'][i])
 
 
         # Obtain a numpy array of all unique timestamps used
         timeframes = []
         for data_segment in data[is_time_series_mask]:
             timeframes.extend(data_segment['t'])
-        timeframes = np.array(set(timeframes))
+        timeframes = np.array(list(set(timeframes)))
 
-        return
 
         # Consider only time-series data stamped with an id:
         for data_segment in data[is_time_series_mask & has_id_mask]:
             # TODO
             # Add this data_segment to a Pandas dataframe
             segment_id = data_segment['id']
-            segment_keys = [k for k in data_segment.keys() 
-                                       if not k in ['t','id']]
-
-
-            import pdb
-            pdb.set_trace()
+            segment_keys = np.array([k for k in data_segment.keys() 
+                                       if not k in ['t','id']])
+            # We want x before y
+            np.sort(segment_keys)
+            
+            cur_timeframes = np.array(data_segment['t'])
 
             # Create our column names as the cartesian product of
             # the segment's keys and the id of the segment
-            key_combos = [x for x in itertools.product([segment_id], 
-                                                       segment_keys, 
-                                                       range(5))]
-            cur_columns = pd.MultiIndex.from_tuples(key_combos)
-            
-            cur_df = pd.DataFrame([data[key] for key in segment_keys],
-                                  columns=cur_columns)
-            cur_df.set_index(['t', timeframes])
-                                       
-            # TODO
-            #time_df.columns.append(cur_columns)
+            key_combos = list(itertools.product([segment_id], 
+                                                segment_keys, 
+                                                range(subelement_xylength)))
+            column_type_names = ['id', 'key', 'aspect']
+            cur_columns = pd.MultiIndex.from_tuples(key_combos,
+                                                    names=column_type_names)
 
-            import pdb
-            pdb.set_trace()
+            #pdb.set_trace()
+            
+            #cur_df = pd.DataFrame([5.4,3,1,-3,3,4,4,3.2],
+            #                      columns=cur_columns)
+
+            #cur_df = pd.DataFrame(np.random.randn(8,8), columns=cur_columns)
+            #cur_df = pd.DataFrame(np.random.randn(16,8), columns=cur_columns)
+
+            df_data = np.array([data_segment[key] for key in segment_keys])
+
+            # Shape KxI where K is the number of keys and 
+            #                 I is the number of "aspects"
+            df_data2 = np.array(
+                [np.concatenate(
+                                    [data_segment[k][i] for k in ['x', 'y']]
+                               ) for i in range(len(cur_timeframes))])
+
+
+            cur_df = pd.DataFrame(df_data2, columns=cur_columns)
+
+            cur_df.index = cur_timeframes
+            cur_df.index.names = 't'
+            
+            if time_df is None:
+                time_df = cur_df
+            else:
+                # Append cur_df to time_df
+                #pdb.set_trace()
+
+                # DEBUG: doesn't merge indexes
+                time_df = time_df.append(cur_df, 
+                                         # If True, raise ValueError on 
+                                         # creating index with duplicates.
+                                         # This is a check that the data isn't
+                                         # duplicated and thus ambiguous
+                                         verify_integrity=True)
+
+            # TODO:
+            # Check that a segment doesn't overwrite a previously read one
             pass
 
-        
-        
+        # We want the index (time) to be in order.
+        time_df.sort_index(inplace=True)
+
+        return time_df
+
+
 
 
     def _parse_special_top_level_objects(self, special_root):
@@ -335,8 +367,13 @@ class WCONWorm():
         """
         pass
 
-if __name__ == '__main__2':
-    JSON_path = '../../tests/hello_world.wcon'
+
+
+pd.set_option('display.expand_frame_repr', False)
+
+if __name__ == '__main__':
+
+    JSON_path = '../../tests/hello_world_simple.wcon'
     f = open(JSON_path, 'r')
     #w1 = WCONWorm_old.load(JSON_path)
     with open(JSON_path, 'r') as infile:
@@ -344,8 +381,11 @@ if __name__ == '__main__2':
     
     u = MeasurementUnit('cm')
     
-if __name__ == '__main__':
-    WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
-                             '"data":[{"id":3, "t":1.3, '
-                                      '"x":[3,4,4,3,5,], '
-                                      '"y":[5.4,3,1,-3]}]}'))
+if __name__ == '__main__2':
+    w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}}'))
+
+if __name__ == '__main__3':
+    w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+                                '"data":[{"id":3, "t":1.3, '
+                                         '"x":[3,4,4,3.2], '
+                                         '"y":[5.4,3,1,-3]}]}'))
