@@ -53,10 +53,17 @@ class TestMeasurementUnit(unittest.TestCase):
     @unittest.skip("Unit combinations are currently not implemented")
     def test_unit_combos(self):
         MeasurementUnit('m^2') == MeasurementUnit('metres^2')
+        MeasurementUnit('C^3') == MeasurementUnit('Celsius^3')
+        MeasurementUnit('m/s') == MeasurementUnit('metres/sec')
+        MeasurementUnit('mm/s^2') == MeasurementUnit('millimeter/sec^2')
+        MeasurementUnit('mm/s^2') == MeasurementUnit('mm/(s^2)')
+        MeasurementUnit('mm^2/s^2') == MeasurementUnit('(mm^2)/(s^2)')
+        MeasurementUnit('mm^2/s^2') == MeasurementUnit('mm^2/(s^2)')
 
 
 class TestWCONParser(unittest.TestCase):
-    def test(self):
+
+    def test_tracker_commons_and_units(self):
         with self.assertRaises(ValueError):
             # The JSON parser shouldn't accept this as valid JSON
             # "ValueError: Expecting ',' delimiter: line 1 column 25 (char 24)"
@@ -84,7 +91,14 @@ class TestWCONParser(unittest.TestCase):
         # Empty data array should be fine
         WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},' 
                                 '"data":[]}'))
-        
+
+        # Duplicate keys should cause the parser to fail
+        with self.assertRaises(KeyError):
+            WCONWorm.load(StringIO('{"tracker-commons":true, '
+                                    '"units":{"t":"s", "t":"s"}}'))
+
+
+    def test_data1(self):
         # Single-valued 't' subelement should be fine
         WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
                                  '"data":[{"id":3, "t":1.3, '
@@ -101,14 +115,65 @@ class TestWCONParser(unittest.TestCase):
         with self.assertRaises(AssertionError):
             WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
                                      '"data":[{"id":3, "t":[1.3,8], '
-                                              '"x":[3,4], "y":[5.4,3]}]}'))
+                                              '"x":[3,4,5], "y":[5.4,3,5]}]}'))
+
+        # Duplicated segments are OK if there are no differences
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
+                    '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
+
+        # Duplicated time indices are OK if the earlier entry was for a 
+        # different worm or the data was missing
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":2, "t":1.3, "x":[3,4], "y":[5.4,3]},'
+                    '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
+
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":1.3, "x":[null,null], "y":[null,null]},'
+                    '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
+
+        # Error if data from a later segment conflicts with earlier segments
+        with self.assertRaises(AssertionError):
+            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+                '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
+                        '{"id":1, "t":1.3, "x":[3,4], "y":[5.5,3]}]}'))
+
+    def test_data2(self):
+        WCON_string = \
+            """
+            {
+                "tracker-commons":true,
+                "units":{"t":"s", "x":"mm", "y":"mm"},
+                "data":[
+                       { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12], "y":[23.3, 22.23, 21135.08] },
+            		{ "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] },
+            		{ "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] },
+            		{ "id":1, "t":[1.3,1.5], "x":[[1,1,1],[1215.11, 1216.14, 1217.12]], "y":[[2,2,2],[234.89, 265.23, 235.08]] }
+            	]
+            }
+            """
+        WCONWorm.load(StringIO(WCON_string))
+
+        # order permuted from previous example
+        WCON_string2 = \
+            """
+            {
+                "tracker-commons":true,
+                "units":{"t":"s", "x":"mm", "y":"mm"},
+                "data":[
+            		{ "id":1, "t":[1.3,1.5], "x":[[1,1,1],[1215.11, 1216.14, 1217.12]], "y":[[2,2,2],[234.89, 265.23, 235.08]] },
+                       { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12], "y":[23.3, 22.23, 21135.08] },
+            		{ "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] },
+            		{ "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] }
+            	]
+            }
+            """
+        WCONWorm.load(StringIO(WCON_string2))
 
 
-        # Duplicate keys should cause the parser to fail
-        with self.assertRaises(KeyError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, '
-                                    '"units":{"t":"s", "t":"s"}}'))
-
+    @unittest.skip("DEBUG: to see if tests pass if we skip these")
+    def test_data3(self):
+        pass
 
 
 if __name__ == '__main__':

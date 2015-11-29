@@ -282,7 +282,6 @@ class WCONWorm():
 
         # Consider only time-series data stamped with an id:
         for data_segment in data[is_time_series_mask & has_id_mask]:
-            # TODO
             # Add this data_segment to a Pandas dataframe
             segment_id = data_segment['id']
             segment_keys = np.array([k for k in data_segment.keys() 
@@ -301,43 +300,29 @@ class WCONWorm():
             cur_columns = pd.MultiIndex.from_tuples(key_combos,
                                                     names=column_type_names)
 
-            #pdb.set_trace()
-            
-            #cur_df = pd.DataFrame([5.4,3,1,-3,3,4,4,3.2],
-            #                      columns=cur_columns)
-
-            #cur_df = pd.DataFrame(np.random.randn(8,8), columns=cur_columns)
-            #cur_df = pd.DataFrame(np.random.randn(16,8), columns=cur_columns)
-
-            df_data = np.array([data_segment[key] for key in segment_keys])
-
             # Shape KxI where K is the number of keys and 
             #                 I is the number of "aspects"
-            df_data2 = np.array(
-                [np.concatenate(
+            cur_data = np.array(
+                   [np.concatenate(
                                     [data_segment[k][i] for k in ['x', 'y']]
-                               ) for i in range(len(cur_timeframes))])
+                                  ) for i in range(len(cur_timeframes))]
+                               )
 
 
-            cur_df = pd.DataFrame(df_data2, columns=cur_columns)
+            cur_df = pd.DataFrame(cur_data, columns=cur_columns)
 
             cur_df.index = cur_timeframes
             cur_df.index.names = 't'
+
+            # We want the index (time) to be in order.
+            cur_df.sort_index(inplace=True)
             
             if time_df is None:
                 time_df = cur_df
             else:
+                time_df.sort_index(inplace=True)
                 # Append cur_df to time_df
-                #pdb.set_trace()
-
-                # DEBUG: doesn't merge indexes
-                #time_df = pd.concat([time_df, cur_df])
-
-                # DEBUG: doesn't merge columns
-                #time_df = pd.concat([time_df, cur_df], axis=1)
-
-                #pdb.set_trace()
-
+ 
                 # Add all rows that don't currently exist in time_df
                 time_df = pd.concat([time_df, cur_df[~cur_df.index.isin(time_df.index)]])
 
@@ -346,6 +331,14 @@ class WCONWorm():
                 time_df_sliced = \
                     time_df.loc[time_df.index.isin(cur_df.index),
                                 time_df.columns.isin(cur_df.columns)]
+
+                cur_df_sliced = \
+                    cur_df.loc[cur_df.index.isin(time_df.index),
+                               cur_df.columns.isin(time_df.columns)]
+
+                # Sort our slices so they will be lined up for comparison
+                time_df_sliced.sort_index(inplace=True)
+                cur_df_sliced.sort_index(inplace=True)                                                    
                 
                 # Obtain a mask of the conflicts in the current segment
                 # as compared with all previously loaded data.  That is:
@@ -355,20 +348,15 @@ class WCONWorm():
                 # 2   3   = True
                 # 2   NaN = True
                 data_conflicts = (pd.notnull(time_df_sliced) & 
-                                  (time_df_sliced != cur_df))
-                                  
+                                  (time_df_sliced != cur_df_sliced))
+
                 if data_conflicts.any().any():
-                    print("Data conflicts:")
-                    print(data_conflicts)
-                    raise Exception("Data from this segment conflicted "
-                                    "with previously loaded data.")
+                    raise AssertionError("Data from this segment conflicted "
+                                         "with previously loaded data:\n", 
+                                         data_conflicts)
 
                 # Replace any rows that do exist with the cur_df version
                 time_df.update(cur_df)
-                
-                #time_df = pd.merge(time_df, cur_df, 
-                #                   left_index=True, right_index=True, 
-                #                   how='outer')
                 
                 # TODO: concatenate using a list comprehension as calling it
                 # iteratively like this causes a performance hit (see
@@ -378,16 +366,6 @@ class WCONWorm():
                 # function can create a signifcant performance hit. If you need 
                 # to use the operation over several datasets, use a list comprehension."
 
-                #time_df = time_df.append(cur_df)#, 
-                                         # If True, raise ValueError on 
-                                         # creating index with duplicates.
-                                         # This is a check that the data isn't
-                                         # duplicated and thus ambiguous
-                                         #verify_integrity=True)
-
-            # TODO:
-            # Check that a segment doesn't overwrite a previously read one
-            pass
 
         # We want the index (time) to be in order.
         time_df.sort_index(inplace=True)
@@ -422,12 +400,12 @@ pd.set_option('display.expand_frame_repr', False)
 if __name__ == '__main__':
 
     JSON_path = '../../tests/hello_world_simple.wcon'
-    f = open(JSON_path, 'r')
-    #w1 = WCONWorm_old.load(JSON_path)
+
     with open(JSON_path, 'r') as infile:
         w1 = WCONWorm.load(infile)
     
     u = MeasurementUnit('cm')
+
     
 if __name__ == '__main__2':
     w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}}'))
