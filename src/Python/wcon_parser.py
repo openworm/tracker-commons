@@ -288,7 +288,7 @@ class WCONWorm():
             segment_keys = np.array([k for k in data_segment.keys() 
                                        if not k in ['t','id']])
             # We want x before y
-            np.sort(segment_keys)
+            segment_keys = np.sort(segment_keys)
             
             cur_timeframes = np.array(data_segment['t'])
 
@@ -331,12 +331,59 @@ class WCONWorm():
                 #pdb.set_trace()
 
                 # DEBUG: doesn't merge indexes
-                time_df = time_df.append(cur_df, 
+                #time_df = pd.concat([time_df, cur_df])
+
+                # DEBUG: doesn't merge columns
+                #time_df = pd.concat([time_df, cur_df], axis=1)
+
+                #pdb.set_trace()
+
+                # Add all rows that don't currently exist in time_df
+                time_df = pd.concat([time_df, cur_df[~cur_df.index.isin(time_df.index)]])
+
+                # Obtain a sliced version of time_df, showing only
+                # the columns and rows shared with the cur_df
+                time_df_sliced = \
+                    time_df.loc[time_df.index.isin(cur_df.index),
+                                time_df.columns.isin(cur_df.columns)]
+                
+                # Obtain a mask of the conflicts in the current segment
+                # as compared with all previously loaded data.  That is:
+                # NaN NaN = False
+                # NaN 2   = False
+                # 2   2   = False
+                # 2   3   = True
+                # 2   NaN = True
+                data_conflicts = (pd.notnull(time_df_sliced) & 
+                                  (time_df_sliced != cur_df))
+                                  
+                if data_conflicts.any().any():
+                    print("Data conflicts:")
+                    print(data_conflicts)
+                    raise Exception("Data from this segment conflicted "
+                                    "with previously loaded data.")
+
+                # Replace any rows that do exist with the cur_df version
+                time_df.update(cur_df)
+                
+                #time_df = pd.merge(time_df, cur_df, 
+                #                   left_index=True, right_index=True, 
+                #                   how='outer')
+                
+                # TODO: concatenate using a list comprehension as calling it
+                # iteratively like this causes a performance hit (see
+                # http://pandas.pydata.org/pandas-docs/stable/merging.html#concatenating-objects
+                # "Note It is worth noting however, that concat (and therefore append) 
+                # makes a full copy of the data, and that constantly reusing this 
+                # function can create a signifcant performance hit. If you need 
+                # to use the operation over several datasets, use a list comprehension."
+
+                #time_df = time_df.append(cur_df)#, 
                                          # If True, raise ValueError on 
                                          # creating index with duplicates.
                                          # This is a check that the data isn't
                                          # duplicated and thus ambiguous
-                                         verify_integrity=True)
+                                         #verify_integrity=True)
 
             # TODO:
             # Check that a segment doesn't overwrite a previously read one
@@ -371,6 +418,7 @@ class WCONWorm():
 
 pd.set_option('display.expand_frame_repr', False)
 
+
 if __name__ == '__main__':
 
     JSON_path = '../../tests/hello_world_simple.wcon'
@@ -389,3 +437,8 @@ if __name__ == '__main__3':
                                 '"data":[{"id":3, "t":1.3, '
                                          '"x":[3,4,4,3.2], '
                                          '"y":[5.4,3,1,-3]}]}'))
+
+
+# Suppress RuntimeWarning warnings in Spider because it's a known bug
+# http://stackoverflow.com/questions/30519487/
+warnings.simplefilter(action = "ignore", category = RuntimeWarning)
