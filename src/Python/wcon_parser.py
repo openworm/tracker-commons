@@ -444,6 +444,11 @@ class WCONWorm():
         Replace origin NaN values with zeroes in the DataFrame.
         
         """
+        if 'ox' in self.data.columns.get_level_values(1):
+            # TODO
+            # add the ox field to the 
+            # x field amounts w1.data[1,'ox',0][1.3]
+        #self.data
         #TODO
         pass
 
