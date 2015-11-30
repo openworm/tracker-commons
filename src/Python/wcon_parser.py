@@ -227,7 +227,14 @@ class WCONWorm():
 
         data = np.array(data)
 
-        basic_data_keys = ['id', 't', 'x', 'y', 'ox', 'oy', 'head', 'ventral']
+        # "Aspect" is my term for the articulation points at a given time frame
+        # So if you track 49 skeleton points per frame, then x and y have
+        # 49 aspects per frame, but ox is only recorded once per frame, or
+        # even once across the whole video.
+        elements_with_aspect = ['x', 'y']
+        elements_without_aspect = ['ox', 'oy', 'head', 'ventral']
+        basic_data_keys = elements_with_aspect + elements_without_aspect
+        supported_data_keys = basic_data_keys + ['id', 't']
 
         # Get a list of all ids in data
         ids = list(set([x['id'] for x in data if 'id' in x]))
@@ -251,26 +258,59 @@ class WCONWorm():
                 for subkey in segment_keys:
                     data_segment[subkey] = [data_segment[subkey]]
 
+            # Further, we have to wrap the elements without an aspect
+            # in a further list so that when we convert to a dataframe,
+            # our staging data list comprehension will be able to see
+            # everything as a list and not as single-valued
+            for subkey in elements_without_aspect:
+                if subkey in data_segment:
+                    if type(data_segment[subkey]) != list:
+                        data_segment[subkey] = [[data_segment[subkey]]]
+                    else:
+                        data_segment[subkey] = [data_segment[subkey]]
+
+            subelement_length = len(data_segment['t'])
+
+            # Broadcast aspectless elements to be 
+            # length n = subelement_length if it's 
+            # just being shown once right now  (e.g. for 'ox', 'oy', etc.)
+            for k in elements_without_aspect:
+                if k in segment_keys:
+                    k_length = len(data_segment[k])
+                    if k_length not in [1, subelement_length]:
+                        raise AssertionError(k + " for each segment "
+                                             "must either have length 1 or "
+                                             "length equal to the number of "
+                                             "time elements.")
+                    elif k_length == 1:
+                        # Broadcast the origin across all time points
+                        # in this segment
+                        data_segment[k] = data_segment[k] * subelement_length
+                    
             # Validate that all sub-elements have the same length
             subelement_lengths = [len(data_segment[key]) 
                                   for key in segment_keys]
 
+            # Now we can assure ourselves that subelement_length is 
+            # well-defined; if not, raise an error.
             if len(set(subelement_lengths)) > 1:
                 raise AssertionError("Error: Subelements must all have "
                                      "the same length.")
 
-            # Now we can speak of a subelement_length, as it is 
-            # now well-defined.
-            subelement_length = subelement_lengths[0]
-
+            
+            # Now let's validate that each subsubelement with aspect are 
+            # same-sized
             for i in range(subelement_length):
                 # The x and y arrays for element i of the data segment
                 # must have the same length
-                if len(data_segment['x'][i]) != len(data_segment['y'][i]):
-                    raise AssertionError("Error: x and y must have same "
+                subsubelement_lengths = [len(data_segment[k][i]) for k in 
+                                         elements_with_aspect]
+                
+                if len(set(subsubelement_lengths)) > 1:
+                    raise AssertionError("Error: x and y, etc. must have same "
                                          "length for index " + str(i))
                 else:
-                    subelement_xylength = len(data_segment['x'][i])
+                    aspect_size = subsubelement_lengths[0]
 
 
         # Obtain a numpy array of all unique timestamps used
@@ -286,26 +326,43 @@ class WCONWorm():
             segment_id = data_segment['id']
             segment_keys = np.array([k for k in data_segment.keys() 
                                        if not k in ['t','id']])
-            # We want x before y
-            segment_keys = np.sort(segment_keys)
             
             cur_timeframes = np.array(data_segment['t'])
 
             # Create our column names as the cartesian product of
             # the segment's keys and the id of the segment
+            # Only elements articulated across the skeleton, etc, of the worm
+            # have the "aspect" key though
+            cur_elements_with_aspect = [k for k in elements_with_aspect
+                                                if k in segment_keys]
+            cur_elements_without_aspect = [k for k in elements_without_aspect
+                                                if k in segment_keys]
             key_combos = list(itertools.product([segment_id], 
-                                                segment_keys, 
-                                                range(subelement_xylength)))
+                                                cur_elements_with_aspect,
+                                                range(aspect_size)))
+            key_combos.extend(
+                         list(itertools.product([segment_id], 
+                                                cur_elements_without_aspect, 
+                                                [0]))
+                             )
+
             column_type_names = ['id', 'key', 'aspect']
             cur_columns = pd.MultiIndex.from_tuples(key_combos,
                                                     names=column_type_names)
 
+            # e.g. if this segment has only 'x', 'y', that's what we'll be 
+            # looking to add to our dataframe data staging in the next step
+            cur_data_keys = [k for k in basic_data_keys if k in data_segment.keys()]
+  
+            #if 'ox' in cur_data_keys:
+            #    pdb.set_trace()  
+            # Stage the data for addition to our DataFrame.
             # Shape KxI where K is the number of keys and 
             #                 I is the number of "aspects"
             cur_data = np.array(
-                   [np.concatenate(
-                                    [data_segment[k][i] for k in ['x', 'y']]
-                                  ) for i in range(len(cur_timeframes))]
+                  [np.concatenate(
+                                  [data_segment[k][i] for k in cur_data_keys]
+                                 ) for i in range(len(cur_timeframes))]
                                )
 
 
@@ -315,16 +372,21 @@ class WCONWorm():
             cur_df.index.names = 't'
 
             # We want the index (time) to be in order.
-            cur_df.sort_index(inplace=True)
+            cur_df.sort_index(axis=0, inplace=True)
+            
+            # Apparently multiindex must be sorted to work properly:
+            cur_df.sort_index(axis=1, inplace=True)
             
             if time_df is None:
                 time_df = cur_df
             else:
-                time_df.sort_index(inplace=True)
+                time_df.sort_index(axis=1, inplace=True)
                 # Append cur_df to time_df
- 
+
                 # Add all rows that don't currently exist in time_df
                 time_df = pd.concat([time_df, cur_df[~cur_df.index.isin(time_df.index)]])
+
+                time_df.sort_index(axis=1, inplace=True)
 
                 # Obtain a sliced version of time_df, showing only
                 # the columns and rows shared with the cur_df
@@ -339,7 +401,7 @@ class WCONWorm():
                 # Sort our slices so they will be lined up for comparison
                 time_df_sliced.sort_index(inplace=True)
                 cur_df_sliced.sort_index(inplace=True)                                                    
-                
+
                 # Obtain a mask of the conflicts in the current segment
                 # as compared with all previously loaded data.  That is:
                 # NaN NaN = False
@@ -368,11 +430,22 @@ class WCONWorm():
 
 
         # We want the index (time) to be in order.
-        time_df.sort_index(inplace=True)
+        time_df.sort_index(axis=0, inplace=True)
 
         return time_df
 
 
+    def _convert_origin(self):
+        """
+        Add the origin values to the x and y coordinates in the dataframe
+        
+        Maybe add a flag to CREATE an origin based on some logic
+        
+        Replace origin NaN values with zeroes in the DataFrame.
+        
+        """
+        #TODO
+        pass
 
 
     def _parse_special_top_level_objects(self, special_root):
