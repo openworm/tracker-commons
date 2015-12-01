@@ -258,6 +258,8 @@ class WCONWorm():
                 for subkey in segment_keys:
                     data_segment[subkey] = [data_segment[subkey]]
 
+            #pdb.set_trace()
+
             # Further, we have to wrap the elements without an aspect
             # in a further list so that when we convert to a dataframe,
             # our staging data list comprehension will be able to see
@@ -267,10 +269,11 @@ class WCONWorm():
                     if type(data_segment[subkey]) != list:
                         data_segment[subkey] = [[data_segment[subkey]]]
                     else:
-                        data_segment[subkey] = [data_segment[subkey]]
+                        data_segment[subkey] = [[x] for x in data_segment[subkey]]
 
             subelement_length = len(data_segment['t'])
 
+            #pdb.set_trace()
             # Broadcast aspectless elements to be 
             # length n = subelement_length if it's 
             # just being shown once right now  (e.g. for 'ox', 'oy', etc.)
@@ -286,7 +289,9 @@ class WCONWorm():
                         # Broadcast the origin across all time points
                         # in this segment
                         data_segment[k] = data_segment[k] * subelement_length
-                    
+            
+            #pdb.set_trace()
+            
             # Validate that all sub-elements have the same length
             subelement_lengths = [len(data_segment[key]) 
                                   for key in segment_keys]
@@ -445,6 +450,7 @@ class WCONWorm():
         
         """
         if 'ox' in self.data.columns.get_level_values(1):
+            pass
             # TODO
             # add the ox field to the 
             # x field amounts w1.data[1,'ox',0][1.3]
