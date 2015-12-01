@@ -454,6 +454,16 @@ class WCONWorm():
             # TODO
             # add the ox field to the 
             # x field amounts w1.data[1,'ox',0][1.3]
+            # w1.data[1,'x',]
+            # w1.data[1,'ox',]
+            # http://stackoverflow.com/questions/18835077/selecting-from-multi-index-pandas
+            #set(w1.data.columns.get_level_values('key'))
+            
+            # w1.data.xs('x', level='key', axis=1)
+            # w1.data.xs('x', level='key', axis=1) + w1.data.xs('ox', level='key', axis=1)
+            # TODO: this is it:
+            # http://pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.DataFrame.add.html
+            # 
         #self.data
         #TODO
         pass
