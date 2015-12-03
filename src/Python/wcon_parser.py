@@ -187,6 +187,9 @@ class WCONWorm():
         
         if 'data' in root and len(root['data']) > 0:
             w.data = w._parse_data(root['data'])
+            
+            # Shift the coordinates by the amount in the offsets 'ox' and 'oy'
+            w._convert_origin()
         else:
             w.data = None
         
@@ -449,24 +452,50 @@ class WCONWorm():
         Replace origin NaN values with zeroes in the DataFrame.
         
         """
-        if 'ox' in self.data.columns.get_level_values(1):
+        #return
+        #pdb.set_trace()
+        for worm_id in self.data.columns.get_level_values(0).unique():
+            cur_worms = self.data.loc[:,(worm_id)]
+
+            for offset, coord in zip(['ox', 'oy'], ['x', 'y']):
+                print("here i am")
+                print (worm_id, offset, coord)
+                if offset in cur_worms.columns.get_level_values(0):
+                    all_x_columns = cur_worms.loc[:,(coord)]
+                    ox_column = cur_worms.loc[:,(offset)].fillna(0)
+                    affine_change = (np.array(ox_column) * 
+                                     np.ones(all_x_columns.shape))
+                    # Shift our 'x' values by the amount in 'ox'
+                    all_x_columns += affine_change
+                    self.data.loc[:,(worm_id,coord)] = all_x_columns.values
+                    
+                    # Now reset our 'ox' values to zero.
+                    self.data.loc[:,(worm_id,offset)] = \
+                                                    np.zeros(ox_column.shape)
+                    
+                    #pdb.set_trace()
+                    
+                    
+                    pass
+                    # TODO
+                    # add the ox field to the 
+                    # x field amounts w1.data[1,'ox',0][1.3]
+                    # w1.data[1,'x',]
+                    # w1.data[1,'ox',]
+                    # http://stackoverflow.com/questions/18835077/selecting-from-multi-index-pandas
+                    #set(w1.data.columns.get_level_values('key'))
+                    
+                    # w1.data.xs('x', level='key', axis=1)
+                    # w1.data.xs('x', level='key', axis=1) + w1.data.xs('ox', level='key', axis=1)
+                    # TODO: this is it:
+                    # http://pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.DataFrame.add.html
+        
+                    # Example of what I want:
+                    # aa = pd.DataFrame([range(6,12), range(12,18)])
+                    # aa[0][:,None] * np.ones(aa.shape) + aa
+            #self.data
+            #TODO
             pass
-            # TODO
-            # add the ox field to the 
-            # x field amounts w1.data[1,'ox',0][1.3]
-            # w1.data[1,'x',]
-            # w1.data[1,'ox',]
-            # http://stackoverflow.com/questions/18835077/selecting-from-multi-index-pandas
-            #set(w1.data.columns.get_level_values('key'))
-            
-            # w1.data.xs('x', level='key', axis=1)
-            # w1.data.xs('x', level='key', axis=1) + w1.data.xs('ox', level='key', axis=1)
-            # TODO: this is it:
-            # http://pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.DataFrame.add.html
-            # 
-        #self.data
-        #TODO
-        pass
 
 
     def _parse_special_top_level_objects(self, special_root):
