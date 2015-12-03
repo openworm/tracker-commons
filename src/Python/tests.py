@@ -123,11 +123,13 @@ class TestWCONParser(unittest.TestCase):
                     '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
 
         # Duplicated time indices are OK if the earlier entry was for a 
-        # different worm or the data was missing
+        # different worm 
         WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
             '"data":[{"id":2, "t":1.3, "x":[3,4], "y":[5.4,3]},'
                     '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
 
+        # Duplicated time indices are OK if the earlier entry had those entries
+        # missing
         WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
             '"data":[{"id":1, "t":1.3, "x":[null,null], "y":[null,null]},'
                     '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
@@ -137,6 +139,46 @@ class TestWCONParser(unittest.TestCase):
             WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
                 '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
                         '{"id":1, "t":1.3, "x":[3,4], "y":[5.5,3]}]}'))
+
+    @unittest.skip("TODO: enable these once we have __eq__ implemented")
+    def test_origin_offset(self):
+        # ox, without optional bracket
+        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":1.3, "ox":5000, '
+            '"x":[3,4], "y":[5.4,3]}]}'))
+        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":1.3, '
+            '"x":[5003,5004], "y":[5.4,3]}]}'))
+        self.assertEqual(w1, w2)
+
+        # oy, with optional bracket
+        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":1.3, "oy":[4000], '
+            '"x":[3,4], "y":[5.4,3]}]}'))
+        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":1.3, '
+            '"x":[3,4], "y":[4005.4,4003]}]}'))
+        self.assertEqual(w1, w2)
+
+        # ox and oy, without optional brackets
+        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":1.3, "ox":500, "oy":4000, '
+            '"x":[3,4], "y":[4005.4,4003]}]}'))
+        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":1.3, '
+            '"x":[503,504], "y":[4005.4,4003]}]}'))
+        self.assertEqual(w1, w2)
+
+        # ox, with two time points
+        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, '
+            '"x":[3,4], "y":[5.4,3]}]}'))
+        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            '"data":[{"id":1, "t":[1.3,1.4], '
+            '"x":[5003,5004], "y":[5.4,3]}]}'))
+        self.assertEqual(w1, w2)
+
+
 
     def test_data2(self):
         WCON_string = \

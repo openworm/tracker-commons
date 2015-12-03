@@ -261,8 +261,6 @@ class WCONWorm():
                 for subkey in segment_keys:
                     data_segment[subkey] = [data_segment[subkey]]
 
-            #pdb.set_trace()
-
             # Further, we have to wrap the elements without an aspect
             # in a further list so that when we convert to a dataframe,
             # our staging data list comprehension will be able to see
@@ -292,8 +290,6 @@ class WCONWorm():
                         # Broadcast the origin across all time points
                         # in this segment
                         data_segment[k] = data_segment[k] * subelement_length
-            
-            #pdb.set_trace()
             
             # Validate that all sub-elements have the same length
             subelement_lengths = [len(data_segment[key]) 
@@ -445,21 +441,18 @@ class WCONWorm():
 
     def _convert_origin(self):
         """
-        Add the origin values to the x and y coordinates in the dataframe
+        Add the offset values 'ox' and 'oy' to the 'x' and 'y' 
+        coordinates in the dataframe
+
+        Offset values that are NaN are considered to be zero.
         
-        Maybe add a flag to CREATE an origin based on some logic
-        
-        Replace origin NaN values with zeroes in the DataFrame.
+        After this is done, set all offset values to zero.
         
         """
-        #return
-        #pdb.set_trace()
         for worm_id in self.data.columns.get_level_values(0).unique():
             cur_worms = self.data.loc[:,(worm_id)]
 
             for offset, coord in zip(['ox', 'oy'], ['x', 'y']):
-                print("here i am")
-                print (worm_id, offset, coord)
                 if offset in cur_worms.columns.get_level_values(0):
                     all_x_columns = cur_worms.loc[:,(coord)]
                     ox_column = cur_worms.loc[:,(offset)].fillna(0)
@@ -472,30 +465,6 @@ class WCONWorm():
                     # Now reset our 'ox' values to zero.
                     self.data.loc[:,(worm_id,offset)] = \
                                                     np.zeros(ox_column.shape)
-                    
-                    #pdb.set_trace()
-                    
-                    
-                    pass
-                    # TODO
-                    # add the ox field to the 
-                    # x field amounts w1.data[1,'ox',0][1.3]
-                    # w1.data[1,'x',]
-                    # w1.data[1,'ox',]
-                    # http://stackoverflow.com/questions/18835077/selecting-from-multi-index-pandas
-                    #set(w1.data.columns.get_level_values('key'))
-                    
-                    # w1.data.xs('x', level='key', axis=1)
-                    # w1.data.xs('x', level='key', axis=1) + w1.data.xs('ox', level='key', axis=1)
-                    # TODO: this is it:
-                    # http://pandas.pydata.org/pandas-docs/version/0.17.0/generated/pandas.DataFrame.add.html
-        
-                    # Example of what I want:
-                    # aa = pd.DataFrame([range(6,12), range(12,18)])
-                    # aa[0][:,None] * np.ones(aa.shape) + aa
-            #self.data
-            #TODO
-            pass
 
 
     def _parse_special_top_level_objects(self, special_root):
