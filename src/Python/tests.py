@@ -69,33 +69,28 @@ class TestWCONParser(unittest.TestCase):
             # "ValueError: Expecting ',' delimiter: line 1 column 25 (char 24)"
             WCONWorm.load(StringIO('{"tracker-commons":blahblah}'))
         
-        #import pdb
-        #pdb.set_trace()
         # Errors because "tracker-commons":true is not present
         with self.assertWarns(UserWarning):
-            WCONWorm.load(StringIO('{"tracker-blah":true, "units":{}}'))
+            WCONWorm.load(StringIO('{"tracker-blah":true, "units":{}, "data":{}}'))
         with self.assertWarns(UserWarning):
-            WCONWorm.load(StringIO('{"units":{}}'))
+            WCONWorm.load(StringIO('{"units":{}, "data":{}}'))
         # If we're being explicitly told that this is NOT a WCON file,
         # the parser should raise an error.
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":false, "units":{}}'))
+            WCONWorm.load(StringIO('{"tracker-commons":false, "units":{}, "data":{}}'))
 
         # This should fail because "units" is required
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":true}'))
+            WCONWorm.load(StringIO('{"tracker-commons":true, "data":{}}'))
 
-        # The smallest valid WCON file
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}}'))
-
-        # Empty data array should be fine
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},' 
-                                '"data":[]}'))
+        # The smallest valid WCON file (Empty data array should be fine)
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}, "data":{}}'))
 
         # Duplicate keys should cause the parser to fail
         with self.assertRaises(KeyError):
             WCONWorm.load(StringIO('{"tracker-commons":true, '
-                                    '"units":{"t":"s", "t":"s"}}'))
+                                    '"units":{"t":"s", "t":"s"}'
+                                    ', "data":{}}'))
 
 
     def test_data1(self):

@@ -172,26 +172,30 @@ class WCONWorm():
         # ===================================================
         # HANDLE THE BASIC TAGS: 'units', 'metadata', 'data'    
     
-        if not ('units' in root):
+        if not 'units' in root:
             raise AssertionError('"units" is required')
         else:
             w.units = root['units']
             
             for key in w.units:
                 w.units[key] = MeasurementUnit(w.units[key])
-
-        if 'metadata' in root:
-            w.metadata = w._parse_metadata(root['metadata'])
-        else:
-            w.metadata = None
         
-        if 'data' in root and len(root['data']) > 0:
+        if not 'data' in root:
+            # The WCON specification requires the data field to be present
+            raise AssertionError('"data" is required')
+        elif len(root['data']) > 0:
             w.data = w._parse_data(root['data'])
             
             # Shift the coordinates by the amount in the offsets 'ox' and 'oy'
             w._convert_origin()
         else:
+            # "data": {}
             w.data = None
+
+        if 'metadata' in root:
+            w.metadata = w._parse_metadata(root['metadata'])
+        else:
+            w.metadata = None
         
         # ===================================================    
         # Any special top-level keys are sent away for later processing
