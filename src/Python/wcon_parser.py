@@ -142,6 +142,7 @@ class WCONWorm():
     Any top-level key other than the basic:
     
     - tracker-commons
+    - files
     - units
     - metadata
     - data
@@ -152,7 +153,80 @@ class WCONWorm():
     overwritten.
     
     """
-    basic_keys = ['tracker-commons', 'units', 'metadata', 'data']
+    basic_keys = ['tracker-commons', 'files', 'units', 'metadata', 'data']
+
+    @classmethod
+    def merge(w1, w2):
+        """
+        Merge two worm files
+        Any clashing data found will cause an exception to be raised.
+        
+        """
+        # TODO
+        pass
+
+    def load_from_file(cls, JSON_path, 
+                       load_prev_chunks=True, 
+                       load_next_chunks=True):
+        """
+        Factory method returning a merged WCONWorm instance of all chunks.
+
+        Uses recursion if there are multiple chunks.
+        
+        Parameters
+        -------------
+        JSON_path: a file path to a file that can be opened
+            
+        load_prev_chunks: bool
+            If a "files" key is present, load the previous chunks and merge
+            them with this one.  If not present, return only the current 
+            file's worm.
+
+        load_next_chunks: bool
+            If a "files" key is present, load the next chunks and merge
+            them with this one.  If not present, return only the current 
+            file's worm.
+
+        """
+        print("Loading file: " + JSON_path)
+
+        with open(JSON_path, 'r') as infile:
+            w_current = cls.load(infile)
+
+        # e.g. cur_filename = 'filename_2.wcon'
+        # cur_ext = '_2', prefix = 'filename', suffix = '.wcon'
+        cur_filename = JSON_path
+        cur_ext = w_current.files['this']
+        if cur_filename.find(cur_ext) == -1:
+            raise AssertionError('Cannot find the current extension "'
+                                 + cur_ext + '" within the current filename "'
+                                 + cur_filename + '".')
+        prefix = cur_filename[:cur_filename.find(cur_ext)]
+        suffix = cur_filename[cur_filename.find(cur_ext)+len(cur_ext):]
+        
+        # If we are supposed to load the previous chunks, and one exists, 
+        # load it and merge it with the current chunk
+        if (load_prev_chunks and 
+            not w_current.files is None and 
+            not w_current.files['prev'] is None):
+                prev_file_name = prefix + w_current.files['prev'][0] + suffix
+                w_prev = cls.load_from_file(prev_file_name,
+                                            load_prev_chunks=True,
+                                            load_next_chunks=False)
+                w_current = cls.merge(w_current, w_prev)
+
+        # Same with the next chunks
+        if (load_next_chunks and 
+            not w_current.files is None and 
+            not w_current.files['next'] is None):
+                next_file_name = prefix + w_current.files['next'][0] + suffix
+                w_next = cls.load_from_file(next_file_name,
+                                            load_prev_chunks=False,
+                                            load_next_chunks=True)
+                w_current = cls.merge(w_current, w_next)
+
+        return w_current
+        
 
 
     @classmethod
@@ -160,11 +234,16 @@ class WCONWorm():
         """
         Factory method to create a WCONWorm instance
         
+        This does NOT load chunks, because a file stream does not 
+        have a file name.  In order to load chunks, you must invoke the
+        factory method load_from_file.  You will be passing it a file path 
+        from which it can find the other files/chunks.
+        
         Parameters
         -------------
         JSON_stream: a text stream implementing .read()
             e.g. an object inheriting from TextIOBase
-        
+                    
         """
         w = cls()
         serialized_data = JSON_stream.read()
@@ -173,6 +252,11 @@ class WCONWorm():
         # keys raise an exception since we've hooked in reject_duplicates
         root = json.loads(serialized_data, object_hook=restore,
                           object_pairs_hook=reject_duplicates)
+    
+        if 'files' in root:
+            w.files = w['files']
+        else:
+            w.files = None
     
         # ===================================================
         # BASIC TOP-LEVEL VALIDATION
@@ -217,8 +301,7 @@ class WCONWorm():
         # Any special top-level keys are sent away for later processing
         w.special_keys = [k for k in root.keys() if k not in w.basic_keys]
         if w.special_keys:
-            special_root = {k: root[k] for k in w.special_keys}
-            w._parse_special_top_level_objects(special_root)
+            w.special_root = {k: root[k] for k in w.special_keys}
 
         # DEBUG: temporary
         w.root = root
@@ -481,11 +564,6 @@ class WCONWorm():
                     # Now reset our 'ox' values to zero.
                     self.data.loc[:,(worm_id,offset)] = \
                                                     np.zeros(ox_column.shape)
-
-
-    def _parse_special_top_level_objects(self, special_root):
-        pass
-
 
 
 pd.set_option('display.expand_frame_repr', False)

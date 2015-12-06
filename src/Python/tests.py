@@ -259,7 +259,20 @@ class TestWCONParser(unittest.TestCase):
         self.assertEqual(w1.metadata["strain"], "CB4856")
         self.assertEqual(w1.metadata["dish"]["size"], 35)
 
+    @unittest.skip("TODO: not yet written")
+    def test_chuncks(self):
+        chunk1 = ('{"tracker-commons":true, "units":{},'
+                                 '"data":[{"id":3, "t":1.3, '
+                                          '"x":[3,4], "y":[5.4,3]}]}')
+        
+        # Save these chunks as files
 
+        # Load them
+        WCONWorm.load(StringIO(chunk1))
+
+        # Validate that the chunks together are __eq__ to a merged file
+
+        # Delete the files created
 
 
     @unittest.skip("DEBUG: to see if tests pass if we skip these")
