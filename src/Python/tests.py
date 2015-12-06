@@ -254,7 +254,13 @@ class TestWCONParser(unittest.TestCase):
                 ]                
             }        
             """
-        WCONWorm.load(StringIO(WCON_string1))
+        w1 = WCONWorm.load(StringIO(WCON_string1))
+
+        self.assertEqual(w1.metadata["strain"], "CB4856")
+        self.assertEqual(w1.metadata["dish"]["size"], 35)
+
+
+
 
     @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_data3(self):
