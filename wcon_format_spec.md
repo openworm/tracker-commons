@@ -227,7 +227,7 @@ Information about experimental conditions and software versions is critical for 
            "timestamp":"2012-04-23T18:25:43.511Z",
            "temperature":{ "experiment":22, "cultivation":20, "units":"C" },
            "humidity":{ "value":40, "units":"%" },
-           "data":{ "type":"petri", "size":35, "units":"mm" },
+           "dish":{ "type":"petri", "size":35, "units":"mm" },
            "food":" none or OP50 or HB101, ... ",
            "media":" NGM or agarose, ... ",
            "sex":" hermaphrodite or male ",
@@ -241,7 +241,7 @@ Information about experimental conditions and software versions is critical for 
                 "featureID":"@OMG"
            },
            "settings":"Any valid JSON entry with hardware and software configuration can go here",
-     }
+     },
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[
         { "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...] },

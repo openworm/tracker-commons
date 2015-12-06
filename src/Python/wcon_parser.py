@@ -133,7 +133,23 @@ class WCONWorm():
     
     # From a string literal:
     from io import StringIO
-    w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}}'))
+    w2 = WCONWorm.load(StringIO('{"tracker-commons":true, '
+                                '"units":{},"data":{}}'))
+
+    Custom WCON versions
+    --------------------
+    
+    Any top-level key other than the basic:
+    
+    - tracker-commons
+    - units
+    - metadata
+    - data
+    
+    Is assigned to the dictionary object special_root
+    
+    To process these items, this class should be subclassed and this method
+    overwritten.
     
     """
     basic_keys = ['tracker-commons', 'units', 'metadata', 'data']
@@ -217,8 +233,7 @@ class WCONWorm():
         Return an object encapsulating that data
         
         """
-        # TODO
-        pass
+        return metadata
 
     def _parse_data(self, data):
         """
@@ -278,7 +293,6 @@ class WCONWorm():
 
             subelement_length = len(data_segment['t'])
 
-            #pdb.set_trace()
             # Broadcast aspectless elements to be 
             # length n = subelement_length if it's 
             # just being shown once right now  (e.g. for 'ox', 'oy', etc.)
@@ -362,8 +376,6 @@ class WCONWorm():
             # looking to add to our dataframe data staging in the next step
             cur_data_keys = [k for k in basic_data_keys if k in data_segment.keys()]
   
-            #if 'ox' in cur_data_keys:
-            #    pdb.set_trace()  
             # Stage the data for addition to our DataFrame.
             # Shape KxI where K is the number of keys and 
             #                 I is the number of "aspects"
@@ -472,20 +484,6 @@ class WCONWorm():
 
 
     def _parse_special_top_level_objects(self, special_root):
-        """
-        Any top-level key other than the basic:
-        
-        - tracker-commons
-        - units
-        - metadata
-        - data
-        
-        Is passed here for further processing.  
-        
-        To accomplish this, this class should be subclassed and 
-        this method overwritten.
-        
-        """
         pass
 
 
@@ -493,7 +491,7 @@ class WCONWorm():
 pd.set_option('display.expand_frame_repr', False)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__1':
 
     JSON_path = '../../tests/hello_world_simple.wcon'
 
@@ -503,8 +501,39 @@ if __name__ == '__main__':
     u = MeasurementUnit('cm')
 
     
-if __name__ == '__main__2':
-    w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}}'))
+if __name__ == '__main__':
+    WCON_string1 = \
+        """
+        {
+            "tracker-commons":true,
+            "metadata":{
+                   "lab":{"location":"CRB, room 5020", "name":"Behavioural Genomics" },
+                   "who":"Firstname Lastname",
+                   "timestamp":"2012-04-23T18:25:43.511Z",
+                   "temperature":{ "experiment":22, "cultivation":20, "units":"C" },
+                   "humidity":{ "value":40, "units":"%" },
+                   "dish":{ "type":"petri", "size":35, "units":"mm" },
+                   "food":"none",
+                   "media":"agarose",
+                   "sex":"hermaphrodite",
+                   "stage":"adult",
+                   "age":"18:25:43.511",
+                   "strain":"CB4856",
+                   "image_orientation":"imaged onto agar or imaged through agar",
+                   "protocol":"text description of protocol",
+                   "software":{
+                        "tracker":{ "name":"Software Name", "version":1.3 },
+                        "featureID":"@OMG"
+                   },
+                   "settings":"Any valid JSON entry with hardware and software configuration can go here"
+            },
+            "units":{"t":"s", "x":"mm", "y":"mm"},
+            "data":[
+                { "id":1, "t":1.3, "x":[7.2, 5], "y":[0.5, 0.86] }
+            ]                
+        }        
+        """
+    w1 = WCONWorm.load(StringIO(WCON_string1))
 
 if __name__ == '__main__3':
     w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'

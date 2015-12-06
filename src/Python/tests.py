@@ -222,6 +222,40 @@ class TestWCONParser(unittest.TestCase):
             """
         WCONWorm.load(StringIO(WCON_string3))
 
+    def test_metadata(self):
+        WCON_string1 = \
+            """
+            {
+                "tracker-commons":true,
+                "metadata":{
+                       "lab":{"location":"CRB, room 5020", "name":"Behavioural Genomics" },
+                       "who":"Firstname Lastname",
+                       "timestamp":"2012-04-23T18:25:43.511Z",
+                       "temperature":{ "experiment":22, "cultivation":20, "units":"C" },
+                       "humidity":{ "value":40, "units":"%" },
+                       "dish":{ "type":"petri", "size":35, "units":"mm" },
+                       "food":"none",
+                       "media":"agarose",
+                       "sex":"hermaphrodite",
+                       "stage":"adult",
+                       "age":"18:25:43.511",
+                       "strain":"CB4856",
+                       "image_orientation":"imaged onto agar or imaged through agar",
+                       "protocol":"text description of protocol",
+                       "software":{
+                            "tracker":{ "name":"Software Name", "version":1.3 },
+                            "featureID":"@OMG"
+                       },
+                       "settings":"Any valid JSON entry with hardware and software configuration can go here"
+                },
+                "units":{"t":"s", "x":"mm", "y":"mm"},
+                "data":[
+                    { "id":1, "t":1.3, "x":[7.2, 5], "y":[0.5, 0.86] }
+                ]                
+            }        
+            """
+        WCONWorm.load(StringIO(WCON_string1))
+
     @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_data3(self):
         pass
