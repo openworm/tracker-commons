@@ -97,11 +97,11 @@ class TestWCONParser(unittest.TestCase):
             WCONWorm.load(StringIO('{"units":{}, "data":[]}'))
         # If we're being explicitly told that this is NOT a WCON file,
         # the parser should raise an error.
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorm.load(StringIO('{"tracker-commons":false, "units":{}, "data":[]}'))
 
         # This should fail because "units" is required
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorm.load(StringIO('{"tracker-commons":true, "data":[]}'))
 
         # The smallest valid WCON file (Empty data array should be fine)
