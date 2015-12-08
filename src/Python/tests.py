@@ -4,7 +4,10 @@ Unit tests for the Python WCON parser
 
 """
 import unittest
+import json
+import jsonschema
 from io import StringIO
+import os
 
 from measurement_unit import MeasurementUnit
 from wcon_parser import WCONWorm
@@ -62,6 +65,24 @@ class TestMeasurementUnit(unittest.TestCase):
 
 
 class TestWCONParser(unittest.TestCase):
+    def _validate_from_schema(self, wcon_string):
+        try:
+            jsonschema.validate(json.load(StringIO(wcon_string)), 
+                                self._wcon_schema)
+        except AttributeError:
+            # Only load _wcon_schema if this method gets called.  Once
+            # it's loaded, though, persist it in memory and don't lose it
+            with open("../../wcon_schema.json", "r") as wcon_schema_file:
+                self._wcon_schema = json.loads(wcon_schema_file.read())
+
+            # Now that the schema has been loaded, we can try again
+            self._validate_from_schema(wcon_string)
+
+    def test_schema(self):
+        basic_wcon = '{"tracker-commons":true, "units":{}, "data":[]}'
+        
+        self._validate_from_schema(basic_wcon)
+        
 
     def test_tracker_commons_and_units(self):
         with self.assertRaises(ValueError):
@@ -189,6 +210,7 @@ class TestWCONParser(unittest.TestCase):
             	]
             }
             """
+        self._validate_from_schema(WCON_string)
         WCONWorm.load(StringIO(WCON_string))
 
         # order permuted from previous example
@@ -205,6 +227,7 @@ class TestWCONParser(unittest.TestCase):
             	]
             }
             """
+        self._validate_from_schema(WCON_string2)
         WCONWorm.load(StringIO(WCON_string2))
 
         # Origin values
@@ -220,6 +243,7 @@ class TestWCONParser(unittest.TestCase):
             	]
             }
             """
+        self._validate_from_schema(WCON_string3)
         WCONWorm.load(StringIO(WCON_string3))
 
     def test_metadata(self):
@@ -261,19 +285,39 @@ class TestWCONParser(unittest.TestCase):
 
     @unittest.skip("TODO: not yet written")
     def test_chuncks(self):
-        chunk1 = ('{"tracker-commons":true, "units":{},'
+        # Define our chunks
+        chunks = []
+        chunks.append(('{"tracker-commons":true,'
+                        '"files":{"this":"_0", "prev:["_1", "_0"], "next"}'
+                        '"units":{},"data":[{"id":3, "t":1.3, '
+                                          '"x":[3,4], "y":[5.4,3]}]}'))
+        chunks.append(('{"tracker-commons":true, "units":{},'
                                  '"data":[{"id":3, "t":1.3, '
-                                          '"x":[3,4], "y":[5.4,3]}]}')
+                                          '"x":[3,4], "y":[5.4,3]}]}'))
+        chunks.append(('{"tracker-commons":true, "units":{},'
+                                 '"data":[{"id":3, "t":1.3, '
+                                          '"x":[3,4], "y":[5.4,3]}]}'))
+
+        # Create filenames for our chunks
+        chunk_filenames = []
+        for (chunk_index, chunk) in enumerate(chunks):
+            chunk_filenames[chunk_index] = \
+                'test_chunk_' + str(chunk_index) + '.wcon'
         
         # Save these chunks as files
+        for (chunk_index, chunk) in enumerate(chunks):
+            with open(chunk_filenames[chunk_index], 'w') as outfile:
+                outfile.write(chunk)
 
         # Load them
-        WCONWorm.load(StringIO(chunk1))
+        WCONWorm.load(StringIO(chunks[0]))
 
         # Validate that the chunks together are __eq__ to a merged file
 
         # Delete the files created
-
+        for chunk_filename in chunk_filenames:
+            os.remove(chunk_filename)
+            
 
     @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_data3(self):

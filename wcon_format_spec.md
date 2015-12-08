@@ -205,7 +205,7 @@ The following units should be handled:
 | inch       | in            |
 | micron     | *(none)*      |
 | fahrenheit | F             |
-| centigrade | *(none)*      |
+| centigrade | C             |
 | kelvin     | K             |
 | celsius    | C             |
 | percent    | %             |
@@ -237,7 +237,7 @@ Information about experimental conditions and software versions is critical for 
            "image_orientation":"imaged onto agar or imaged through agar",
            "protocol":"text description of protocol�",
            "software":{
-                "tracker":{ "name":"Software Name", "version":1.3 },
+                "tracker":{ "name":"Software Name", "version":"1.3.0" },
                 "featureID":"@OMG"
            },
            "settings":"Any valid JSON entry with hardware and software configuration can go here",

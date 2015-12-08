@@ -23,13 +23,11 @@ assert(filecmp.cmp('file1.wcon', file2.wcon'))
 """
 
 import pdb
-import warnings
-import itertools
-import json
+import warnings, itertools
+from io import StringIO
 import numpy as np
 import pandas as pd
-
-from io import StringIO
+import json, jsonschema
 
 from measurement_unit import MeasurementUnit
 
@@ -155,6 +153,27 @@ class WCONWorm():
     """
     basic_keys = ['tracker-commons', 'files', 'units', 'metadata', 'data']
 
+    @property
+    def schema(self):
+        try:
+            return self._schema
+            
+        except AttributeError:
+            # Only load _schema if this method gets called.  Once
+            # it's loaded, though, persist it in memory and don't lose it
+            with open("../../wcon_schema.json", "r") as wcon_schema_file:
+                self._schema = json.loads(wcon_schema_file.read())
+
+            # Now that the schema has been loaded, we can try again
+            return self._schema
+
+    @classmethod
+    def validate_from_schema(cls, wcon_string):
+        with open("../../wcon_schema.json", "r") as wcon_schema_file:
+            wcon_schema = json.loads(wcon_schema_file.read())
+
+        jsonschema.validate(json.load(StringIO(wcon_string)), wcon_schema)
+
     @classmethod
     def merge(w1, w2):
         """
@@ -169,7 +188,9 @@ class WCONWorm():
                        load_prev_chunks=True, 
                        load_next_chunks=True):
         """
-        Factory method returning a merged WCONWorm instance of all chunks.
+        Factory method returning a merged WCONWorm instance of the file
+        located at JSON_path and all related "chunks" as specified in the 
+        "files" element of the file.
 
         Uses recursion if there are multiple chunks.
         
@@ -252,6 +273,9 @@ class WCONWorm():
         # keys raise an exception since we've hooked in reject_duplicates
         root = json.loads(serialized_data, object_hook=restore,
                           object_pairs_hook=reject_duplicates)
+    
+        # Validate the raw file against the WCON schema
+        jsonschema.validate(root, w.schema)
     
         if 'files' in root:
             w.files = w['files']
@@ -568,8 +592,12 @@ class WCONWorm():
 
 pd.set_option('display.expand_frame_repr', False)
 
+# Suppress RuntimeWarning warnings in Spider because it's a known bug
+# http://stackoverflow.com/questions/30519487/
+warnings.simplefilter(action = "ignore", category = RuntimeWarning)
 
-if __name__ == '__main__1':
+
+if __name__ == '__main__':
 
     JSON_path = '../../tests/hello_world_simple.wcon'
 
@@ -579,40 +607,6 @@ if __name__ == '__main__1':
     u = MeasurementUnit('cm')
 
     
-if __name__ == '__main__':
-    WCON_string1 = \
-        """
-        {
-            "tracker-commons":true,
-            "metadata":{
-                   "lab":{"location":"CRB, room 5020", "name":"Behavioural Genomics" },
-                   "who":"Firstname Lastname",
-                   "timestamp":"2012-04-23T18:25:43.511Z",
-                   "temperature":{ "experiment":22, "cultivation":20, "units":"C" },
-                   "humidity":{ "value":40, "units":"%" },
-                   "dish":{ "type":"petri", "size":35, "units":"mm" },
-                   "food":"none",
-                   "media":"agarose",
-                   "sex":"hermaphrodite",
-                   "stage":"adult",
-                   "age":"18:25:43.511",
-                   "strain":"CB4856",
-                   "image_orientation":"imaged onto agar or imaged through agar",
-                   "protocol":"text description of protocol",
-                   "software":{
-                        "tracker":{ "name":"Software Name", "version":1.3 },
-                        "featureID":"@OMG"
-                   },
-                   "settings":"Any valid JSON entry with hardware and software configuration can go here"
-            },
-            "units":{"t":"s", "x":"mm", "y":"mm"},
-            "data":[
-                { "id":1, "t":1.3, "x":[7.2, 5], "y":[0.5, 0.86] }
-            ]                
-        }        
-        """
-    w1 = WCONWorm.load(StringIO(WCON_string1))
-
 if __name__ == '__main__3':
     w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
                                 '"data":[{"id":3, "t":1.3, '
@@ -620,6 +614,3 @@ if __name__ == '__main__3':
                                          '"y":[5.4,3,1,-3]}]}'))
 
 
-# Suppress RuntimeWarning warnings in Spider because it's a known bug
-# http://stackoverflow.com/questions/30519487/
-warnings.simplefilter(action = "ignore", category = RuntimeWarning)
