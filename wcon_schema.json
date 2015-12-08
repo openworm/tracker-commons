@@ -83,7 +83,7 @@
 						"featureID": {"type":"string"}
 					}
 				},
-				"settings": {"type": "object"}
+				"settings": {"type": "string"}
 			},
 			"additionalProperties": true
 		},

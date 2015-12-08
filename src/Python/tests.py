@@ -92,26 +92,26 @@ class TestWCONParser(unittest.TestCase):
         
         # Errors because "tracker-commons":true is not present
         with self.assertWarns(UserWarning):
-            WCONWorm.load(StringIO('{"tracker-blah":true, "units":{}, "data":{}}'))
+            WCONWorm.load(StringIO('{"tracker-blah":true, "units":{}, "data":[]}'))
         with self.assertWarns(UserWarning):
-            WCONWorm.load(StringIO('{"units":{}, "data":{}}'))
+            WCONWorm.load(StringIO('{"units":{}, "data":[]}'))
         # If we're being explicitly told that this is NOT a WCON file,
         # the parser should raise an error.
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":false, "units":{}, "data":{}}'))
+            WCONWorm.load(StringIO('{"tracker-commons":false, "units":{}, "data":[]}'))
 
         # This should fail because "units" is required
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, "data":{}}'))
+            WCONWorm.load(StringIO('{"tracker-commons":true, "data":[]}'))
 
         # The smallest valid WCON file (Empty data array should be fine)
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}, "data":{}}'))
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}, "data":[]}'))
 
         # Duplicate keys should cause the parser to fail
         with self.assertRaises(KeyError):
             WCONWorm.load(StringIO('{"tracker-commons":true, '
                                     '"units":{"t":"s", "t":"s"}'
-                                    ', "data":{}}'))
+                                    ', "data":[]}'))
 
 
     def test_data1(self):
@@ -264,10 +264,10 @@ class TestWCONParser(unittest.TestCase):
                        "stage":"adult",
                        "age":"18:25:43.511",
                        "strain":"CB4856",
-                       "image_orientation":"imaged onto agar or imaged through agar",
+                       "image_orientation":"imaged onto agar",
                        "protocol":"text description of protocol",
                        "software":{
-                            "tracker":{ "name":"Software Name", "version":1.3 },
+                            "tracker":{"name":"Software Name", "version":"1.3.0"},
                             "featureID":"@OMG"
                        },
                        "settings":"Any valid JSON entry with hardware and software configuration can go here"
