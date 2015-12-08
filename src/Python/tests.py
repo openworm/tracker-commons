@@ -3,6 +3,7 @@
 Unit tests for the Python WCON parser
 
 """
+import pdb
 import unittest
 import json
 import jsonschema
@@ -283,23 +284,71 @@ class TestWCONParser(unittest.TestCase):
         self.assertEqual(w1.metadata["strain"], "CB4856")
         self.assertEqual(w1.metadata["dish"]["size"], 35)
 
-    @unittest.skip("TODO: not yet written")
-    def test_chuncks(self):
+    def test_bad_files_object(self):
+        """
+        Test that a badly specified "files" object will fail
+        
+        """
+        # "this":null should be disallowed by the schema
+        worm_file_text1 = (('{"tracker-commons":true,'
+                            '"files":{"this":null, "prev":null, "next":["_1", "_2"]},'
+                            '"units":{},"data":[{"id":3, "t":1.3, '
+                                                '"x":[3,4], "y":[5.4,3]}]}'))
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            WCONWorm.load(StringIO(worm_file_text1))
+
+        # "this":"" should be disallowed by the schema
+        worm_file_text2 = (('{"tracker-commons":true,'
+                            '"files":{"this":"", "prev":null, "next":["_1", "_2"]},'
+                            '"units":{},"data":[{"id":3, "t":1.3, '
+                                                '"x":[3,4], "y":[5.4,3]}]}'))
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
+            WCONWorm.load(StringIO(worm_file_text2))
+
+
+    def test_load_from_file(self):
+        """
+        Test that .load_from_file works identically to .load
+
+        """
+        worm_file_text3 = (('{"tracker-commons":true,'
+                            '"units":{},"data":[{"id":3, "t":1.3, '
+                                                '"x":[3,4], "y":[5.4,3]}]}'))
+
+        # STREAM
+        worm_from_stream = WCONWorm.load(StringIO(worm_file_text3))
+
+        # FILE
+        with open("test.wcon", 'w') as outfile:
+            outfile.write(worm_file_text3)        
+        worm_from_file = WCONWorm.load_from_file("test.wcon")
+        os.remove("test.wcon")
+        
+        # COMPARISON
+        self.assertEqual(worm_from_file, worm_from_stream)
+
+    def test_chunks(self):
+        """
+        Test load_from_file with two or more chunks
+        
+        """
         # Define our chunks
         chunks = []
         chunks.append(('{"tracker-commons":true,'
-                        '"files":{"this":"_0", "prev:["_1", "_0"], "next"}'
+                        '"files":{"this":"_0", "prev":null, "next":["_1", "_2"]},'
                         '"units":{},"data":[{"id":3, "t":1.3, '
                                           '"x":[3,4], "y":[5.4,3]}]}'))
         chunks.append(('{"tracker-commons":true, "units":{},'
+                       '"files":{"this":"_1", "prev:["_0"], "next":["_2"]},'
                                  '"data":[{"id":3, "t":1.3, '
                                           '"x":[3,4], "y":[5.4,3]}]}'))
         chunks.append(('{"tracker-commons":true, "units":{},'
+                       '"files":{"this":"_2", "prev:["_1", "_0"], "next":null},'
                                  '"data":[{"id":3, "t":1.3, '
                                           '"x":[3,4], "y":[5.4,3]}]}'))
 
         # Create filenames for our chunks
-        chunk_filenames = []
+        chunk_filenames = ['']*len(chunks)
         for (chunk_index, chunk) in enumerate(chunks):
             chunk_filenames[chunk_index] = \
                 'test_chunk_' + str(chunk_index) + '.wcon'
@@ -309,10 +358,22 @@ class TestWCONParser(unittest.TestCase):
             with open(chunk_filenames[chunk_index], 'w') as outfile:
                 outfile.write(chunk)
 
-        # Load them
-        WCONWorm.load(StringIO(chunks[0]))
+        # First load one of them
+        worm_combined_manually = WCONWorm.load(StringIO(chunks[0]))
+        # Then merge the others sequentially to the first one
+        for chunk in chunks[1:]:
+            worm_chunk = WCONWorm.load(StringIO(chunk))
+            worm_combined_manually = WCONWorm.merge(worm_combined_manually, 
+                                                    worm_chunk)
 
-        # Validate that the chunks together are __eq__ to a merged file
+        # Validate that the chunks together are __eq__ to the files
+        # that find each other through their "files" object
+        for chunk_filename in chunk_filenames:
+            # Worm from files that found each other through 
+            # the "files" object
+            worm_from_files = WCONWorm.load_from_file(chunk_filename)
+            
+            self.assertEqual(worm_from_files, worm_combined_manually)
 
         # Delete the files created
         for chunk_filename in chunk_filenames:

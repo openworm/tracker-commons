@@ -175,7 +175,7 @@ class WCONWorm():
         jsonschema.validate(json.load(StringIO(wcon_string)), wcon_schema)
 
     @classmethod
-    def merge(w1, w2):
+    def merge(cls, w1, w2):
         """
         Merge two worm files
         Any clashing data found will cause an exception to be raised.
@@ -184,6 +184,14 @@ class WCONWorm():
         # TODO
         pass
 
+    def __eq__(self, other):
+        """
+        Comparison operator (overloaded)
+        
+        """
+        return True
+
+    @classmethod
     def load_from_file(cls, JSON_path, 
                        load_prev_chunks=True, 
                        load_next_chunks=True):
@@ -214,10 +222,23 @@ class WCONWorm():
         with open(JSON_path, 'r') as infile:
             w_current = cls.load(infile)
 
+        # CASE 1: NO "files" OBJECT, hence no multiple files.  We are done.
+        if w_current.files is None:
+            return w_current
+
+        # OTHERWISE, CASE 2: MULTIPLE FILES
+
+        # The schema guarantees that if "files" is present, 
+        # "this", "prev" and "next" will exist.  Also, that "this" is not null.
+        cur_ext = w_current.files['this']
+
+        if cur_ext == '':
+            raise AssertionError('["files"]["this"] == "", which is not '
+                                 'a valid file extension for multichunk data')
+
         # e.g. cur_filename = 'filename_2.wcon'
         # cur_ext = '_2', prefix = 'filename', suffix = '.wcon'
         cur_filename = JSON_path
-        cur_ext = w_current.files['this']
         if cur_filename.find(cur_ext) == -1:
             raise AssertionError('Cannot find the current extension "'
                                  + cur_ext + '" within the current filename "'
@@ -225,26 +246,25 @@ class WCONWorm():
         prefix = cur_filename[:cur_filename.find(cur_ext)]
         suffix = cur_filename[cur_filename.find(cur_ext)+len(cur_ext):]
         
-        # If we are supposed to load the previous chunks, and one exists, 
-        # load it and merge it with the current chunk
-        if (load_prev_chunks and 
-            not w_current.files is None and 
-            not w_current.files['prev'] is None):
-                prev_file_name = prefix + w_current.files['prev'][0] + suffix
-                w_prev = cls.load_from_file(prev_file_name,
-                                            load_prev_chunks=True,
-                                            load_next_chunks=False)
-                w_current = cls.merge(w_current, w_prev)
-
-        # Same with the next chunks
-        if (load_next_chunks and 
-            not w_current.files is None and 
-            not w_current.files['next'] is None):
-                next_file_name = prefix + w_current.files['next'][0] + suffix
-                w_next = cls.load_from_file(next_file_name,
-                                            load_prev_chunks=False,
-                                            load_next_chunks=True)
-                w_current = cls.merge(w_current, w_next)
+        load_chunks= {'prev': load_prev_chunks,
+                      'next': load_next_chunks}
+        
+        for direction in ['prev', 'next']:
+            # If we are supposed to load the previous chunks, and one exists, 
+            # load it and merge it with the current chunk
+            # Same with the "next" chunks
+            if (load_chunks[direction] and 
+                not w_current.files is None and 
+                not w_current.files[direction] is None):
+                    cur_load_prev_chunks = (direction == 'prev')
+                    cur_load_next_chunks = (direction == 'next')
+    
+                    new_file_name = (prefix + w_current.files[direction][0] + 
+                                     suffix)
+                    w_new = cls.load_from_file(new_file_name,
+                                               cur_load_prev_chunks,
+                                               cur_load_next_chunks)
+                    w_current = cls.merge(w_current, w_new)
 
         return w_current
         
@@ -278,7 +298,7 @@ class WCONWorm():
         jsonschema.validate(root, w.schema)
     
         if 'files' in root:
-            w.files = w['files']
+            w.files = root['files']
         else:
             w.files = None
     
@@ -600,6 +620,8 @@ warnings.simplefilter(action = "ignore", category = RuntimeWarning)
 if __name__ == '__main__':
 
     JSON_path = '../../tests/hello_world_simple.wcon'
+
+    print("Loading " + JSON_path)
 
     with open(JSON_path, 'r') as infile:
         w1 = WCONWorm.load(infile)
