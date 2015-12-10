@@ -4,7 +4,13 @@
 	"description": "A text-based data interchange format for *C. elegans* trackers. It is a constrained subset of JSON. It is designed to be both human and machine readable and to facilitate data exchange and inter-operability for worm tracking data that is independent of platform and the language used for implementation.",
 	"type": "object",
 	"required": ["units", "data"],
-	"additionalProperties": true,
+	"additionalProperties": false,
+	"patternProperties" : {
+		"^@.*": {
+			"type": "object", 
+			"description": "Top-Level Custom Features"
+		}
+	}
 	"properties": {
 		"tracker-commons": {
 			"description": "A term to aid easy identification that this is a WCON file.  A warning should be produced by the parser if this field is not present and set to true.",
@@ -91,7 +97,46 @@
 		},
 		"data": {
 			"type": "array",
-			"items": {}
+			"items": {
+				"type":"object"
+				"properties": {
+					"id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
+					"t": { "$ref": "#/definitions/element_without_aspect" },
+					"ox": { "$ref": "#/definitions/element_without_aspect" },
+					"oy": { "$ref": "#/definitions/element_without_aspect" },
+					"x": { "$ref": "#/definitions/element_with_aspect" },
+					"y": { "$ref": "#/definitions/element_with_aspect" },
+					"head": {
+						"oneOf": [
+							{"type":"string", "enum":["L","R","?"]},
+							{"type":"array", "items":{"type":"string", "enum":["L","R","?"]}}
+						]
+					},
+					"ventral": {
+						"oneOf": [
+							{"type":"string", "enum":["CW","CCW","?"]},
+							{"type":"array", "items":{"type":"string", "enum":["CW","CCW","?"]}}
+						]
+					}
+				},
+				"additionalProperties": true
+				"required": ["id", "t", "x", "y"]
+			}
 		}
-	}
+	},
+	"definitions": {
+		"nullable_number": {"oneOf":[{"type":"number"},{"type":"null"}]},
+		"element_without_aspect": {
+			"oneOf": [
+				{"$ref": "#/definitions/nullable_number"},
+				{"type":"array", "items":{"$ref": "#/definitions/nullable_number"}}
+			]
+		},
+		"element_with_aspect": {
+			"oneOf": [
+				{"$ref": "#/definitions/nullable_number"},
+				{"type":"array", "items": {"$ref": "#/definitions/element_without_aspect"}}
+			]
+		}
+	},	
 }

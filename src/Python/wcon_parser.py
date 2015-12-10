@@ -488,9 +488,17 @@ class WCONWorm():
 
     def _parse_data(self, data):
         """
-        Parse the 'data' element
+        Parse the an array of entries conforming to the WCON schema definition
+        for the "data" array in the root object.  The canonical example is
+        that of worm "skeleton" (midline) information over time.
         
-        Return an object encapsulating that data
+        This could be the standard "data" array from the root object, or 
+        some custom array that needs to be processed
+        
+        Note that all elements are required to have "id", "t", and "x" and "y"
+        entries.
+        
+        Return an object encapsulating that data.
         
         """
         # If data is single-valued, wrap it in a list so it will be just
@@ -503,11 +511,8 @@ class WCONWorm():
         # Get a list of all ids in data
         #ids = list(set([x['id'] for x in data if 'id' in x]))
 
-        is_time_series_mask = get_mask(data, 't')
-        has_id_mask = get_mask(data, 'id')
-
         # Clean up and validate all time-series data segments
-        self._validate_time_series_data(data[is_time_series_mask])
+        self._validate_time_series_data(data)
 
         # Obtain a numpy array of all unique timestamps used
         #timeframes = []
@@ -515,7 +520,7 @@ class WCONWorm():
         #    timeframes.extend(data_segment['t'])
         #timeframes = np.array(list(set(timeframes)))
 
-        time_df = self._obtain_time_series_data_frame(data[is_time_series_mask & has_id_mask])
+        time_df = self._obtain_time_series_data_frame(data)
 
         return time_df
 
