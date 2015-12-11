@@ -92,7 +92,7 @@ class TestWCONParser(unittest.TestCase):
             WCONWorm.load(StringIO('{"tracker-commons":blahblah}'))
         
         # Errors because "tracker-commons":true is not present
-        with self.assertWarns(UserWarning):
+        with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorm.load(StringIO('{"tracker-blah":true, "units":{}, "data":[]}'))
         with self.assertWarns(UserWarning):
             WCONWorm.load(StringIO('{"units":{}, "data":[]}'))
@@ -374,7 +374,7 @@ class TestWCONParser(unittest.TestCase):
         for chunk_filename in chunk_filenames:
             # Worm from files that found each other through 
             # the "files" object
-            pdb.set_trace()
+            #pdb.set_trace()
             worm_from_files = WCONWorm.load_from_file(chunk_filename)
             
             self.assertEqual(worm_from_files, worm_combined_manually)
