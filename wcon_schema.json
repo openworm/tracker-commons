@@ -7,10 +7,9 @@
 	"additionalProperties": false,
 	"patternProperties" : {
 		"^@.*": {
-			"type": "object", 
-			"description": "Top-Level Custom Features"
+			"description": "Top-Level Custom Feature"
 		}
-	}
+	},
 	"properties": {
 		"tracker-commons": {
 			"description": "A term to aid easy identification that this is a WCON file.  A warning should be produced by the parser if this field is not present and set to true.",
@@ -98,7 +97,7 @@
 		"data": {
 			"type": "array",
 			"items": {
-				"type":"object"
+				"type":"object",
 				"properties": {
 					"id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
 					"t": { "$ref": "#/definitions/element_without_aspect" },
@@ -119,7 +118,7 @@
 						]
 					}
 				},
-				"additionalProperties": true
+				"additionalProperties": true,
 				"required": ["id", "t", "x", "y"]
 			}
 		}
@@ -138,5 +137,5 @@
 				{"type":"array", "items": {"$ref": "#/definitions/element_without_aspect"}}
 			]
 		}
-	},	
+	}
 }

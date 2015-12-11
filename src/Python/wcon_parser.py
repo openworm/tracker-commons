@@ -42,6 +42,14 @@ def df_upsert(src, dest):
         src is the one to be added to dest
         dest is the one that is modified in place
     
+    # TODO: concatenate using a list comprehension as calling it
+    # iteratively like this causes a performance hit (see
+    # http://pandas.pydata.org/pandas-docs/stable/merging.html#concatenating-objects
+    # "Note It is worth noting however, that concat (and therefore append) 
+    # makes a full copy of the data, and that constantly reusing this 
+    # function can create a signifcant performance hit. If you need 
+    # to use the operation over several datasets, use a list comprehension."
+    
     """
     dest.sort_index(axis=1, inplace=True)
     # Append src to dest
@@ -82,14 +90,7 @@ def df_upsert(src, dest):
 
     # Replace any rows that do exist with the src version
     dest.update(src)
-    
-    # TODO: concatenate using a list comprehension as calling it
-    # iteratively like this causes a performance hit (see
-    # http://pandas.pydata.org/pandas-docs/stable/merging.html#concatenating-objects
-    # "Note It is worth noting however, that concat (and therefore append) 
-    # makes a full copy of the data, and that constantly reusing this 
-    # function can create a signifcant performance hit. If you need 
-    # to use the operation over several datasets, use a list comprehension."
+
 
 def reject_duplicates(ordered_pairs):
     """Reject duplicate keys."""
@@ -363,6 +364,7 @@ class WCONWorm():
                     
         """
         w = cls()
+
         serialized_data = JSON_stream.read()
 
         # Load the whole JSON file into a nested dict.  Any duplicate
@@ -370,40 +372,27 @@ class WCONWorm():
         root = json.loads(serialized_data, object_hook=restore,
                           object_pairs_hook=reject_duplicates)
     
+        # ===================================================
+        # BASIC TOP-LEVEL VALIDATION AGAINST THE SCHEMA
+
         # Validate the raw file against the WCON schema
         jsonschema.validate(root, w.schema)
     
-        if 'files' in root:
-            w.files = root['files']
-        else:
-            w.files = None
-    
-        # ===================================================
-        # BASIC TOP-LEVEL VALIDATION
-        
         if not ('tracker-commons' in root):
             warnings.warn('{"tracker-commons":true} was not present. '
                           'Nevertheless proceeding under the assumption '
                           'this is a WCON file.')
-        
-        if 'tracker-commons' in root and root['tracker-commons'] == False:
-            raise AssertionError('"tracker-commons" is set to false.')
-    
+
         # ===================================================
-        # HANDLE THE BASIC TAGS: 'units', 'metadata', 'data'    
+        # HANDLE THE REQUIRED ELEMENTS: 'units', 'data'    
     
-        if not 'units' in root:
-            raise AssertionError('"units" is required')
-        else:
-            w.units = root['units']
-            
-            for key in w.units:
-                w.units[key] = MeasurementUnit(w.units[key])
+        w.units = root['units']
         
-        if not 'data' in root:
-            # The WCON specification requires the data field to be present
-            raise AssertionError('"data" is required')
-        elif len(root['data']) > 0:
+        for key in w.units:
+            w.units[key] = MeasurementUnit(w.units[key])
+
+        
+        if len(root['data']) > 0:
             w.data = w._parse_data(root['data'])
             
             # Shift the coordinates by the amount in the offsets 'ox' and 'oy'
@@ -412,12 +401,20 @@ class WCONWorm():
             # "data": {}
             w.data = None
 
+        # ===================================================
+        # HANDLE THE OPTIONAL ELEMENTS: 'files', 'metadata'
+
+        if 'files' in root:
+            w.files = root['files']
+        else:
+            w.files = None
+
         if 'metadata' in root:
             w.metadata = w._parse_metadata(root['metadata'])
         else:
             w.metadata = None
         
-        # ===================================================    
+        # ===================================================
         # Any special top-level keys are sent away for later processing
         w.special_keys = [k for k in root.keys() if k not in w.basic_keys]
         if w.special_keys:
@@ -559,18 +556,21 @@ class WCONWorm():
             # the segment's keys and the id of the segment
             # Only elements articulated across the skeleton, etc, of the worm
             # have the "aspect" key though
-            cur_elements_with_aspect = [k for k in self.elements_with_aspect
-                                                if k in segment_keys]
-            cur_elements_without_aspect = [k for k in self.elements_without_aspect
-                                                if k in segment_keys]
+            cur_elements_with_aspect = \
+                [k for k in self.elements_with_aspect if k in segment_keys]
+            cur_elements_without_aspect = ['aspect_size'] + \
+                [k for k in self.elements_without_aspect if k in segment_keys]
+
+            # We want to be able to fit the largest aspect size in our
+            # DataFrame
+            max_aspect_size = max([k[0] for k in data_segment['aspect_size']])
+            
             key_combos = list(itertools.product([segment_id], 
                                                 cur_elements_with_aspect,
-                                                range(self.aspect_size)))
-            key_combos.extend(
-                         list(itertools.product([segment_id], 
+                                                range(max_aspect_size)))
+            key_combos.extend(list(itertools.product([segment_id], 
                                                 cur_elements_without_aspect, 
-                                                [0]))
-                             )
+                                                [0])))
 
             column_type_names = ['id', 'key', 'aspect']
             cur_columns = pd.MultiIndex.from_tuples(key_combos,
@@ -578,8 +578,9 @@ class WCONWorm():
 
             # e.g. if this segment has only 'x', 'y', that's what we'll be 
             # looking to add to our dataframe data staging in the next step
-            cur_data_keys = [k for k in self.basic_data_keys if k in data_segment.keys()]
-  
+            cur_data_keys = cur_elements_with_aspect + \
+                            cur_elements_without_aspect  
+
             # Stage the data for addition to our DataFrame.
             # Shape KxI where K is the number of keys and 
             #                 I is the number of "aspects"
@@ -588,7 +589,6 @@ class WCONWorm():
                                   [data_segment[k][i] for k in cur_data_keys]
                                  ) for i in range(len(cur_timeframes))]
                                )
-
 
             cur_df = pd.DataFrame(cur_data, columns=cur_columns)
 
@@ -605,7 +605,6 @@ class WCONWorm():
                 time_df = cur_df
             else:
                 df_upsert(src=cur_df, dest=time_df)
-
 
         # We want the index (time) to be in order.
         time_df.sort_index(axis=0, inplace=True)
@@ -626,7 +625,7 @@ class WCONWorm():
             must have 't' entries
         
         """
-        for data_segment in time_series_data:
+        for (data_segment_index, data_segment) in enumerate(time_series_data):
             segment_keys = [k for k in data_segment.keys() if k != 'id']
 
             # If the 't' element is single-valued, wrap it and all other
@@ -675,20 +674,30 @@ class WCONWorm():
                 raise AssertionError("Error: Subelements must all have "
                                      "the same length.")
 
-            
-            # Now let's validate that each subsubelement with aspect are 
-            # same-sized
-            for i in range(subelement_length):
+            # In each time, the aspect size could change, so we need to keep
+            # track of it since the dataframe will ultimately have columns
+            # for the maximal aspect size and it won't otherwise be possible
+            # to determine what the aspect size is in each timeframe
+
+            # First let's validate that the aspect size is identical
+            # across data elements in each time frame:
+            aspect_size_over_time = []
+            for t in range(subelement_length):
                 # The x and y arrays for element i of the data segment
                 # must have the same length
-                subsubelement_lengths = [len(data_segment[k][i]) for k in 
+                cur_aspect_sizes = [len(data_segment[k][t]) for k in 
                                          self.elements_with_aspect]
                 
-                if len(set(subsubelement_lengths)) > 1:
-                    raise AssertionError("Error: x and y, etc. must have same "
-                                         "length for index " + str(i))
+                if len(set(cur_aspect_sizes)) > 1:
+                    raise AssertionError(
+                        "Error: Aspects x and y, etc. must have same "
+                        "length for data segment " + str(data_segment_index) +
+                        " and time index " + str(data_segment['t'][t]))
                 else:
-                    aspect_size = subsubelement_lengths[0]
+                    aspect_size_over_time.append([cur_aspect_sizes[0]])
+            
+            data_segment['aspect_size'] = aspect_size_over_time
+
 
 
 pd.set_option('display.expand_frame_repr', False)
