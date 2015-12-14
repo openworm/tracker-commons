@@ -109,7 +109,7 @@ def df_upsert(src, dest):
 
 
 
-def _convert_origin(data):
+def convert_origin(data):
     """
     Add the offset values 'ox' and 'oy' to the 'x' and 'y' 
     coordinates in the dataframe
@@ -137,7 +137,7 @@ def _convert_origin(data):
                                                 np.zeros(ox_column.shape)
 
 
-def parse_data(self, data):
+def parse_data(data):
     """
     Parse the an array of entries conforming to the WCON schema definition
     for the "data" array in the root object.  The canonical example is
@@ -163,7 +163,7 @@ def parse_data(self, data):
     #ids = list(set([x['id'] for x in data if 'id' in x]))
 
     # Clean up and validate all time-series data segments
-    self._validate_time_series_data(data)
+    _validate_time_series_data(data)
 
     # Obtain a numpy array of all unique timestamps used
     #timeframes = []
@@ -171,12 +171,12 @@ def parse_data(self, data):
     #    timeframes.extend(data_segment['t'])
     #timeframes = np.array(list(set(timeframes)))
 
-    time_df = self._obtain_time_series_data_frame(data)
+    time_df = _obtain_time_series_data_frame(data)
 
     return time_df
 
 
-def _obtain_time_series_data_frame(self, time_series_data):
+def _obtain_time_series_data_frame(time_series_data):
     """
     Obtain a time-series pandas DataFrame
 
@@ -211,9 +211,9 @@ def _obtain_time_series_data_frame(self, time_series_data):
         # Only elements articulated across the skeleton, etc, of the worm
         # have the "aspect" key though
         cur_elements_with_aspect = \
-            [k for k in self.elements_with_aspect if k in segment_keys]
+            [k for k in elements_with_aspect if k in segment_keys]
         cur_elements_without_aspect = ['aspect_size'] + \
-            [k for k in self.elements_without_aspect if k in segment_keys]
+            [k for k in elements_without_aspect if k in segment_keys]
 
         # We want to be able to fit the largest aspect size in our
         # DataFrame
@@ -265,7 +265,7 @@ def _obtain_time_series_data_frame(self, time_series_data):
 
     return time_df
 
-def _validate_time_series_data(self, time_series_data):
+def _validate_time_series_data(time_series_data):
     """
     Clean up and validate all time-series data segments in the 
     data dictionary provided
@@ -293,7 +293,7 @@ def _validate_time_series_data(self, time_series_data):
         # in a further list so that when we convert to a dataframe,
         # our staging data list comprehension will be able to see
         # everything as a list and not as single-valued
-        for subkey in self.elements_without_aspect:
+        for subkey in elements_without_aspect:
             if subkey in data_segment:
                 if type(data_segment[subkey]) != list:
                     data_segment[subkey] = [[data_segment[subkey]]]
@@ -305,7 +305,7 @@ def _validate_time_series_data(self, time_series_data):
         # Broadcast aspectless elements to be 
         # length n = subelement_length if it's 
         # just being shown once right now  (e.g. for 'ox', 'oy', etc.)
-        for k in self.elements_without_aspect:
+        for k in elements_without_aspect:
             if k in segment_keys:
                 k_length = len(data_segment[k])
                 if k_length not in [1, subelement_length]:
@@ -340,7 +340,7 @@ def _validate_time_series_data(self, time_series_data):
             # The x and y arrays for element i of the data segment
             # must have the same length
             cur_aspect_sizes = [len(data_segment[k][t]) for k in 
-                                     self.elements_with_aspect]
+                                     elements_with_aspect]
             
             if len(set(cur_aspect_sizes)) > 1:
                 raise AssertionError(

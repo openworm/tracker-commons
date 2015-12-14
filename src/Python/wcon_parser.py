@@ -28,7 +28,7 @@ import warnings
 from io import StringIO
 import json, jsonschema
 
-from wcon_data import WCONTimeSeriesData
+from wcon_data import parse_data, convert_origin
 from measurement_unit import MeasurementUnit
 
 
@@ -187,6 +187,16 @@ class WCONWorm():
         return (WCONWorm.is_data_equal(self, other) and
                 WCONWorm.is_metadata_equal(self, other))
             
+    @classmethod
+    def does_data_clash(cls, w1, w2):
+        """
+        Return True if any shared data between w1 and w2 clashes.
+        
+        """
+        pass
+        # TODO: maybe use the upsert functionality
+        return True
+    
     @classmethod
     def merge(cls, w1, w2):
         """
@@ -366,10 +376,10 @@ class WCONWorm():
 
         
         if len(root['data']) > 0:
-            w.data = w._parse_data(root['data'])
+            w.data = parse_data(root['data'])
             
             # Shift the coordinates by the amount in the offsets 'ox' and 'oy'
-            w._convert_origin()
+            convert_origin(w.data)
         else:
             # "data": {}
             w.data = None
