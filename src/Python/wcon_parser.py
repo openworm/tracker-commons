@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+#!/user/bin/python
 """
 WCON Parser
 
@@ -23,73 +24,12 @@ assert(filecmp.cmp('file1.wcon', file2.wcon'))
 """
 
 import pdb
-import warnings, itertools
-from io import StringIO
-import numpy as np
-import pandas as pd
+import warnings
+from os import StringIO
 import json, jsonschema
 
+from wcon_data import WCONTimeSeriesData
 from measurement_unit import MeasurementUnit
-
-def df_upsert(src, dest):
-    """
-    Append src to dest, doing an "update/insert" where
-    conflicts cause an AssertionError to be raised.
-    
-    Parameters
-    -----------
-    src, dest: pandas DataFrames
-        src is the one to be added to dest
-        dest is the one that is modified in place
-    
-    # TODO: concatenate using a list comprehension as calling it
-    # iteratively like this causes a performance hit (see
-    # http://pandas.pydata.org/pandas-docs/stable/merging.html#concatenating-objects
-    # "Note It is worth noting however, that concat (and therefore append) 
-    # makes a full copy of the data, and that constantly reusing this 
-    # function can create a signifcant performance hit. If you need 
-    # to use the operation over several datasets, use a list comprehension."
-    
-    """
-    dest.sort_index(axis=1, inplace=True)
-    # Append src to dest
-
-    # Add all rows that don't currently exist in dest
-    dest = pd.concat([dest, src[~src.index.isin(dest.index)]])
-
-    dest.sort_index(axis=1, inplace=True)
-
-    # Obtain a sliced version of dest, showing only
-    # the columns and rows shared with the src
-    dest_sliced = \
-        dest.loc[dest.index.isin(src.index),
-                    dest.columns.isin(src.columns)]
-
-    src_sliced = \
-        src.loc[src.index.isin(dest.index),
-                   src.columns.isin(dest.columns)]
-
-    # Sort our slices so they will be lined up for comparison
-    dest_sliced.sort_index(inplace=True)
-    src_sliced.sort_index(inplace=True)                                                    
-
-    # Obtain a mask of the conflicts in the current segment
-    # as compared with all previously loaded data.  That is:
-    # NaN NaN = False
-    # NaN 2   = False
-    # 2   2   = False
-    # 2   3   = True
-    # 2   NaN = True
-    data_conflicts = (pd.notnull(dest_sliced) & 
-                      (dest_sliced != src_sliced))
-
-    if data_conflicts.any().any():
-        raise AssertionError("Data from this segment conflicted "
-                             "with previously loaded data:\n", 
-                             data_conflicts)
-
-    # Replace any rows that do exist with the src version
-    dest.update(src)
 
 
 def reject_duplicates(ordered_pairs):
@@ -102,70 +42,6 @@ def reject_duplicates(ordered_pairs):
            unique_dict[key] = val
 
     return unique_dict
-
-
-def restore(dct):
-    """
-    """
-
-    if "py/dict" in dct:
-        return dict(dct["py/dict"])
-    if "py/tuple" in dct:
-        return tuple(dct["py/tuple"])
-    if "py/set" in dct:
-        return set(dct["py/set"])
-    if "py/collections.namedtuple" in dct:
-        data = dct["py/collections.namedtuple"]
-        return namedtuple(data["type"], data["fields"])(*data["values"])
-    if "py/numpy.ndarray" in dct:
-        data = dct["py/numpy.ndarray"]
-        return np.array(data["values"], dtype=data["dtype"])
-    if "py/collections.OrderedDict" in dct:
-        return OrderedDict(dct["py/collections.OrderedDict"])
-    return dct
-
-
-def get_mask(arr, desired_key):
-    """
-    In an array of dicts, obtain a mask on arr of elements having 
-    the desired key
-    
-    Parameters
-    ----------
-    arr: list-like array of dicts
-    desired_key: str
-    
-    Returns
-    ----------
-    Boolean numpy array of same size as arr
-    
-    """
-    # Find elements having a time aspect
-    desired_indexes = [i for (i,s) in enumerate(arr) if desired_key in s]
-    desired_indexes = np.array(desired_indexes)
-
-    # Transform our list of indexes into a mask on the data array
-    return np.bincount(desired_indexes, minlength=len(arr)).astype(bool)
-
-
-
-class WormData():
-    """
-    A worm's data (stripped of units and metadata)
-
-    Time-series and aggregate data
-    Tagged by worm or tagged by plate    
-    
-    Attributes
-    -------------
-    time_df: Pandas DataFrame
-        Indexed by time
-        All worms
-        Plate data uses id:'plate'
-    
-    
-    """
-    pass
 
 
 class WCONWorm():
@@ -230,18 +106,87 @@ class WCONWorm():
 
     @classmethod
     def validate_from_schema(cls, wcon_string):
-        with open("../../wcon_schema.json", "r") as wcon_schema_file:
-            wcon_schema = json.loads(wcon_schema_file.read())
-
-        jsonschema.validate(json.load(StringIO(wcon_string)), wcon_schema)
+        jsonschema.validate(json.load(StringIO(wcon_string)), cls().schema)
 
     @classmethod
-    def does_data_clash(cls, w1, w2):
+    def is_data_equal(cls, w1, w2, convert_units=True):
         """
+        Parameters
+        -------------
+        w1, w2: WCONWorm objects
+            The objects whose .data attributes will be compared
+        convert_units: bool
+            If True, the data will first be converted to a standard form
+            so that if one worm uses millimetres and the other metres, the
+            data can still be properly compared
+            
+        TODO:
+            Add a "threshold" parameter so that perfect equality is not
+            the only option
+            
         """
-        #TODO
-        return False
+        if convert_units:
+            return w1.standard_form.data == w2.standard_form.data
+        else:
+            return w1.data == w2.data
 
+    @property
+    def standard_form(self):
+        """
+        Return a new WCONWorm object, with .units and .data changed so they
+        are in standard form.
+        
+        """
+        # TODO
+        # Go through each "units" attribute
+        return self
+
+    @classmethod
+    def is_metadata_equal(cls, w1, w2):
+        """
+        Returns
+        ----------
+        boolean
+            True if w1.metadata == w2.metadata
+    
+        """
+        return w1.metadata == w2.metadata
+
+    @classmethod
+    def are_units_equal(cls, w1, w2):
+        """
+        Returns
+        ---------
+        boolean
+            True if w1.units == w2.units, with the only conversion being 
+            between units that mean the same thing 
+            (e.g. 'mm' and 'millimetres')
+            False otherwise
+            
+        """
+        if set(w1.units.keys()) != set(w2.units.keys()):
+            return False
+            
+        for k in w1.units.keys():
+            if w1.units[k] != w2.units[k]:
+                return False
+        
+        return True
+
+    def __eq__(self, other):
+        """
+        Comparison operator (overloaded)
+        
+        Equivalent to .is_data_equal and .is_metadata_equal
+        
+        Units are converted
+        
+        Special units are not considered
+        
+        """
+        return (WCONWorm.is_data_equal(self, other) and
+                WCONWorm.is_metadata_equal(self, other))
+            
     @classmethod
     def merge(cls, w1, w2):
         """
@@ -261,12 +206,27 @@ class WCONWorm():
         # TODO: implement this properly
         return w1
 
-    def __eq__(self, other):
+    def save_to_file(self, JSON_path, num_chunks=1):
         """
-        Comparison operator (overloaded)
+        Save this object to the path specified.  The object
+        will be serialized as a WCON JSON text file.
         
+        Parameters
+        -----------
+        JSON_path: str
+            The path to save this object to.  A warning is raised if the path
+            does not end in ".WCON"
+        num_chunks: int
+            The number of chunks to break this object into.  If
+            num_chunks > 1 then num_chunks files will be created.
+            Filenames will have "_1", "_2", etc., added
+            to the end of the filename after the last path separator (e.g. "/")
+            and then, before the last "." (if any)
+            
         """
-        return True
+        # TODO
+        pass
+
 
     @classmethod
     def load_from_file(cls, JSON_path, 
@@ -295,6 +255,17 @@ class WCONWorm():
 
         """
         print("Loading file: " + JSON_path)
+
+        assert(isinstance(JSON_path, str))
+        assert(len(JSON_path)>0)
+        
+
+        if len(JSON_path) <= 5 or JSON_path[-5:].upper() != '.WCON':
+            warnings.warn('The file name is either less than 5 characters,'
+                          'consists of only the extension ".WCON", or '
+                          'does not end in ".WCON", the recommended'
+                          'file extension.')
+
 
         with open(JSON_path, 'r') as infile:
             w_current = cls.load(infile)
@@ -343,6 +314,9 @@ class WCONWorm():
                                                cur_load_next_chunks)
                     w_current = cls.merge(w_current, w_new)
 
+        # We don't want 'files' to stay after loading
+        del(w_current.files)
+
         return w_current
         
 
@@ -369,8 +343,7 @@ class WCONWorm():
 
         # Load the whole JSON file into a nested dict.  Any duplicate
         # keys raise an exception since we've hooked in reject_duplicates
-        root = json.loads(serialized_data, object_hook=restore,
-                          object_pairs_hook=reject_duplicates)
+        root = json.loads(serialized_data, object_pairs_hook=reject_duplicates)
     
         # ===================================================
         # BASIC TOP-LEVEL VALIDATION AGAINST THE SCHEMA
@@ -410,7 +383,7 @@ class WCONWorm():
             w.files = None
 
         if 'metadata' in root:
-            w.metadata = w._parse_metadata(root['metadata'])
+            w.metadata = root['metadata']
         else:
             w.metadata = None
         
@@ -424,309 +397,5 @@ class WCONWorm():
         w.root = root
 
         return w
-
-
-    def _parse_metadata(self, metadata):
-        """
-        Parse the 'metadata' element
-        
-        Return an object encapsulating that data
-        
-        """
-        return metadata
-
-
-    def _convert_origin(self):
-        """
-        Add the offset values 'ox' and 'oy' to the 'x' and 'y' 
-        coordinates in the dataframe
-
-        Offset values that are NaN are considered to be zero.
-        
-        After this is done, set all offset values to zero.
-        
-        """
-        for worm_id in self.data.columns.get_level_values(0).unique():
-            cur_worms = self.data.loc[:,(worm_id)]
-
-            for offset, coord in zip(['ox', 'oy'], ['x', 'y']):
-                if offset in cur_worms.columns.get_level_values(0):
-                    all_x_columns = cur_worms.loc[:,(coord)]
-                    ox_column = cur_worms.loc[:,(offset)].fillna(0)
-                    affine_change = (np.array(ox_column) * 
-                                     np.ones(all_x_columns.shape))
-                    # Shift our 'x' values by the amount in 'ox'
-                    all_x_columns += affine_change
-                    self.data.loc[:,(worm_id,coord)] = all_x_columns.values
-                    
-                    # Now reset our 'ox' values to zero.
-                    self.data.loc[:,(worm_id,offset)] = \
-                                                    np.zeros(ox_column.shape)
-
-    # "Aspect" is my term for the articulation points at a given time frame
-    # So if you track 49 skeleton points per frame, then x and y have
-    # 49 aspects per frame, but ox is only recorded once per frame, or
-    # even once across the whole video.
-    @property
-    def elements_with_aspect(self):
-        return ['x', 'y']
-    
-    @property
-    def elements_without_aspect(self):
-        return ['ox', 'oy', 'head', 'ventral']
-    
-    @property
-    def basic_data_keys(self):
-        return self.elements_with_aspect + self.elements_without_aspect
-
-    @property    
-    def supported_data_keys(self):
-        return self.basic_data_keys + ['id', 't']
-
-    def _parse_data(self, data):
-        """
-        Parse the an array of entries conforming to the WCON schema definition
-        for the "data" array in the root object.  The canonical example is
-        that of worm "skeleton" (midline) information over time.
-        
-        This could be the standard "data" array from the root object, or 
-        some custom array that needs to be processed
-        
-        Note that all elements are required to have "id", "t", and "x" and "y"
-        entries.
-        
-        Return an object encapsulating that data.
-        
-        """
-        # If data is single-valued, wrap it in a list so it will be just
-        # a special case of the array case.
-        if type(data) == dict:
-            data = [data]
-
-        data = np.array(data)
-
-        # Get a list of all ids in data
-        #ids = list(set([x['id'] for x in data if 'id' in x]))
-
-        # Clean up and validate all time-series data segments
-        self._validate_time_series_data(data)
-
-        # Obtain a numpy array of all unique timestamps used
-        #timeframes = []
-        #for data_segment in data[is_time_series_mask]:
-        #    timeframes.extend(data_segment['t'])
-        #timeframes = np.array(list(set(timeframes)))
-
-        time_df = self._obtain_time_series_data_frame(data)
-
-        return time_df
-
-
-    def _obtain_time_series_data_frame(self, time_series_data):
-        """
-        Obtain a time-series pandas DataFrame
-
-        Parameters
-        ------------
-        time_series_data: list
-            All entries must be lists of dicts, all of which 
-            must have 'id' and 't'
-        
-        Returns
-        ----------
-        pandas dataframe
-            Time-series data goes into this Pandas DataFrame
-            The dataframe will have t as index, and multilevel columns
-            with id at the first level and all other keys at second level.
-        
-        """
-        # Our DataFrame to return
-        time_df = None
-
-        # Consider only time-series data stamped with an id:
-        for data_segment in time_series_data:
-            # Add this data_segment to a Pandas dataframe
-            segment_id = data_segment['id']
-            segment_keys = np.array([k for k in data_segment.keys() 
-                                       if not k in ['t','id']])
-            
-            cur_timeframes = np.array(data_segment['t'])
-
-            # Create our column names as the cartesian product of
-            # the segment's keys and the id of the segment
-            # Only elements articulated across the skeleton, etc, of the worm
-            # have the "aspect" key though
-            cur_elements_with_aspect = \
-                [k for k in self.elements_with_aspect if k in segment_keys]
-            cur_elements_without_aspect = ['aspect_size'] + \
-                [k for k in self.elements_without_aspect if k in segment_keys]
-
-            # We want to be able to fit the largest aspect size in our
-            # DataFrame
-            max_aspect_size = max([k[0] for k in data_segment['aspect_size']])
-            
-            key_combos = list(itertools.product([segment_id], 
-                                                cur_elements_with_aspect,
-                                                range(max_aspect_size)))
-            key_combos.extend(list(itertools.product([segment_id], 
-                                                cur_elements_without_aspect, 
-                                                [0])))
-
-            column_type_names = ['id', 'key', 'aspect']
-            cur_columns = pd.MultiIndex.from_tuples(key_combos,
-                                                    names=column_type_names)
-
-            # e.g. if this segment has only 'x', 'y', that's what we'll be 
-            # looking to add to our dataframe data staging in the next step
-            cur_data_keys = cur_elements_with_aspect + \
-                            cur_elements_without_aspect  
-
-            # Stage the data for addition to our DataFrame.
-            # Shape KxI where K is the number of keys and 
-            #                 I is the number of "aspects"
-            cur_data = np.array(
-                  [np.concatenate(
-                                  [data_segment[k][i] for k in cur_data_keys]
-                                 ) for i in range(len(cur_timeframes))]
-                               )
-
-            cur_df = pd.DataFrame(cur_data, columns=cur_columns)
-
-            cur_df.index = cur_timeframes
-            cur_df.index.names = 't'
-
-            # We want the index (time) to be in order.
-            cur_df.sort_index(axis=0, inplace=True)
-            
-            # Apparently multiindex must be sorted to work properly:
-            cur_df.sort_index(axis=1, inplace=True)
-            
-            if time_df is None:
-                time_df = cur_df
-            else:
-                df_upsert(src=cur_df, dest=time_df)
-
-        # We want the index (time) to be in order.
-        time_df.sort_index(axis=0, inplace=True)
-
-        return time_df
-
-    def _validate_time_series_data(self, time_series_data):
-        """
-        Clean up and validate all time-series data segments in the 
-        data dictionary provided
-        
-        Parameters
-        -----------
-        data_series_data: array
-            Dictionary extracted from JSON, but only the entries with
-            a time series.
-            All elements must be lists of dicts, all of which 
-            must have 't' entries
-        
-        """
-        for (data_segment_index, data_segment) in enumerate(time_series_data):
-            segment_keys = [k for k in data_segment.keys() if k != 'id']
-
-            # If the 't' element is single-valued, wrap it and all other
-            # elements into an array so single-valued elements
-            # don't need special treatment in our later processing steps
-            if type(data_segment['t']) != list:
-                for subkey in segment_keys:
-                    data_segment[subkey] = [data_segment[subkey]]
-
-            # Further, we have to wrap the elements without an aspect
-            # in a further list so that when we convert to a dataframe,
-            # our staging data list comprehension will be able to see
-            # everything as a list and not as single-valued
-            for subkey in self.elements_without_aspect:
-                if subkey in data_segment:
-                    if type(data_segment[subkey]) != list:
-                        data_segment[subkey] = [[data_segment[subkey]]]
-                    else:
-                        data_segment[subkey] = [[x] for x in data_segment[subkey]]
-
-            subelement_length = len(data_segment['t'])
-
-            # Broadcast aspectless elements to be 
-            # length n = subelement_length if it's 
-            # just being shown once right now  (e.g. for 'ox', 'oy', etc.)
-            for k in self.elements_without_aspect:
-                if k in segment_keys:
-                    k_length = len(data_segment[k])
-                    if k_length not in [1, subelement_length]:
-                        raise AssertionError(k + " for each segment "
-                                             "must either have length 1 or "
-                                             "length equal to the number of "
-                                             "time elements.")
-                    elif k_length == 1:
-                        # Broadcast the origin across all time points
-                        # in this segment
-                        data_segment[k] = data_segment[k] * subelement_length
-            
-            # Validate that all sub-elements have the same length
-            subelement_lengths = [len(data_segment[key]) 
-                                  for key in segment_keys]
-
-            # Now we can assure ourselves that subelement_length is 
-            # well-defined; if not, raise an error.
-            if len(set(subelement_lengths)) > 1:
-                raise AssertionError("Error: Subelements must all have "
-                                     "the same length.")
-
-            # In each time, the aspect size could change, so we need to keep
-            # track of it since the dataframe will ultimately have columns
-            # for the maximal aspect size and it won't otherwise be possible
-            # to determine what the aspect size is in each timeframe
-
-            # First let's validate that the aspect size is identical
-            # across data elements in each time frame:
-            aspect_size_over_time = []
-            for t in range(subelement_length):
-                # The x and y arrays for element i of the data segment
-                # must have the same length
-                cur_aspect_sizes = [len(data_segment[k][t]) for k in 
-                                         self.elements_with_aspect]
-                
-                if len(set(cur_aspect_sizes)) > 1:
-                    raise AssertionError(
-                        "Error: Aspects x and y, etc. must have same "
-                        "length for data segment " + str(data_segment_index) +
-                        " and time index " + str(data_segment['t'][t]))
-                else:
-                    aspect_size_over_time.append([cur_aspect_sizes[0]])
-            
-            data_segment['aspect_size'] = aspect_size_over_time
-
-
-
-pd.set_option('display.expand_frame_repr', False)
-
-# Suppress RuntimeWarning warnings in Spider because it's a known bug
-# http://stackoverflow.com/questions/30519487/
-warnings.simplefilter(action = "ignore", category = RuntimeWarning)
-
-
-if __name__ == '__main__':
-
-    JSON_path = '../../tests/hello_world_simple.wcon'
-
-    print("Loading " + JSON_path)
-
-    w2 = WCONWorm.load_from_file(JSON_path)
-
-    with open(JSON_path, 'r') as infile:
-        w1 = WCONWorm.load(infile)
-    
-    u = MeasurementUnit('cm')
-
-
-
-    
-if __name__ == '__main__3':
-    w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
-                                '"data":[{"id":3, "t":1.3, '
-                                         '"x":[3,4,4,3.2], '
-                                         '"y":[5.4,3,1,-3]}]}'))
 
 
