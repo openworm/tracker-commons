@@ -8,7 +8,7 @@ notifications:
   email: false
 install:
   - pip install --upgrade pip
-  - pip install numpy pandas jsonschema
+  - pip install numpy scipy pandas jsonschema
 script:
   - cd src/Python/
   - python -m unittest discover
