@@ -325,7 +325,6 @@ class MeasurementUnit():
             self._all_prefixes = list(self.SI_prefixes.keys())
         
             return self._all_prefixes
-
     
     @property
     def canonical_unit_string(self):
@@ -337,17 +336,20 @@ class MeasurementUnit():
  
     def __eq__(self, other):
         """
-        Returns if the units are the same.
+        Returns if the units are the same, and the type of measurement being
+        done is the same (temperature, distance, etc).
         
         That is 'm' and 'metre' will return True
         But 'um' and 'm' will return False
+        
         """
         # Any value would work except the point where Celsius == Fahrenheit,
         # i.e. 0 or 32
-        return self.to_canon(10) == other.to_canon(10)
+        return (self.to_canon(10) == other.to_canon(10) and
+                self.canonical_suffix == other.canonical_suffix)
 
     def __ne__(self, other):
-        return self.to_canon(10) != other.to_canon(10)
+        return not self.__eq__(other)
  
 
 
