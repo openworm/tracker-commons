@@ -11,7 +11,7 @@ python:
 notifications:
   email: false
 install:
-  pip install -U pip
-  pip install numpy pandas json jsonschema
+  - pip install --upgrade pip
+  - pip install numpy pandas json jsonschema
 script:
-  python -m unittest discover
+  - python -m unittest discover

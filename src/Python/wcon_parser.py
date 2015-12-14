@@ -25,7 +25,7 @@ assert(filecmp.cmp('file1.wcon', file2.wcon'))
 
 import pdb
 import warnings
-from os import StringIO
+from io import StringIO
 import json, jsonschema
 
 from wcon_data import WCONTimeSeriesData
