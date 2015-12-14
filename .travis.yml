@@ -1,9 +1,5 @@
 language: python
 python:
-  - "2.6"
-  - "2.7"
-  - "3.2"
-  - "3.3"
   - "3.4"
   - "3.5"
   - "3.5-dev" # 3.5 development branch
@@ -12,6 +8,6 @@ notifications:
   email: false
 install:
   - pip install --upgrade pip
-  - pip install numpy pandas json jsonschema
+  - pip install numpy pandas jsonschema
 script:
   - python -m unittest discover
