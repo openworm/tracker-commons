@@ -6,9 +6,31 @@ python:
   - "nightly" # currently points to 3.6-dev
 notifications:
   email: false
-install:
-  - pip install --upgrade pip
-  - pip install numpy pandas jsonschema
+env:
+  global:
+    - MINICONDA_DIR=/home/travis/miniconda3
+before_install:
+  - which python
+  - python --version
+  - cmake --version
+
+  # Anaconda installation
+  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - chmod +x miniconda.sh
+  - ./miniconda.sh -b
+  - export PATH=$MINICONDA_DIR/bin:$PATH
+  
+  # Need to install the actual Python version, does this work?
+  # To get the correct version you have to do a conda install
+  # Old versions are at: http://repo.continuum.io/miniconda/ but don't 
+  # match Python versions and it seems like continuum doesn't want you 
+  # to try and match
+  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy pandas jsonschema
+ 
+#install:
+#  - pip install --upgrade pip
+#  - pip install numpy pandas jsonschema
 script:
   - cd src/Python/
+  - pwd
   - python -m unittest discover
