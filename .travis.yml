@@ -6,6 +6,7 @@ python:
   - "nightly" # currently points to 3.6-dev
 notifications:
   email: false
+<<<<<<< HEAD
 env:
   global:
     - MINICONDA_DIR=/home/travis/miniconda3
@@ -30,6 +31,11 @@ before_install:
 #install:
 #  - pip install --upgrade pip
 #  - pip install numpy pandas jsonschema
+=======
+install:
+  - pip install --upgrade pip
+  - pip install numpy scipy pandas jsonschema
+>>>>>>> origin/master
 script:
   - cd src/Python/
   - pwd
