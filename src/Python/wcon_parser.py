@@ -384,6 +384,12 @@ class WCONWorm():
             # "data": {}
             w.data = None
 
+        # Raise error if there are any data keys without units
+        # TODO
+        # w1.data.index.name
+        # w1.data.columns
+        # w1.units.keys()
+
         # ===================================================
         # HANDLE THE OPTIONAL ELEMENTS: 'files', 'metadata'
 
