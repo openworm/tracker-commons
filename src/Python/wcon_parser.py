@@ -137,7 +137,14 @@ class WCONWorm():
         are in standard form.
         
         """
+        
         # TODO
+        for data_key in self.units:
+            mu = self.units[data_key]
+            self.data.loc[:,(4,data_key)].apply(mu.to_canon)
+            #DEBUG
+            #TODO
+            
         # Go through each "units" attribute
         return self
 
