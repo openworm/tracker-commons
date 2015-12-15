@@ -402,12 +402,6 @@ class WCONWorm():
             w.metadata = root['metadata']
         else:
             w.metadata = None
-        
-        # ===================================================
-        # Any special top-level keys are sent away for later processing
-        w.special_keys = [k for k in root.keys() if k not in w.basic_keys]
-        if w.special_keys:
-            w.special_root = {k: root[k] for k in w.special_keys}
 
         # DEBUG: temporary
         w.root = root

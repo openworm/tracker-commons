@@ -7,6 +7,7 @@
 	"additionalProperties": false,
 	"patternProperties" : {
 		"^@.*": {
+			"title": "Custom Feature Type 1",
 			"description": "Top-Level Custom Feature"
 		}
 	},
@@ -84,10 +85,16 @@
 							"type": "object",
 							"properties": {
 								"name": {"type": "string"},
-								"version": {"type": "string"}
+								"version": {
+									"description": "Supports semantic versioning (MAJOR.MINOR.PATCH) (http://semver.org/), written as a string, or any other string.",
+									"type": "string"
+								}
 							}
 						},
-						"featureID": {"type":"string"}
+						"featureID": {
+							"description": "i.e. the lab strain designation followed by an optional suffix (e.g. '@OMG')",
+							"type":"string"
+						}
 					}
 				},
 				"settings": {"type": "string"}
@@ -97,29 +104,49 @@
 		"data": {
 			"type": "array",
 			"items": {
-				"type":"object",
-				"properties": {
-					"id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
-					"t": { "$ref": "#/definitions/element_without_aspect" },
-					"ox": { "$ref": "#/definitions/element_without_aspect" },
-					"oy": { "$ref": "#/definitions/element_without_aspect" },
-					"x": { "$ref": "#/definitions/element_with_aspect" },
-					"y": { "$ref": "#/definitions/element_with_aspect" },
-					"head": {
-						"oneOf": [
-							{"type":"string", "enum":["L","R","?"]},
-							{"type":"array", "items":{"type":"string", "enum":["L","R","?"]}}
-						]
+				"oneOf": [
+					{
+						"type":"object",
+						"patternProperties" : {
+							"^@.*": {
+								"title": "Custom Feature Type 2",
+								"description": "Data Object Custom Feature"
+							}
+						},
+						"additionalProperties":false
 					},
-					"ventral": {
-						"oneOf": [
-							{"type":"string", "enum":["CW","CCW","?"]},
-							{"type":"array", "items":{"type":"string", "enum":["CW","CCW","?"]}}
-						]
+					{
+						"type":"object",
+						"properties": {
+							"id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
+							"t": { "$ref": "#/definitions/element_without_aspect" },
+							"ox": { "$ref": "#/definitions/element_without_aspect" },
+							"oy": { "$ref": "#/definitions/element_without_aspect" },
+							"x": { "$ref": "#/definitions/element_with_aspect" },
+							"y": { "$ref": "#/definitions/element_with_aspect" },
+							"head": {
+								"oneOf": [
+									{"type":"string", "enum":["L","R","?"]},
+									{"type":"array", "items":{"type":"string", "enum":["L","R","?"]}}
+								]
+							},
+							"ventral": {
+								"oneOf": [
+									{"type":"string", "enum":["CW","CCW","?"]},
+									{"type":"array", "items":{"type":"string", "enum":["CW","CCW","?"]}}
+								]
+							}
+						},
+						"patternProperties" : {
+							"^@.*": {
+								"title": "Custom Feature Type 3",
+								"description": "Data Array Time Series Custom Feature"
+							}
+						},
+						"additionalProperties": false,
+						"required": ["id", "t", "x", "y"]
 					}
-				},
-				"additionalProperties": true,
-				"required": ["id", "t", "x", "y"]
+				]
 			}
 		}
 	},

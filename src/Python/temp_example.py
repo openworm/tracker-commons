@@ -22,7 +22,7 @@ warnings.simplefilter(action = "ignore", category = RuntimeWarning)
 
 if __name__ == '__main__':
 
-    JSON_path = '../../tests/hello_world_simple.wcon'
+    JSON_path = '../../tests/minimax.wcon'
 
     print("Loading " + JSON_path)
 
