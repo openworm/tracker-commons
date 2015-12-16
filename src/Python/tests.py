@@ -81,7 +81,7 @@ class TestWCONParser(unittest.TestCase):
             self._validate_from_schema(wcon_string)
 
     def test_schema(self):
-        basic_wcon = '{"tracker-commons":true, "units":{}, "data":[]}'
+        basic_wcon = '{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'
         
         self._validate_from_schema(basic_wcon)
         
@@ -94,104 +94,104 @@ class TestWCONParser(unittest.TestCase):
         
         # Errors because "tracker-commons":true is not present
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            WCONWorm.load(StringIO('{"tracker-blah":true, "units":{}, "data":[]}'))
+            WCONWorm.load(StringIO('{"tracker-blah":true, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
         with self.assertWarns(UserWarning):
-            WCONWorm.load(StringIO('{"units":{}, "data":[]}'))
+            WCONWorm.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
         # If we're being explicitly told that this is NOT a WCON file,
         # the parser should raise an error.
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            WCONWorm.load(StringIO('{"tracker-commons":false, "units":{}, "data":[]}'))
+            WCONWorm.load(StringIO('{"tracker-commons":false, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
 
         # This should fail because "units" is required
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorm.load(StringIO('{"tracker-commons":true, "data":[]}'))
 
         # The smallest valid WCON file (Empty data array should be fine)
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{}, "data":[]}'))
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
 
         # Duplicate keys should cause the parser to fail
         with self.assertRaises(KeyError):
             WCONWorm.load(StringIO('{"tracker-commons":true, '
-                                    '"units":{"t":"s", "t":"s"}'
+                                    '"units":{"t":"s","t":"s","x":"mm","y":"mm"}'
                                     ', "data":[]}'))
 
 
     def test_data1(self):
         # Single-valued 't' subelement should be fine
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                                  '"data":[{"id":3, "t":1.3, '
                                           '"x":[3,4], "y":[5.4,3]}]}'))
 
         # Two values for 'x' but four values for 'y': error
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                                      '"data":[{"id":3, "t":1.3, '
                                               '"x":[3,4], '
                                               '"y":[5.4,3,1,-3]}]}'))
 
         # Two values for 't' but 3 for 'x' and 'y': error
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                                      '"data":[{"id":3, "t":[1.3,8], '
                                               '"x":[3,4,5], "y":[5.4,3,5]}]}'))
 
         # Duplicated segments are OK if there are no differences
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
                     '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
 
         # Duplicated time indices are OK if the earlier entry was for a 
         # different worm 
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":2, "t":1.3, "x":[3,4], "y":[5.4,3]},'
                     '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
 
         # Duplicated time indices are OK if the earlier entry had those entries
         # missing
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "x":[null,null], "y":[null,null]},'
                     '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
 
         # Error if data from a later segment conflicts with earlier segments
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                 '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
                         '{"id":1, "t":1.3, "x":[3,4], "y":[5.5,3]}]}'))
 
     @unittest.skip("TODO: enable these once we have __eq__ implemented")
     def test_origin_offset(self):
         # ox, without optional bracket
-        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "ox":5000, '
             '"x":[3,4], "y":[5.4,3]}]}'))
-        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, '
             '"x":[5003,5004], "y":[5.4,3]}]}'))
         self.assertEqual(w1, w2)
 
         # oy, with optional bracket
-        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "oy":[4000], '
             '"x":[3,4], "y":[5.4,3]}]}'))
-        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, '
             '"x":[3,4], "y":[4005.4,4003]}]}'))
         self.assertEqual(w1, w2)
 
         # ox and oy, without optional brackets
-        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "ox":500, "oy":4000, '
             '"x":[3,4], "y":[4005.4,4003]}]}'))
-        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, '
             '"x":[503,504], "y":[4005.4,4003]}]}'))
         self.assertEqual(w1, w2)
 
         # ox, with two time points
-        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, '
             '"x":[3,4], "y":[5.4,3]}]}'))
-        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":[1.3,1.4], '
             '"x":[5003,5004], "y":[5.4,3]}]}'))
         self.assertEqual(w1, w2)
@@ -294,7 +294,7 @@ class TestWCONParser(unittest.TestCase):
         # "this":null should be disallowed by the schema
         worm_file_text1 = (('{"tracker-commons":true,'
                             '"files":{"this":null, "prev":null, "next":["_1", "_2"]},'
-                            '"units":{},"data":[{"id":3, "t":1.3, '
+                            '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
                                                 '"x":[3,4], "y":[5.4,3]}]}'))
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorm.load(StringIO(worm_file_text1))
@@ -302,7 +302,7 @@ class TestWCONParser(unittest.TestCase):
         # "this":"" should be disallowed by the schema
         worm_file_text2 = (('{"tracker-commons":true,'
                             '"files":{"this":"", "prev":null, "next":["_1", "_2"]},'
-                            '"units":{},"data":[{"id":3, "t":1.3, '
+                            '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
                                                 '"x":[3,4], "y":[5.4,3]}]}'))
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorm.load(StringIO(worm_file_text2))
@@ -314,7 +314,7 @@ class TestWCONParser(unittest.TestCase):
 
         """
         worm_file_text3 = (('{"tracker-commons":true,'
-                            '"units":{},"data":[{"id":3, "t":1.3, '
+                            '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
                                                 '"x":[3,4], "y":[5.4,3]}]}'))
 
         # STREAM
@@ -339,13 +339,13 @@ class TestWCONParser(unittest.TestCase):
         chunks = []
         chunks.append(('{"tracker-commons":true,'
                         '"files":{"this":"_0", "prev":null, "next":["_1", "_2"]},'  #'"files":{"this":"_0", "prev":null, "next":["_1", "_2"]},'
-                        '"units":{},"data":[{"id":3, "t":1.3, '
+                        '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
                                           '"x":[3,4], "y":[5.4,3]}]}'))
-        chunks.append(('{"tracker-commons":true, "units":{},'
+        chunks.append(('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                        '"files":{"this":"_1", "prev":["_0"], "next":["_2"]},'
                                  '"data":[{"id":3, "t":1.3, '
                                           '"x":[3,4], "y":[5.4,3]}]}'))
-        chunks.append(('{"tracker-commons":true, "units":{},'
+        chunks.append(('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                        '"files":{"this":"_2", "prev":["_1", "_0"], "next":null},'
                                  '"data":[{"id":3, "t":1.3, '
                                           '"x":[3,4], "y":[5.4,3]}]}'))

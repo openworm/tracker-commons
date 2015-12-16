@@ -31,6 +31,7 @@
 		"units": {
 			"type": "object",
 			"description": "Defines the dimensions (temporal, spatial, etc) of the experiment.",
+			"required": ["t", "x", "y"],
 			"properties": {
 				"t": {"type":"string"},
 				"x": {"type":"string"},

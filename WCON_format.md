@@ -59,7 +59,7 @@ Any numeric quantity followed on a per-animal or per-timepoint basis must have i
 
 We recommend that time values be in seconds (specified as one of `"s"`, `"second"`, or `"seconds"`), and that spatial values be in millimetres (specified as one of `"mm"`, `"millimetre"`, or `"millimetres"`) or higher-dimensional versions thereof as appropriate (e.g. `"mm^2"`).
 
-`"units"` is required and must be single-valued.
+`"units"` is required and must be single-valued.  Units must be specified at least for `"t"`, `"x"`, and `"y"`.
 
 #### Data
 
