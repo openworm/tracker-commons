@@ -1,10 +1,23 @@
 #!usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-MeasurementUnit
+Two classes:
+
+- MeasurementUnitAtom, which handles just a single prefix and suffix
+   e.g. mm, celsius, kilograms, etc.
+
+- MeasurementUnit, which can handle the composite units as well
+  e.g. mm^2, m/s, etc.
+  
+  Note that it cannot handle composite units involving Fahrenheit or Kelvin,
+  since they require an affine transformation to the canonical unit expression
+  e.g. F^2, K/s will not have to_canon and from_canon attributes that 
+  work properly.
+
+  Single units involving Fahrenheit and Kelvin will work fine:
+  e.g. F, K.
 
 """
-import pdb
 import ast
 import operator as op
 from scipy.constants import F2C, K2C, C2F, C2K
