@@ -162,6 +162,14 @@ def parse_data(data):
     # Get a list of all ids in data
     #ids = list(set([x['id'] for x in data if 'id' in x]))
 
+    is_time_series_mask = get_mask(data, 't')
+    has_id_mask = get_mask(data, 'id')
+
+    # We only care about data that have all the mandatory fields.
+    # the Custom Feature Type 2 objects are suppresed by this filter:
+    data = data[is_time_series_mask & has_id_mask]
+
+    #pdb.set_trace()
     # Clean up and validate all time-series data segments
     _validate_time_series_data(data)
 

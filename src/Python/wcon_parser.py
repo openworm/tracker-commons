@@ -137,7 +137,14 @@ class WCONWorm():
         are in standard form.
         
         """
+        
         # TODO
+        for data_key in self.units:
+            mu = self.units[data_key]
+            self.data.loc[:,(4,data_key)].apply(mu.to_canon)
+            #DEBUG
+            #TODO
+            
         # Go through each "units" attribute
         return self
 
@@ -372,7 +379,7 @@ class WCONWorm():
         w.units = root['units']
         
         for key in w.units:
-            w.units[key] = MeasurementUnit(w.units[key])
+            w.units[key] = MeasurementUnit.create(w.units[key])
 
         
         if len(root['data']) > 0:
@@ -383,6 +390,12 @@ class WCONWorm():
         else:
             # "data": {}
             w.data = None
+
+        # Raise error if there are any data keys without units
+        # TODO
+        # w1.data.index.name
+        # w1.data.columns
+        # w1.units.keys()
 
         # ===================================================
         # HANDLE THE OPTIONAL ELEMENTS: 'files', 'metadata'
@@ -396,12 +409,6 @@ class WCONWorm():
             w.metadata = root['metadata']
         else:
             w.metadata = None
-        
-        # ===================================================
-        # Any special top-level keys are sent away for later processing
-        w.special_keys = [k for k in root.keys() if k not in w.basic_keys]
-        if w.special_keys:
-            w.special_root = {k: root[k] for k in w.special_keys}
 
         # DEBUG: temporary
         w.root = root

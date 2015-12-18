@@ -22,7 +22,7 @@ warnings.simplefilter(action = "ignore", category = RuntimeWarning)
 
 if __name__ == '__main__':
 
-    JSON_path = '../../tests/hello_world_simple.wcon'
+    JSON_path = '../../tests/minimax.wcon'
 
     print("Loading " + JSON_path)
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     with open(JSON_path, 'r') as infile:
         w1 = WCONWorm.load(infile)
     
-    u = MeasurementUnit('cm')
+    u = MeasurementUnit.create('cm')
 
 
 

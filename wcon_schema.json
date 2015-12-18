@@ -7,6 +7,7 @@
 	"additionalProperties": false,
 	"patternProperties" : {
 		"^@.*": {
+			"title": "Custom Feature Type 1",
 			"description": "Top-Level Custom Feature"
 		}
 	},
@@ -30,6 +31,7 @@
 		"units": {
 			"type": "object",
 			"description": "Defines the dimensions (temporal, spatial, etc) of the experiment.",
+			"required": ["t", "x", "y"],
 			"properties": {
 				"t": {"type":"string"},
 				"x": {"type":"string"},
@@ -84,10 +86,16 @@
 							"type": "object",
 							"properties": {
 								"name": {"type": "string"},
-								"version": {"type": "string"}
+								"version": {
+									"description": "Supports semantic versioning (MAJOR.MINOR.PATCH) (http://semver.org/), written as a string, or any other string.",
+									"type": "string"
+								}
 							}
 						},
-						"featureID": {"type":"string"}
+						"featureID": {
+							"description": "i.e. the lab strain designation followed by an optional suffix (e.g. '@OMG')",
+							"type":"string"
+						}
 					}
 				},
 				"settings": {"type": "string"}
@@ -118,7 +126,13 @@
 						]
 					}
 				},
-				"additionalProperties": true,
+				"patternProperties" : {
+					"^@.*": {
+						"title": "Custom Feature Type 2",
+						"description": "Data Array Time Series Custom Feature"
+					}
+				},
+				"additionalProperties": false,
 				"required": ["id", "t", "x", "y"]
 			}
 		}
