@@ -379,7 +379,7 @@ class WCONWorm():
         w.units = root['units']
         
         for key in w.units:
-            w.units[key] = MeasurementUnit(w.units[key])
+            w.units[key] = MeasurementUnit.create(w.units[key])
 
         
         if len(root['data']) > 0:

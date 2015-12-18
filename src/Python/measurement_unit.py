@@ -4,7 +4,9 @@
 MeasurementUnit
 
 """
-
+import pdb
+import ast
+import operator as op
 from scipy.constants import F2C, K2C, C2F, C2K
 
 def C2C(x):
@@ -15,7 +17,7 @@ def C2C(x):
     return x
 
 
-class MeasurementUnit():
+class MeasurementUnitAtom():
     """
     Encapsulates the notion of a measurement unit, with an optional SI prefix.
     
@@ -29,11 +31,11 @@ class MeasurementUnit():
     -----------
     
     Initialize with a specific unit string like this: 
-        u = MeasurementUnit('cm')
+        u = MeasurementUnitAtom('cm')
 
     In this case the prefix is 'c' (centi), and the suffix is 'm' (metres):
     
-        assert(MeasurementUnit('centimetres') == u)
+        assert(MeasurementUnitAtom('centimetres') == u)
         
     To get the canonical (i.e. 'mm') representation of 1 cm:
     
@@ -110,6 +112,9 @@ class MeasurementUnit():
                          'celsius': (C2C, C2C),
                          'centigrade': (C2C, C2C)}
 
+    unit_types = {'m': 'spatial', 's': 'temporal', 'C': 'temperature',
+                  '': 'dimensionless'}
+
     def __init__(self, unit_string):
         """
         Canonical units: 
@@ -118,10 +123,12 @@ class MeasurementUnit():
            temperature: 'C'
 
         """
-        self.unit_string = unit_string
+        # Reversing the kludge to fix that ast can't handle the reserved 
+        # word 'in'; see MeasurementUnit.create below for more details
+        self.unit_string = unit_string.replace('_in', 'in')
 
         # Parse the string into a valid prefix and suffix
-        self.prefix, self.suffix = self._parse_unit_string(unit_string)
+        self.prefix, self.suffix = self._parse_unit_string(self.unit_string)
         
         # Validate that our prefix and suffix don't mix abbreviations and 
         # long form, which is forbidden by the WCON specification
@@ -129,17 +136,16 @@ class MeasurementUnit():
         
         self._obtain_canonical_representation()
         
+    @property
+    def unit_type(self):
+        return self.unit_types[self.canonical_suffix]
+
     def __repr__(self):
         """
         Pretty-print a nice summary of this unit.
 
         """
-        unit_types = {'m': 'spatial', 's': 'temporal', 'C': 'temperature',
-                      '': 'dimensionless'}
-
-        cur_type = unit_types[self.canonical_suffix]
-        
-        return ("MeasurementUnit type:" + cur_type + " " +
+        return ("MeasurementUnitAtom type:" + self.unit_type + " " +
                 "original form:'" + self.unit_string + "' canonical "
                 "form:'" + self.canonical_unit_string + "'")
 
@@ -351,22 +357,283 @@ class MeasurementUnit():
 
     def __ne__(self, other):
         return not self.__eq__(other)
- 
-
-
-
-class MeasurementUnitComposite(MeasurementUnit):
+        
+"""
+###############################################################################
+###############################################################################
+###############################################################################
+"""
+             
+class MeasurementUnit():
     """
     A class that can handle mm^2, mm/s, C/(s*m), etc.
     
+    Since there can be multiple prefixes and suffixes, the only attributes are:
+
+    Attributes
+    ------------
+    unit_string: str
+        The original string
+    canonical_unit_string: str
+        The canonical form for all units within the original string
+
+    Methods
+    ------------
+    create
+        The only public-facing factory method for this class
+    to_canon
+        transforms v from original units to canonical units
+    from_canon
+        the inverse of to_canon
+
+    Operators overloaded
+    ------------
+    = != + - * / ** % -(unary) +(unary) repr
+    
     """
-    def __init__(self, unit_string):
-        # Trim all whitespace        
-        # Parse the *, ^ and /, ( and ) characters (the operators)
+    # supported operators
+    operators = {ast.Add: op.add, ast.Sub: op.sub, 
+                 ast.Mult: op.mul, ast.Div: op.truediv, 
+                 ast.Pow: op.pow, 
+                 ast.USub: op.neg}
+
+    inverse_operators = {op.add: op.sub, op.sub: op.add,
+                         op.mul: op.truediv, op.truediv: op.mul,
+                         op.pow: lambda a,b: (a ** (-b)),
+                         op.pos: op.neg, op.neg: op.pos}
+
+    operator_symbols = {op.add: '+', op.sub: '-', 
+                        op.mul: '*', op.truediv: '/', 
+                        op.pow: '**', 
+                        op.pos: '', op.neg:'-'}
+
+    unit_types = {'m': 'spatial', 's': 'temporal', 'C': 'temperature',
+                  '': 'dimensionless'}
+
+    def __repr__(self):
+        """
+        Pretty-print a nice summary of this unit.
+
+        """
+        return ("MeasurementUnit, original form: '" + self.unit_string + 
+                "' canonical form: '" + self.canonical_unit_string + "'")
+
+    @property
+    def unit_string(self):
+        # The convention is to use '^' for exponentiation, but in Python
+        # that symbol is used for binary xor.  Here we make the substitution.
+        return self._unit_string.replace('**', '^')
+
+    @property
+    def canonical_unit_string(self):
+        return self._canonical_unit_string.replace('**', '^')
+
+    def __eq__(self, other):
+        # TODO: figure out if the units are measuring the same type of thing
+        #       i.e. time vs distance.  Right now this doesn't care about that
+    
+        # Because the function might be nonlinear e.g. 'm**2', we should 
+        # sample the function at two points to validate that they are the same
+        # this technically won't work for functions of odd degree but let's
+        # call that a known bug and leave it for now since the robust way
+        # of doing this check would require traversing the syntax tree again
+        # via ast and that seems complicated
+        return (
+                self.to_canon(10) == other.to_canon(10) and
+                self.to_canon(100) == other.to_canon(100)
+            )
         
-        # 1. Raise error if the exists a ( without a later )
-        # 2. Parse into atoms separated by operators
-        # 3. Raise error if any atom is empty
-        # 4. 
-        # 1. recursively call this method on any text found between
-        pass
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    @classmethod
+    def create(cls, unit_string):
+        """
+        The public-facing factory method for this class
+        
+        unit_string: str
+            The unit expression, e.g. 'mm^2' or 'cm/s' or 'C'
+
+        """
+        assert(isinstance(unit_string, str))
+        
+        # ast can't handle parsing '', so just create the end product 
+        # ourselves 
+        if unit_string == '':
+            return cls._create_from_atomic('')
+        
+        # ast can't handle treating '%' as a leaf node to be sent to 
+        # MeasurementUnitAtom's initializer. So we make the substitution
+        # to the friendly 'percent' instead.
+        unit_string = unit_string.replace('%', 'percent')
+
+        # The convention is to use '^' for exponentiation, but in Python
+        # that symbol is used for binary xor.  Here we make the substitution.
+        unit_string = unit_string.replace('^', '**')
+        
+        # ast can't handle parsing 'in' as a variable, since it's a
+        # reserved word in Python.  So let's make a substitution
+        # to the kludgey but friendly "_in"
+        unit_string = unit_string.replace('in', '_in')
+        # Fix the case where 'min' was changed to 'm_in' above
+        unit_string = unit_string.replace('m_in', 'min')        
+        
+        node = ast.parse(unit_string, mode='eval').body
+        return cls._create_from_node(node)
+
+    #=====================================================================
+    # "private" methods
+
+    @classmethod
+    def _create_from_atomic(cls, unit_string):
+        """
+        Create a MeasurementUnit from an "atomic" or "irreducible" string
+        
+        e.g. 'mm' or 'kilocelsius' is irreducible, but 'mm^2' is not
+             ('mm^2' can be decomposed into 'mm' ** 2)
+
+        """
+        u = cls()
+        u_atom = MeasurementUnitAtom(unit_string)
+
+        # Copy over the necessary attributes from our atomic (irreducible) 
+        # unit representation
+        u.to_canon               = u_atom.to_canon
+        u.from_canon             = u_atom.from_canon
+        u._unit_string           = u_atom.unit_string
+        u._canonical_unit_string = u_atom.canonical_unit_string
+        
+        return u
+
+    @classmethod
+    def _create_from_node(cls, node):
+        """
+        node: ast.Num or ast.BinOp or ast.UnaryOp or ast.Str or ast.Name
+            The expression to be transformed into a MeasurementUnit
+
+        """
+        if isinstance(node, ast.Num): # <number>
+            assert(node.n != 0) # A unit cannot have zero in the expression
+
+            u = cls()
+            
+            u._unit_string = str(node.n)
+            u._canonical_unit_string = str(node.n)
+            u.to_canon = lambda x: node.n
+            u.from_canon = lambda x: node.n
+            
+            return u
+
+        elif isinstance(node, ast.BinOp): # <left> <operator> <right>
+            u = cls()
+            t = type(node.op)
+
+            # Recursively calculate the left and right nodes
+            l = cls._create_from_node(node.left)
+            r = cls._create_from_node(node.right)
+
+            return u.operators[t](l, r)
+            
+        elif isinstance(node, ast.UnaryOp): # <operator> <operand> e.g., -1
+            t = type(node.op)
+
+            # Recursively calculate the operand
+            u = cls._create_from_node(node.operand)
+
+            # Apply the unary operator to the created object
+            return u.operators[t](u)
+
+        elif isinstance(node, ast.Name):
+            # If we're down to the leaf node, we parse the actual
+            # unit string
+            return cls._create_from_atomic(node.id)
+
+        else:
+            raise TypeError(node)        
+
+    @classmethod
+    def _create_with_binary_operator(cls, l, r, oper):
+        """
+        Factory method to create a new MeasurementUnit object from
+        a binary operation on two existing MeasurementUnit objects, l and r.
+        
+        e.g. 
+        import operator
+        MeasurementUnit.create_with_binary_operator(l,r,op.mul), is l * m.
+
+        Parameters
+        -----------
+        l,r: MeasurementUnit objects
+        oper: a binary operator, e.g. operator.mul
+        
+        Returns
+        -----------
+        A MeasurementUnit object
+            The combination of the l and r by oper
+
+        """
+        u = MeasurementUnit()
+
+        # For instance, MeasurementUnit.create('m') ** 2 is not allowed.
+        # use MeasurementUnit.create('m**2')
+        assert(isinstance(l, cls))
+        assert(isinstance(r, cls))
+        
+        # NOTE: This won't work with affine functions.  We should probably
+        # raise an Assertion if there is a temperature somewhere in the mix.
+        new_scalar = oper(l.to_canon(1), r.to_canon(1))
+        
+        u.to_canon = lambda x: x * new_scalar
+        u.from_canon = lambda x: x / new_scalar
+        
+        # Combine the left and right nodes together
+        #u.to_canon = lambda x: oper(l.to_canon(x), r.to_canon(x))
+        #u.from_canon = lambda x: u.inverse_operators[oper](l.from_canon(x), r.from_canon(x))
+        u._unit_string = l._unit_string + u.operator_symbols[oper] + r._unit_string
+        u._canonical_unit_string = l._canonical_unit_string + u.operator_symbols[oper] + r._canonical_unit_string
+
+        return u
+
+    @classmethod
+    def _create_with_unary_operator(cls, r, oper):
+        """
+        Similar to the create_with_binary_operator but for unary
+        
+        """
+        assert(isinstance(r, cls))
+
+        u = MeasurementUnit()
+
+        u.to_canon = lambda x: u.operators[oper](u.to_canon(x))
+        u.from_canon = lambda x: u.inverse_operators[oper](u.from_canon(x))
+        
+        u._unit_string = u.operator_symbols[oper] + u._unit_string
+        u._canonical_unit_string = u.operator_symbols[oper] + u._canonical_unit_string
+           
+    # Overloaded operators
+    def __mul__(self, other):
+        return self.__class__._create_with_binary_operator(self, other, op.mul)
+
+    def __add__(self, other):
+        return self.__class__._create_with_binary_operator(self, other, op.add)
+
+    def __sub__(self, other):
+        return self.__class__._create_with_binary_operator(self, other, op.sub)
+
+    def __truediv__(self, other):
+        return self.__class__._create_with_binary_operator(self, other, op.truediv)
+
+    def __pow__(self, other):
+        return self.__class__._create_with_binary_operator(self, other, op.pow)
+
+    def __mod__(self, other):
+        return self.__class__._create_with_binary_operator(self, other, op.mod)
+
+    def __pos__(self):
+        return self.__class__._create_with_unary_operator(self, op.pos)
+
+    def __neg__(self):
+        return self.__class__._create_with_unary_operator(self, op.neg)
+
+
+
