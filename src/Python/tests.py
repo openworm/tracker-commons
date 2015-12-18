@@ -53,8 +53,6 @@ class TestMeasurementUnit(unittest.TestCase):
         # and suffix are long-form.
         MeasurementUnit.create('milliseconds')
 
-
-    #@unittest.skip("Unit combinations are currently not implemented")
     def test_unit_combos(self):
         MeasurementUnit.create('m^2') == MeasurementUnit.create('metres^2')
         MeasurementUnit.create('C') == MeasurementUnit.create('celsius')
