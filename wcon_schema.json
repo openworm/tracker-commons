@@ -105,49 +105,35 @@
 		"data": {
 			"type": "array",
 			"items": {
-				"oneOf": [
-					{
-						"type":"object",
-						"patternProperties" : {
-							"^@.*": {
-								"title": "Custom Feature Type 2",
-								"description": "Data Object Custom Feature"
-							}
-						},
-						"additionalProperties":false
+				"type":"object",
+				"properties": {
+					"id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
+					"t": { "$ref": "#/definitions/element_without_aspect" },
+					"ox": { "$ref": "#/definitions/element_without_aspect" },
+					"oy": { "$ref": "#/definitions/element_without_aspect" },
+					"x": { "$ref": "#/definitions/element_with_aspect" },
+					"y": { "$ref": "#/definitions/element_with_aspect" },
+					"head": {
+						"oneOf": [
+							{"type":"string", "enum":["L","R","?"]},
+							{"type":"array", "items":{"type":"string", "enum":["L","R","?"]}}
+						]
 					},
-					{
-						"type":"object",
-						"properties": {
-							"id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
-							"t": { "$ref": "#/definitions/element_without_aspect" },
-							"ox": { "$ref": "#/definitions/element_without_aspect" },
-							"oy": { "$ref": "#/definitions/element_without_aspect" },
-							"x": { "$ref": "#/definitions/element_with_aspect" },
-							"y": { "$ref": "#/definitions/element_with_aspect" },
-							"head": {
-								"oneOf": [
-									{"type":"string", "enum":["L","R","?"]},
-									{"type":"array", "items":{"type":"string", "enum":["L","R","?"]}}
-								]
-							},
-							"ventral": {
-								"oneOf": [
-									{"type":"string", "enum":["CW","CCW","?"]},
-									{"type":"array", "items":{"type":"string", "enum":["CW","CCW","?"]}}
-								]
-							}
-						},
-						"patternProperties" : {
-							"^@.*": {
-								"title": "Custom Feature Type 3",
-								"description": "Data Array Time Series Custom Feature"
-							}
-						},
-						"additionalProperties": false,
-						"required": ["id", "t", "x", "y"]
+					"ventral": {
+						"oneOf": [
+							{"type":"string", "enum":["CW","CCW","?"]},
+							{"type":"array", "items":{"type":"string", "enum":["CW","CCW","?"]}}
+						]
 					}
-				]
+				},
+				"patternProperties" : {
+					"^@.*": {
+						"title": "Custom Feature Type 2",
+						"description": "Data Array Time Series Custom Feature"
+					}
+				},
+				"additionalProperties": false,
+				"required": ["id", "t", "x", "y"]
 			}
 		}
 	},
