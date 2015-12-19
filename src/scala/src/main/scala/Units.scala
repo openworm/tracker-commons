@@ -129,9 +129,9 @@ package units {
 }
 
 package object units {
-  def parseUnit(s: String): Option[Convert] = ConvertParser(s).map{
-    case lc: LinearConvert => lc.copy(name = s)
-    case x                 => x
+  def parseUnit(s: String): Option[Convert] = ConvertParser(s) match {
+    case Some(lc: LinearConvert) => Some(lc.copy(name = s))
+    case x                       => x
   }
 
   implicit class FloatIntoUnits(private val underlying: Float) extends AnyVal {
