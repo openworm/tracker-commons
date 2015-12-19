@@ -261,7 +261,7 @@ Knowing the head position and the ventral side, it is possible to infer whether 
     "tracker-commons":true,
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[
-�        { "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...],
+        { "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...],
           "head":"L",
           "ventral":"CCW"
         },

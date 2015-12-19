@@ -381,6 +381,10 @@ class WCONWorm():
         for key in w.units:
             w.units[key] = MeasurementUnit.create(w.units[key])
 
+        # The only data key without units should be aspect_size, since it's
+        # generated during the construction of the pandas dataframe
+        # it is a dimensionless quantity
+        w.units['aspect_size'] = ''
         
         if len(root['data']) > 0:
             w.data = parse_data(root['data'])
@@ -391,11 +395,18 @@ class WCONWorm():
             # "data": {}
             w.data = None
 
+
         # Raise error if there are any data keys without units
-        # TODO
-        # w1.data.index.name
-        # w1.data.columns
-        # w1.units.keys()
+        if w.data is None:
+            data_keys = set()
+        else:
+            data_keys = set(w.data.columns.get_level_values(1))
+        units_keys = set(w.units.keys())
+        keys_missing_units = data_keys - units_keys
+        if keys_missing_units != set():
+            raise AssertionError('The following data keys are missing '
+                                 'entries in the "units" object: ' + 
+                                 str(keys_missing_units))
 
         # ===================================================
         # HANDLE THE OPTIONAL ELEMENTS: 'files', 'metadata'
