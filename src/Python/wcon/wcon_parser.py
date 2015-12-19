@@ -25,6 +25,7 @@ assert(filecmp.cmp('file1.wcon', file2.wcon'))
 
 import warnings
 from io import StringIO
+from os import path
 import json, jsonschema
 
 from .wcon_data import parse_data, convert_origin
@@ -97,8 +98,10 @@ class WCONWorm():
         except AttributeError:
             # Only load _schema if this method gets called.  Once
             # it's loaded, though, persist it in memory and don't lose it
-            with open("../../wcon_schema.json", "r") as wcon_schema_file:
-                self._schema = json.loads(wcon_schema_file.read())
+            here = path.abspath(path.dirname(__file__))
+
+            with open(path.join(here, "wcon_schema.json"), "r") as f:
+                self._schema = json.loads(f.read())
 
             # Now that the schema has been loaded, we can try again
             return self._schema

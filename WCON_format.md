@@ -4,6 +4,10 @@ WCON (Worm tracker Commons Object Notation) is a text-based data interchange for
 
 WCON has a minimal core description so that the basic data from a tracking experiment can be parsed by any software that is WCON-compatible, regardless of resolution or whether the file is from a single- or multi-worm tracker.  At the same time, we recognise that most groups that develop and use worm trackers have particular features they are interested in that can depend on the specifics of their experiments.  We have included recommendations for how such custom features should be included that can accommodate a wide range of custom features while preserving interchange of the basic tracking data.  Therefore, like JSON itself, we expect other lab- or tracker-specific documentation to refer to this standard in introducing restricted formats.
 
+## Formal schema
+
+A formal schema, in JSON, specifying most of the below is available as 
+[`wcon_schema.json`](wcon_schema.json).
 
 ## Basic implementation
 

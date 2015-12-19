@@ -19,7 +19,6 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     
 setup(
     name='wcon',
-
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
@@ -27,7 +26,7 @@ setup(
     description='Worm tracker Commons Object Notation',
     long_description=long_description,
     url='https://github.com/openworm/tracker-commons',
-    author='Kerr, R; Brown, A; Currie, M; OpenWorm.',
+    author='Kerr, R; Brown, A; Currie, M; OpenWorm',
     author_email='ichoran@gmail.com',
     license='MIT',
     classifiers=[
@@ -41,6 +40,5 @@ setup(
     ],
     keywords='C. elegans worm tracking',
     packages=['wcon'],
-    install_requires=['scipy', 'numpy', 'pandas', 'jsonschema', 'json', 'ast'],
-    package_data={'wcon_schema': ['../../wcon_schema.json']}
+    install_requires=['scipy', 'numpy', 'pandas', 'jsonschema', 'json', 'ast']
 )

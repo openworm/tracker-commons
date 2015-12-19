@@ -1,0 +1,155 @@
+{
+	"$schema": "http://json-schema.org/draft-04/schema#",
+	"title": "Worm tracker Commons Object Notation (WCON)",
+	"description": "A text-based data interchange format for *C. elegans* trackers. It is a constrained subset of JSON. It is designed to be both human and machine readable and to facilitate data exchange and inter-operability for worm tracking data that is independent of platform and the language used for implementation.",
+	"type": "object",
+	"required": ["units", "data"],
+	"additionalProperties": false,
+	"patternProperties" : {
+		"^@.*": {
+			"title": "Custom Feature Type 1",
+			"description": "Top-Level Custom Feature"
+		}
+	},
+	"properties": {
+		"tracker-commons": {
+			"description": "A term to aid easy identification that this is a WCON file.  A warning should be produced by the parser if this field is not present and set to true.",
+			"type": "boolean",
+			"enum": [true]
+		},
+		"files": {
+			"type": "object",
+			"description": "For very long tracking experiments, it may be convenient to split a single experiment across multiple WCON files. To make it easier to reconstruct tracks across files, we support a 'files' object.",
+			"properties": {
+				"this": {"type":"string"},
+				"prev": {"oneOf": [{"type": "null"}, {"type": "array", "minItems":1, "items": {"type":"string"}}]},
+				"next": {"oneOf": [{"type": "null"}, {"type": "array", "minItems":1, "items": {"type":"string"}}]}
+			},
+			"additionalProperties": false,
+			"required": ["this", "prev", "next"]
+		},
+		"units": {
+			"type": "object",
+			"description": "Defines the dimensions (temporal, spatial, etc) of the experiment.",
+			"required": ["t", "x", "y"],
+			"properties": {
+				"t": {"type":"string"},
+				"x": {"type":"string"},
+				"y": {"type":"string"}
+			},
+			"additionalProperties":{
+				"type": "string"
+			}
+		},
+		"metadata": {
+			"type": "object",
+			"description": "Information about experimental conditions and software versions; critical for reproducibility across labs.",
+			"properties": {
+				"lab": {"type": "object"},
+				"who": {"type": "string"},
+				"timestamp": {"type": "string", "format":"date-time"},
+				"temperature": {
+					"type": "object",
+					"properties":{
+						"experiment": {"type": "number"},
+						"cultivation": {"type": "number"},
+						"units": {"type": "string"}
+					}
+				},
+				"humidity": {
+					"type": "object",
+					"properties":{
+						"value": {"type": "number"},
+						"units": {"type": "string"}
+					}
+				},
+				"dish": {
+					"type": "object",
+					"properties":{
+						"type": {"type": "string", "default":"petri"},
+						"size": {"type": "number"},
+						"units": {"type": "string"}
+					}
+				},
+				"food": {"type": "string"},
+				"media": {"type": "string"},
+				"sex": {"type": "string", "enum": ["hermaphrodite", "male"]},
+				"stage": {"type": "string", "enum": ["L1", "L2", "L3", "L4", "adult", "dauer"]},
+				"age": {"type": "string"},
+				"strain": {"type": "string"},
+				"image_orientation": {"type": "string", "enum": ["imaged onto agar", "imaged through agar"]},
+				"protocol": {"type": "string"},
+				"software": {
+					"type": "object",
+					"properties": {
+						"tracker": {
+							"type": "object",
+							"properties": {
+								"name": {"type": "string"},
+								"version": {
+									"description": "Supports semantic versioning (MAJOR.MINOR.PATCH) (http://semver.org/), written as a string, or any other string.",
+									"type": "string"
+								}
+							}
+						},
+						"featureID": {
+							"description": "i.e. the lab strain designation followed by an optional suffix (e.g. '@OMG')",
+							"type":"string"
+						}
+					}
+				},
+				"settings": {"type": "string"}
+			},
+			"additionalProperties": true
+		},
+		"data": {
+			"type": "array",
+			"items": {
+				"type":"object",
+				"properties": {
+					"id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
+					"t": { "$ref": "#/definitions/element_without_aspect" },
+					"ox": { "$ref": "#/definitions/element_without_aspect" },
+					"oy": { "$ref": "#/definitions/element_without_aspect" },
+					"x": { "$ref": "#/definitions/element_with_aspect" },
+					"y": { "$ref": "#/definitions/element_with_aspect" },
+					"head": {
+						"oneOf": [
+							{"type":"string", "enum":["L","R","?"]},
+							{"type":"array", "items":{"type":"string", "enum":["L","R","?"]}}
+						]
+					},
+					"ventral": {
+						"oneOf": [
+							{"type":"string", "enum":["CW","CCW","?"]},
+							{"type":"array", "items":{"type":"string", "enum":["CW","CCW","?"]}}
+						]
+					}
+				},
+				"patternProperties" : {
+					"^@.*": {
+						"title": "Custom Feature Type 2",
+						"description": "Data Array Time Series Custom Feature"
+					}
+				},
+				"additionalProperties": false,
+				"required": ["id", "t", "x", "y"]
+			}
+		}
+	},
+	"definitions": {
+		"nullable_number": {"oneOf":[{"type":"number"},{"type":"null"}]},
+		"element_without_aspect": {
+			"oneOf": [
+				{"$ref": "#/definitions/nullable_number"},
+				{"type":"array", "items":{"$ref": "#/definitions/nullable_number"}}
+			]
+		},
+		"element_with_aspect": {
+			"oneOf": [
+				{"$ref": "#/definitions/nullable_number"},
+				{"type":"array", "items": {"$ref": "#/definitions/element_without_aspect"}}
+			]
+		}
+	}
+}

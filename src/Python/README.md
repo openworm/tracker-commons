@@ -12,7 +12,7 @@ Thanks to the Python libraries `json` and `jsonschema`, it is relatively trivial
     import json, jsonschema
     
     # The WCON schema
-    with open("../../wcon_schema.json", "r") as wcon_schema_file:
+    with open("wcon/wcon_schema.json", "r") as wcon_schema_file:
     	schema = json.loads(wcon_schema_file.read())
     
     # Our example WCON file

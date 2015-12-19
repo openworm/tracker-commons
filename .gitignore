@@ -1,3 +1,8 @@
 # Python byte-compiled / optimized / DLL files
 *.pyc
-__pycache__\*
+__pycache__/*
+src/Python/build/*
+src/Python/dist/*
+src/Python/tests/test_chunk*
+src/Python/wcon.egg*
+.pypirc
