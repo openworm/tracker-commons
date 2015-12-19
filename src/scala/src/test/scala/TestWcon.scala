@@ -412,18 +412,19 @@ class TestWcon {
   def genUnitMap(r: R): UnitMap = {
     val dur = r.nextInt(6) match { case 0 => "ms"; case 1 => "h"; case 2 => "min"; case _ => "s" }
     val dist = r.nextInt(6) match { case 0 => "cm"; case 1 => "um"; case 2 => "inch"; case _ => "mm" }
+    val namedUnits = Array("mm", "cm", "meter", "metre", "K", "C", "F", "mm^2/s", "1/hr", "1 / ms cm").map(units.parseUnit).map(_.get)
     var m = Map(
-      "t" -> units.Units(dur).get,
-      "x" -> units.Units(dist).get,
-      "y" -> units.Units(dist).get,
-      "ox" -> units.Units(dist).get,
-      "oy" -> units.Units(dist).get,
-      "cx" -> units.Units(dist).get,
-      "cy" -> units.Units(dist).get
+      "t" -> units.parseUnit(dur).get,
+      "x" -> units.parseUnit(dist).get,
+      "y" -> units.parseUnit(dist).get,
+      "ox" -> units.parseUnit(dist).get,
+      "oy" -> units.parseUnit(dist).get,
+      "cx" -> units.parseUnit(dist).get,
+      "cy" -> units.parseUnit(dist).get
     )
     (0 until (r.nextInt(10) - 5)).foreach{ _ =>
       val qs = "q" * (r.nextInt(10) + 1)
-      m += (qs -> (units.NamedUnits.map(_._2).toArray match { case x => x(r.nextInt(x.length)) }))
+      m += (qs -> namedUnits(r.nextInt(namedUnits.length)))
     }
     UnitMap(m, ObjJ.empty)
   }
