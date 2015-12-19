@@ -7,7 +7,7 @@ This project contains source code in Python that implements the WCON data format
 
 ### WCON parser: proof of concept
 
-Thanks to the Python libraries `json` and `jsonschema`, it is relatively trivial to parse and validate a WCON file.  Here's an example of how to accomplish this, without using this package:
+Thanks to the Python libraries `json` and `jsonschema`, it is relatively trivial to parse and validate a WCON file.  Here's an example of how one might accomplish this, without even using the `wcon_parser` package:
 
     import json, jsonschema
     
@@ -40,6 +40,7 @@ Using this `wcon_parser` Python package, something similar can be accomplished:
 
 Here, instead of being a nested dictionary, `w` is a `WCONWorm` object that is more powerful.  Here are some of the additional things that can be accomplished with the `WCONWorm` object:
 
+- The WCON file is validated not just against the WCON schema, but also to ensure units are valid, that every data key has a corresponding unit, and that every data segment has "aspects" of the same length.  (e.g. if a skeleton at time `1.3` has 45 `x`-coordinates, it should also have 45 `y`-coordinates.  This condition is not expressible in a JSON schema but it is validated programatically by the WCONWorm initializer.
 - Units are expressed as `MeasurementUnit` objects, which can be compared with other such objects, to verify that "mm" and "millimetres" refer to the same units, for instance.  (see the below section for more details)
 - WCONWorm objects can have their data be converted into canonical units, and then saved again.
 - WCONWorm objects can be loaded from multiple files and combined together, via the `"files"` object.
