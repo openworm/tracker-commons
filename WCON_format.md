@@ -59,7 +59,7 @@ Any numeric quantity followed on a per-animal or per-timepoint basis must have i
 
 We recommend that time values be in seconds (specified as one of `"s"`, `"second"`, or `"seconds"`), and that spatial values be in millimetres (specified as one of `"mm"`, `"millimetre"`, or `"millimetres"`) or higher-dimensional versions thereof as appropriate (e.g. `"mm^2"`).
 
-`"units"` is required and must be single-valued.
+`"units"` is required and must be single-valued.  Units must be specified at least for `"t"`, `"x"`, and `"y"`.
 
 #### Data
 
@@ -195,21 +195,22 @@ _Note: JSON must be unicode, so the micro-symbol must be encoded as unicode.  Th
 
 The following units should be handled:
 
-| Unit       | Abbrevations |
-| ---------- | ------------ |
-| second     | s sec        |
-| minute     | m min        |
-| hour       | h            |
-| day        | d            |
-| metre      | m            |
-| inch       | in           |
-| micron     |              |
-| fahrenheit | F            |
-| centigrade |              |
-| celsius    | C            |
-| percent    | %            |
+| Unit       | Abbreviations |
+| ---------- | ------------- |
+| second     | s sec         |
+| minute     | min           |
+| hour       | h             |
+| day        | d             |
+| metre      | m             |
+| inch       | in            |
+| micron     | *(none)*      |
+| fahrenheit | F             |
+| centigrade | C             |
+| kelvin     | K             |
+| celsius    | C             |
+| percent    | %             |
  
-Abbreviated and full versions must not be mixed.  For instance, both `"ms"` and `"milliseconds"` are okay, but `"msecond"` and `"millis"` are not.  Words may be pluralized or not.  Capitalization is significant: `"mM"` and `"Mm"` are not the same!
+Abbreviated and full versions must not be mixed.  For instance, both `"ms"` and `"milliseconds"` are okay, but `"msecond"` and `"millis"` are not.  Words may be pluralized or not.  Capitalization is significant: `"mm"` and `"Mm"` are not the same (millimetre vs megametre)!
 
 If a numeric quantity is dimensionless, specify the units as an empty string `""`.
 
@@ -226,7 +227,7 @@ Information about experimental conditions and software versions is critical for 
            "timestamp":"2012-04-23T18:25:43.511Z",
            "temperature":{ "experiment":22, "cultivation":20, "units":"C" },
            "humidity":{ "value":40, "units":"%" },
-           "data":{ "type":"petri", "size":35, "units":"mm" },
+           "dish":{ "type":"petri", "size":35, "units":"mm" },
            "food":" none or OP50 or HB101, ... ",
            "media":" NGM or agarose, ... ",
            "sex":" hermaphrodite or male ",
@@ -236,11 +237,11 @@ Information about experimental conditions and software versions is critical for 
            "image_orientation":"imaged onto agar or imaged through agar",
            "protocol":"text description of protocol�",
            "software":{
-                "tracker":{ "name":"Software Name", "version":1.3 },
+                "tracker":{ "name":"Software Name", "version":"1.3.0" },
                 "featureID":"@OMG"
            },
            "settings":"Any valid JSON entry with hardware and software configuration can go here",
-     }
+     },
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[
         { "id":1, "t":1.3, "x":[7.2, ...], "y":[0.5, ...] },
