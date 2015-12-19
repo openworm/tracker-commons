@@ -9,7 +9,6 @@ array.
 import numpy as np
 import pandas as pd
 import itertools
-import pdb
 
 # "Aspect" is my term for the articulation points at a given time frame
 # So if you track 49 skeleton points per frame, then x and y have

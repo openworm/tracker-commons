@@ -7,7 +7,7 @@ This project contains source code in Python that implements the WCON data format
 
 ### WCON parser: proof of concept
 
-Thanks to the Python libraries `json` and `jsonschema`, it is relatively trivial to parse and validate a WCON file.  Here's an example of how one might accomplish this, without even using the `wcon_parser` package:
+Thanks to the Python libraries `json` and `jsonschema`, it is relatively trivial to parse and validate a WCON file.  Here's an example of how one might accomplish this, without even using the `wcon` package:
 
     import json, jsonschema
     
@@ -28,15 +28,15 @@ Thanks to the Python libraries `json` and `jsonschema`, it is relatively trivial
 
 With the above code we end up with a nested dictionary `w` containing everything that was serialized in the `minimax.wcon` file.
 
-### The `wcon_parser` Python package
+### The `wcon` Python package
 
-Using this `wcon_parser` Python package, something similar can be accomplished:
+Using this `wcon` Python package, something similar can be accomplished:
 
-    from wcon_parser import WCONWorm
+    import wcon
 
     JSON_path = '../../tests/minimax.wcon'
     with open(JSON_path, 'r') as infile:
-    	w = WCONWorm.load(infile)
+    	w = wcon.WCONWorm.load(infile)
 
 Here, instead of being a nested dictionary, `w` is a `WCONWorm` object that is more powerful.  Here are some of the additional things that can be accomplished with the `WCONWorm` object:
 

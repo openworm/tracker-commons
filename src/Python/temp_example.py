@@ -10,8 +10,7 @@ import pandas as pd
 import warnings
 from io import StringIO
 
-from wcon_parser import WCONWorm
-from measurement_unit import MeasurementUnit
+from wcon import WCONWorm, MeasurementUnit
 
 pd.set_option('display.expand_frame_repr', False)
 

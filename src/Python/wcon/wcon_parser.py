@@ -23,13 +23,12 @@ assert(filecmp.cmp('file1.wcon', file2.wcon'))
 
 """
 
-import pdb
 import warnings
 from io import StringIO
 import json, jsonschema
 
-from wcon_data import parse_data, convert_origin
-from measurement_unit import MeasurementUnit
+from .wcon_data import parse_data, convert_origin
+from .measurement_unit import MeasurementUnit
 
 
 def reject_duplicates(ordered_pairs):
