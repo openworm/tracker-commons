@@ -21,14 +21,14 @@ if path.exists(readme_path):
 else:
     long_description = 'See https://github.com/openworm/tracker-commons'
 
-print(os.listdir()) # DEBUG
+print(os.listdir('.')) # DEBUG
 
 setup(
     name='wcon',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.5',
+    version='0.1.6',
     description='Worm tracker Commons Object Notation',
     long_description=long_description,
     url='https://github.com/openworm/tracker-commons',
