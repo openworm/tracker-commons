@@ -10,19 +10,25 @@ from setuptools import setup
 # To use a consistent encoding
 from codecs import open
 from os import path
+import os
 
 here = path.abspath(path.dirname(__file__))
-
+readme_path = path.join(here, 'README.md')
 # Get the long description from the README file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
-    
+if path.exists(readme_path):
+    with open(readme_path, encoding='utf-8') as f:
+        long_description = f.read()
+else:
+    long_description = 'See https://github.com/openworm/tracker-commons'
+
+print(os.listdir()) # DEBUG
+
 setup(
     name='wcon',
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.4',
+    version='0.1.5',
     description='Worm tracker Commons Object Notation',
     long_description=long_description,
     url='https://github.com/openworm/tracker-commons',
@@ -34,6 +40,10 @@ setup(
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering :: Bio-Informatics',
         'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.6',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
