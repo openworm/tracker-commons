@@ -22,7 +22,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.1.1',
+    version='0.1.3',
     description='Worm tracker Commons Object Notation',
     long_description=long_description,
     url='https://github.com/openworm/tracker-commons',
@@ -40,5 +40,7 @@ setup(
     ],
     keywords='C. elegans worm tracking',
     packages=['wcon'],
-    install_requires=['scipy', 'numpy', 'pandas', 'jsonschema', 'json']
+    install_requires=['pandas', 'jsonschema']
+    # Actually also requires scipy and numpy but I don't want to force
+    # pip to install these since pip is bad at that for those two packages.
 )
