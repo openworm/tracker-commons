@@ -18,6 +18,7 @@ Two classes:
   e.g. F, K.
 
 """
+import six
 import ast
 import operator as op
 from scipy.constants import F2C, K2C, C2F, C2K
@@ -468,7 +469,13 @@ class MeasurementUnit():
             The unit expression, e.g. 'mm^2' or 'cm/s' or 'C'
 
         """
-        assert(isinstance(unit_string, str))
+        import pdb
+        # In Python 2, ensure that unit_string is unicode
+        if six.PY2 and isinstance(unit_string, str):
+                unit_string = unit_string.decode('unicode-escape')
+        
+        # Ensure that unit_string is str in Python 3 or unicode in Python 2.
+        assert(isinstance(unit_string, six.text_type))
         
         # ast can't handle parsing '', so just create the end product 
         # ourselves 

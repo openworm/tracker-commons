@@ -4,8 +4,9 @@
 Unit tests for the Python WCON parser
 
 """
+import six
 import os, sys
-from io import StringIO
+from six import StringIO # StringIO.StringIO in 2.x, io.StringIO in 3.x
 import json
 import jsonschema
 import unittest
@@ -94,8 +95,11 @@ class TestWCONParser(unittest.TestCase):
         # Errors because "tracker-commons":true is not present
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorm.load(StringIO('{"tracker-blah":true, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
-        with self.assertWarns(UserWarning):
-            WCONWorm.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
+
+        if six.PY3:  # since assertWarns is not available in Python 2
+            with self.assertWarns(UserWarning):
+                WCONWorm.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
+
         # If we're being explicitly told that this is NOT a WCON file,
         # the parser should raise an error.
         with self.assertRaises(jsonschema.exceptions.ValidationError):
