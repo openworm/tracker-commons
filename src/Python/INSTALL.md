@@ -9,7 +9,7 @@ pip install wcon
 Here are the complete installation instructions to get from a freshly provisioned Ubuntu Amazon Web Services (AWS) Machine Instance (AMI) to a machine with WCON installed:
 
 ```
-PYTHON 2 STEPS FROM CLEAN UBUNTU AMI:
+# PYTHON 2 STEPS FROM CLEAN UBUNTU AMI:
 sudo apt-get update
 sudo apt-get -y install python-pip
 

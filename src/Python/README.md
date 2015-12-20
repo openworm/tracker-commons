@@ -4,6 +4,13 @@ This project contains source code in Python that implements the WCON data format
 
 *When the Python specification and the behavior of the Scala implementation differ, and it is not obvious which one is correct, the behavior of the Scala implementation should be presumed to be authoritative.*
 
+### Installation
+
+```
+pip install wcon
+```
+
+Any problems?  Visit the more detailed [installation guide](INSTALL.md).
 
 ### WCON parser: proof of concept
 
