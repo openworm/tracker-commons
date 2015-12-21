@@ -80,12 +80,44 @@ class TestWCONParser(unittest.TestCase):
             # Now that the schema has been loaded, we can try again
             self._validate_from_schema(wcon_string)
 
+    def test_schemas_same(self):
+        # Schema had to be saved in two places, since it's common to the repo
+        # but also needs to be found by the PyPi packager for pip.
+        # Here we confirm that the files are identical.
+        import filecmp
+        self.assertTrue(filecmp.cmp('../wcon/wcon_schema.json', 
+                                    '../../../wcon_schema.json'))
+
     def test_schema(self):
         basic_wcon = '{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'
         
         self._validate_from_schema(basic_wcon)
-        
 
+    def test_equality_operator(self):
+        JSON_path = '../../../tests/minimax.wcon'
+        w2 = WCONWorm.load_from_file(JSON_path)
+        w2.units['y'] = MeasurementUnit.create('m')
+        w2data = w2.data.copy()
+        
+        w2c = w2.to_canon
+        # A change to_canon should change the data in one but equality 
+        # should remain
+        self.assertFalse((w2.data == w2c.data).all().all())
+        # This has the same effect as above
+        self.assertFalse(WCONWorm.is_data_equal(w2,w2c,convert_units=False))
+        self.assertEqual(w2, w2)
+        self.assertEqual(w2c, w2c)
+        self.assertEqual(w2, w2c)
+
+        # Change the units for w2 (not really what we should do but just 
+        # force a difference now, with w2c)
+        w2.units['y'] = MeasurementUnit.create('mm')
+        self.assertNotEqual(w2, w2c)
+        
+        # Confirm that data was not altered in situ after performing 
+        # the to_canon operation
+        self.assertTrue((w2data == w2.data).any().any())
+        
     def test_tracker_commons_and_units(self):
         with self.assertRaises(ValueError):
             # The JSON parser shouldn't accept this as valid JSON

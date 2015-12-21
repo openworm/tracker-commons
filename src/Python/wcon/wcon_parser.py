@@ -22,7 +22,8 @@ from .measurement_unit import MeasurementUnit
 
 class WCONWorm():
     """
-    A set of worm tracker data, as specified by the WCON standard.
+    A set of worm tracker data for one or more worms, as specified by 
+    the WCON standard.
 
     Attributes
     -------------
@@ -37,7 +38,7 @@ class WCONWorm():
         If 'data' was not specified, data is None.
 
     [Note: the "tracker-commons" key is not persisted]
-    [Note: the "files" key is not persisted if the .load_from_files 
+    [Note: the "files" key is not persisted unless the .load
            factory method is used.]
 
     Public-Facing Methods
@@ -225,7 +226,6 @@ class WCONWorm():
             return (w1.to_canon.data == w2.to_canon.data).all().all()
         else:
             return (w1.data == w2.data).all().all()
-
         
     @classmethod
     def does_data_clash(cls, w1, w2):
@@ -236,7 +236,6 @@ class WCONWorm():
         pass
         # TODO: maybe use the upsert functionality
         return True
-
 
     def __eq__(self, other):
         """
@@ -252,13 +251,16 @@ class WCONWorm():
         return (WCONWorm.is_data_equal(self, other) and
                 WCONWorm.is_metadata_equal(self, other))
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     def __add__(self, other):
         """
         Addition operator (overloaded)
         
         """
         return self.merge(self, other)
-        
+
     @property
     def to_canon(self):
         """
