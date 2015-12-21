@@ -5,10 +5,9 @@ Created on Sun Dec 13 00:47:21 2015
 
 @author: Michael
 """
-
 import pandas as pd
 import warnings
-from io import StringIO
+from six import StringIO
 
 from wcon import WCONWorm, MeasurementUnit
 
@@ -35,6 +34,14 @@ if __name__ == '__main__':
 
 
     
+if __name__ == '__main__2':
+    worm_file_text2 = (('{"tracker-commons":true,'
+                        '"files":{"this":"", "prev":null, "next":["_1", "_2"]},'
+                        '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
+                                            '"x":[3,4], "y":[5.4,3]}]}'))
+
+    w1 = WCONWorm.load(StringIO(worm_file_text2))
+
 if __name__ == '__main__3':
     w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
                                 '"data":[{"id":3, "t":1.3, '

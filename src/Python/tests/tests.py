@@ -288,7 +288,6 @@ class TestWCONParser(unittest.TestCase):
         self.assertEqual(w1.metadata["strain"], "CB4856")
         self.assertEqual(w1.metadata["dish"]["size"], 35)
 
-    @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_bad_files_object(self):
         """
         Test that a badly specified "files" object will fail

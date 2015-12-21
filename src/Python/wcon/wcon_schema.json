@@ -21,9 +21,9 @@
 			"type": "object",
 			"description": "For very long tracking experiments, it may be convenient to split a single experiment across multiple WCON files. To make it easier to reconstruct tracks across files, we support a 'files' object.",
 			"properties": {
-				"this": {"type":"string"},
-				"prev": {"oneOf": [{"type": "null"}, {"type": "array", "minItems":1, "items": {"type":"string"}}]},
-				"next": {"oneOf": [{"type": "null"}, {"type": "array", "minItems":1, "items": {"type":"string"}}]}
+				"this": {"type":"string", "minLength":1},
+				"prev": {"oneOf": [{"type": "null"}, {"type": "array", "minItems":1, "items": {"type":"string", "minLength":1}}]},
+				"next": {"oneOf": [{"type": "null"}, {"type": "array", "minItems":1, "items": {"type":"string", "minLength":1}}]}
 			},
 			"additionalProperties": false,
 			"required": ["this", "prev", "next"]
