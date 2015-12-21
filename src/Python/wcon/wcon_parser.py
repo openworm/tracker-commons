@@ -296,12 +296,10 @@ class WCONWorm():
         # OTHERWISE, CASE 2: MULTIPLE FILES
 
         # The schema guarantees that if "files" is present, 
-        # "this", "prev" and "next" will exist.  Also, that "this" is not null.
+        # "this", "prev" and "next" will exist.  Also, that "this" is not
+        # null and whose corresponding value is a string at least one 
+        # character in length.
         cur_ext = w_current.files['this']
-
-        if cur_ext == '':
-            raise AssertionError('["files"]["this"] == "", which is not '
-                                 'a valid file extension for multichunk data')
 
         # e.g. cur_filename = 'filename_2.wcon'
         # cur_ext = '_2', prefix = 'filename', suffix = '.wcon'
