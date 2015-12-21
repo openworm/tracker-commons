@@ -1,25 +1,13 @@
 #!usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-WCON Parser
+Methods
+------------
+reject_duplicates
 
-This parser accepts any valid WCON file, but the output is always "canonical"
-WCON, which makes specific choices about how to arrange and format the WCON
-file.  This way the functional equality of any two WCON files can be tested 
-by this:
-
-w1 = WCONWorm.load('file1.wcon')
-w2 = WCONWorm.load('file2.wcon')
-
-assert(w1 == w2)
-
-# or:
-
-w1.output('file1.wcon')
-w2.output('file2.wcon')
-
-import filecmp
-assert(filecmp.cmp('file1.wcon', file2.wcon'))
+Classes
+------------
+WCONWorm
 
 """
 
@@ -47,7 +35,7 @@ def reject_duplicates(ordered_pairs):
 
 class WCONWorm():
     """
-    A worm as specified by the WCON standard
+    A set of worm tracker data, as specified by the WCON standard.
 
     Attributes
     -------------
@@ -61,6 +49,18 @@ class WCONWorm():
     data: Pandas DataFrame or None
         If 'data' was not specified, data is None.
 
+    [Note: the "tracker-commons" key is not persisted]
+    [Note: the "files" key is not persisted if the .load_from_files 
+           factory method is used.]
+
+    Public-Facing Methods
+    -------------
+    load_from_file   (JSON_path)                [class method]
+    save_to_file     (JSON_path, pretty_print)
+    to_canon                                    [property]
+    __add__                                     [use "+"]
+    __eq__                                      [use "=="]
+
     Usage
     -------------
     # From a file:
@@ -71,6 +71,24 @@ class WCONWorm():
     from io import StringIO
     w2 = WCONWorm.load(StringIO('{"tracker-commons":true, '
                                 '"units":{},"data":{}}'))
+
+    # WCONWorm.load_from_file accepts any valid WCON, but .save_to_file 
+    # output is always "canonical" WCON, which makes specific choices about 
+    # how to arrange and format the WCON file.  This way the functional 
+    # equality of any two WCON files can be tested by this:
+    
+        w1 = WCONWorm.load_from_file('file1.wcon')
+        w2 = WCONWorm.load_from_file('file2.wcon')
+        
+        assert(w1 == w2)
+    
+        # or:
+    
+        w1.save_to_file('file1.wcon')
+        w2.save_to_file('file2.wcon')
+        
+        import filecmp
+        assert(filecmp.cmp('file1.wcon', file2.wcon'))
 
     Custom WCON versions
     --------------------
@@ -89,6 +107,12 @@ class WCONWorm():
     overwritten.
     
     """
+    """
+    ================================================================
+    Properties
+    ================================================================
+    """
+
     basic_keys = ['tracker-commons', 'files', 'units', 'metadata', 'data']
 
     @property
@@ -111,163 +135,6 @@ class WCONWorm():
     def validate_from_schema(cls, wcon_string):
         jsonschema.validate(json.load(StringIO(wcon_string)), cls().schema)
 
-    @classmethod
-    def is_data_equal(cls, w1, w2, convert_units=True):
-        """
-        Parameters
-        -------------
-        w1, w2: WCONWorm objects
-            The objects whose .data attributes will be compared
-        convert_units: bool
-            If True, the data will first be converted to a standard form
-            so that if one worm uses millimetres and the other metres, the
-            data can still be properly compared
-            
-        TODO:
-            Add a "threshold" parameter so that perfect equality is not
-            the only option
-            
-        """
-        if convert_units:
-            return w1.to_canon.data == w2.to_canon.data
-        else:
-            return w1.data == w2.data
-
-    @property
-    def to_canon(self):
-        """
-        Return a new WCONWorm object, with the same .metadata, but with
-        .units and .data changed so they are in standard form.
-        
-        """
-        w = WCONWorm()
-        w.metadata = self.metadata
-        w.units = self.canonical_units
-
-        w.data = self.data
-        
-        for data_key in self.units:
-            mu = self.units[data_key]
-            #self.data.loc[:,(4,data_key)].apply(mu.to_canon)
-            try:
-                # apply across all worm ids and all aspects
-                mu_slice = w.data.loc[:,(slice(None),data_key,slice(None))]
-                w.data.loc[:,(slice(None),data_key,slice(None))] = \
-                    mu_slice.applymap(mu.to_canon)
-            except KeyError:
-                # Just ignore cases where there are "units" entries but no
-                # corresponding data
-                pass
-            
-        # Go through each "units" attribute
-        return w
-
-    @classmethod
-    def is_metadata_equal(cls, w1, w2):
-        """
-        Returns
-        ----------
-        boolean
-            True if w1.metadata == w2.metadata
-    
-        """
-        return w1.metadata == w2.metadata
-
-    @classmethod
-    def are_units_equal(cls, w1, w2):
-        """
-        Returns
-        ---------
-        boolean
-            True if w1.units == w2.units, with the only conversion being 
-            between units that mean the same thing 
-            (e.g. 'mm' and 'millimetres')
-            False otherwise
-            
-        """
-        if set(w1.units.keys()) != set(w2.units.keys()):
-            return False
-            
-        for k in w1.units.keys():
-            if w1.units[k] != w2.units[k]:
-                return False
-        
-        return True
-
-    def __eq__(self, other):
-        """
-        Comparison operator (overloaded)
-        
-        Equivalent to .is_data_equal and .is_metadata_equal
-        
-        Units are converted
-        
-        Special units are not considered
-        
-        """
-        return (WCONWorm.is_data_equal(self, other) and
-                WCONWorm.is_metadata_equal(self, other))
-            
-    @classmethod
-    def does_data_clash(cls, w1, w2):
-        """
-        Return True if any shared data between w1 and w2 clashes.
-        
-        """
-        pass
-        # TODO: maybe use the upsert functionality
-        return True
-    
-    @classmethod
-    def merge(cls, w1, w2):
-        """
-        Merge two worms
-
-        Any clashing data found will cause an exception to be raised.
-        
-        Clashes are checked at a low level of granularity: 
-        e.g. if two worms have different metadata but the individual metadata
-        entries do not conflict, this method will still fail and raise an
-        AssertionError.
-        
-        """
-        if cls.does_data_clash(w1, w2):
-            raise AssertionError("Data conflicts between worms to be merged")
-            
-        # TODO: implement this properly
-        return w1
-
-    def save_to_file(self, JSON_path, pretty_print=False, num_chunks=1):
-        """
-        Save this object to the path specified.  The object
-        will be serialized as a WCON JSON text file.
-        
-        Parameters
-        -----------
-        JSON_path: str
-            The path to save this object to.  A warning is raised if the path
-            does not end in ".WCON"
-        pretty_print: bool
-            If True, adds newlines and spaces to make the file more human-
-            readable.  Otherwise, the JSON output will use as few characters 
-            as possible.
-        num_chunks: int
-            The number of chunks to break this object into.  If
-            num_chunks > 1 then num_chunks files will be created.
-            Filenames will have "_1", "_2", etc., added
-            to the end of the filename after the last path separator
-            (e.g. "/") and then, before the last "." (if any)
-            
-        """
-        if num_chunks > 1:
-            raise NotImplementedError("Saving a worm to more than one chunk "
-                                      "has not yet been implemented")
-
-        self.validate_filename(JSON_path)
-
-        with open(JSON_path, 'w') as outfile:
-            json.dump(self.as_ordered_dict, outfile, 
-                      indent=4 if pretty_print else None)
 
     @property
     def canonical_units(self):
@@ -310,6 +177,154 @@ class WCONWorm():
 
         return w_dict
 
+    """
+    ================================================================
+    Comparison Methods
+    ================================================================
+    """
+    @classmethod
+    def are_units_equal(cls, w1, w2):
+        """
+        Returns
+        ---------
+        boolean
+            True if w1.units == w2.units, with the only conversion being 
+            between units that mean the same thing 
+            (e.g. 'mm' and 'millimetres')
+            False otherwise
+            
+        """
+        if set(w1.units.keys()) != set(w2.units.keys()):
+            return False
+            
+        for k in w1.units.keys():
+            if w1.units[k] != w2.units[k]:
+                return False
+        
+        return True
+
+
+    @classmethod
+    def is_metadata_equal(cls, w1, w2):
+        """
+        Returns
+        ----------
+        boolean
+            True if w1.metadata == w2.metadata
+    
+        """
+        return w1.metadata == w2.metadata
+
+
+    @classmethod
+    def is_data_equal(cls, w1, w2, convert_units=True):
+        """
+        Parameters
+        -------------
+        w1, w2: WCONWorm objects
+            The objects whose .data attributes will be compared
+        convert_units: bool
+            If True, the data will first be converted to a standard form
+            so that if one worm uses millimetres and the other metres, the
+            data can still be properly compared
+            
+        TODO:
+            Add a "threshold" parameter so that perfect equality is not
+            the only option
+            
+        """
+        if convert_units:
+            return (w1.to_canon.data == w2.to_canon.data).all().all()
+        else:
+            return (w1.data == w2.data).all().all()
+
+        
+    @classmethod
+    def does_data_clash(cls, w1, w2):
+        """
+        Return True if any shared data between w1 and w2 clashes.
+        
+        """
+        pass
+        # TODO: maybe use the upsert functionality
+        return True
+
+
+    def __eq__(self, other):
+        """
+        Comparison operator (overloaded)
+        
+        Equivalent to .is_data_equal and .is_metadata_equal
+        
+        Units are converted
+        
+        Special units are not considered
+        
+        """
+        return (WCONWorm.is_data_equal(self, other) and
+                WCONWorm.is_metadata_equal(self, other))
+
+    def __add__(self, other):
+        """
+        Addition operator (overloaded)
+        
+        """
+        return self.merge(self, other)
+        
+    @property
+    def to_canon(self):
+        """
+        Return a new WCONWorm object, with the same .metadata, but with
+        .units and .data changed so they are in standard form.
+        
+        """
+        w = WCONWorm()
+        w.metadata = self.metadata
+        w.units = self.canonical_units
+
+        w.data = self.data.copy()
+        
+        for data_key in self.units:
+            mu = self.units[data_key]
+            #self.data.loc[:,(4,data_key)].apply(mu.to_canon)
+            try:
+                # apply across all worm ids and all aspects
+                mu_slice = w.data.loc[:,(slice(None),data_key,slice(None))]
+                w.data.loc[:,(slice(None),data_key,slice(None))] = \
+                    mu_slice.applymap(mu.to_canon)
+            except KeyError:
+                # Just ignore cases where there are "units" entries but no
+                # corresponding data
+                pass
+            
+        # Go through each "units" attribute
+        return w
+  
+    @classmethod
+    def merge(cls, w1, w2):
+        """
+        Merge two worms
+
+        Any clashing data found will cause an exception to be raised.
+        
+        Clashes are checked at a low level of granularity: 
+        e.g. if two worms have different metadata but the individual metadata
+        entries do not conflict, this method will still fail and raise an
+        AssertionError.
+        
+        """
+        if cls.does_data_clash(w1, w2):
+            raise AssertionError("Data conflicts between worms to be merged")
+            
+        # TODO: implement this properly
+        return w1
+
+    """
+    ================================================================
+    Load / save methods
+    ================================================================
+    """
+
     @classmethod
     def validate_filename(cls, JSON_path):
         """
@@ -325,10 +340,52 @@ class WCONWorm():
                           'does not end in ".WCON", the recommended'
                           'file extension.')
 
+    def save_to_file(self, JSON_path, pretty_print=False, num_chunks=1):
+        """
+        Save this object to the path specified.  The object
+        will be serialized as a WCON JSON text file.
+        
+        Parameters
+        -----------
+        JSON_path: str
+            The path to save this object to.  A warning is raised if the path
+            does not end in ".WCON"
+        pretty_print: bool
+            If True, adds newlines and spaces to make the file more human-
+            readable.  Otherwise, the JSON output will use as few characters 
+            as possible.
+        num_chunks: int
+            The number of chunks to break this object into.  If
+            num_chunks > 1 then num_chunks files will be created.
+            Filenames will have "_1", "_2", etc., added
+            to the end of the filename after the last path separator
+            (e.g. "/") and then, before the last "." (if any)
+            
+        """
+        if num_chunks > 1:
+            raise NotImplementedError("Saving a worm to more than one chunk "
+                                      "has not yet been implemented")
+
+        self.validate_filename(JSON_path)
+
+        with open(JSON_path, 'w') as outfile:
+            json.dump(self.as_ordered_dict, outfile, 
+                      indent=4 if pretty_print else None)
+
+
     @classmethod
-    def load_from_file(cls, JSON_path, 
-                       load_prev_chunks=True, 
-                       load_next_chunks=True):
+    def load_from_file(cls, JSON_path):
+        """
+        Public-facing factory method, without options for chunks not needed
+        except internally for this class.
+        
+        """
+        return cls._load_from_file(JSON_path)
+  
+  
+    def _load_from_file(cls, JSON_path,
+                        load_prev_chunks=True, 
+                        load_next_chunks=True):
         """
         Factory method returning a merged WCONWorm instance of the file
         located at JSON_path and all related "chunks" as specified in the 
