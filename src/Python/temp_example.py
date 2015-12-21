@@ -18,7 +18,7 @@ pd.set_option('display.expand_frame_repr', False)
 warnings.simplefilter(action = "ignore", category = RuntimeWarning)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__1':
 
     JSON_path = '../../tests/minimax.wcon'
 
@@ -34,13 +34,15 @@ if __name__ == '__main__':
 
 
     
-if __name__ == '__main__2':
+if __name__ == '__main__':
     worm_file_text2 = (('{"tracker-commons":true,'
-                        '"files":{"this":"", "prev":null, "next":["_1", "_2"]},'
-                        '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
-                                            '"x":[3,4], "y":[5.4,3]}]}'))
+                        '"units":{"t":"s","x":"m","y":"m"},'
+                        '"data":[{"id":3, "t":1.3, '
+                                 '"x":[3,4], "y":[5.4,3]}]}'))
 
     w1 = WCONWorm.load(StringIO(worm_file_text2))
+    
+    #w2 = w1.standard_form
 
 if __name__ == '__main__3':
     w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'

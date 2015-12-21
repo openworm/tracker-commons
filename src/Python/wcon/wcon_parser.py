@@ -128,12 +128,12 @@ class WCONWorm():
             
         """
         if convert_units:
-            return w1.standard_form.data == w2.standard_form.data
+            return w1.to_canon.data == w2.to_canon.data
         else:
             return w1.data == w2.data
 
     @property
-    def standard_form(self):
+    def to_canon(self):
         """
         Return a new WCONWorm object, with .units and .data changed so they
         are in standard form.
