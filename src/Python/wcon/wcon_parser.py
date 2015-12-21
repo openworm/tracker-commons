@@ -7,7 +7,7 @@ reject_duplicates
 
 Classes
 ------------
-WCONWorm
+WCONWorms
 
 """
 import warnings
@@ -20,7 +20,7 @@ from .wcon_data import parse_data, convert_origin
 from .measurement_unit import MeasurementUnit
 
 
-class WCONWorm():
+class WCONWorms():
     """
     A set of worm tracker data for one or more worms, as specified by 
     the WCON standard.
@@ -53,21 +53,21 @@ class WCONWorm():
     -------------
     # From a file:
     with open('my_worm.wcon', 'r') as infile:
-        w1 = WCONWorm.load(infile)
+        w1 = WCONWorms.load(infile)
     
     # From a string literal:
     from io import StringIO
-    w2 = WCONWorm.load(StringIO('{"tracker-commons":true, '
+    w2 = WCONWorms.load(StringIO('{"tracker-commons":true, '
                                 '"units":{"t":"s","x":"mm","y":"mm"}, '
                                 '"data":[]}'))
 
-    # WCONWorm.load_from_file accepts any valid WCON, but .save_to_file 
+    # WCONWorms.load_from_file accepts any valid WCON, but .save_to_file 
     # output is always "canonical" WCON, which makes specific choices about 
     # how to arrange and format the WCON file.  This way the functional 
     # equality of any two WCON files can be tested by this:
     
-        w1 = WCONWorm.load_from_file('file1.wcon')
-        w2 = WCONWorm.load_from_file('file2.wcon')
+        w1 = WCONWorms.load_from_file('file1.wcon')
+        w2 = WCONWorms.load_from_file('file2.wcon')
         
         assert(w1 == w2)
     
@@ -210,7 +210,7 @@ class WCONWorm():
         """
         Parameters
         -------------
-        w1, w2: WCONWorm objects
+        w1, w2: WCONWorms objects
             The objects whose .data attributes will be compared
         convert_units: bool
             If True, the data will first be converted to a standard form
@@ -248,8 +248,8 @@ class WCONWorm():
         Special units are not considered
         
         """
-        return (WCONWorm.is_data_equal(self, other) and
-                WCONWorm.is_metadata_equal(self, other))
+        return (WCONWorms.is_data_equal(self, other) and
+                WCONWorms.is_metadata_equal(self, other))
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -264,11 +264,11 @@ class WCONWorm():
     @property
     def to_canon(self):
         """
-        Return a new WCONWorm object, with the same .metadata, but with
+        Return a new WCONWorms object, with the same .metadata, but with
         .units and .data changed so they are in standard form.
         
         """
-        w = WCONWorm()
+        w = WCONWorms()
         w.metadata = self.metadata
         w.units = self.canonical_units
 
@@ -377,7 +377,7 @@ class WCONWorm():
                         load_prev_chunks=True, 
                         load_next_chunks=True):
         """
-        Factory method returning a merged WCONWorm instance of the file
+        Factory method returning a merged WCONWorms instance of the file
         located at JSON_path and all related "chunks" as specified in the 
         "files" element of the file.
 
@@ -457,7 +457,7 @@ class WCONWorm():
     @classmethod
     def load(cls, JSON_stream):
         """
-        Factory method to create a WCONWorm instance
+        Factory method to create a WCONWorms instance
         
         This does NOT load chunks, because a file stream does not 
         have a file name.  In order to load chunks, you must invoke the

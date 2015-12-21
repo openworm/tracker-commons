@@ -10,9 +10,10 @@ from six import StringIO # StringIO.StringIO in 2.x, io.StringIO in 3.x
 import json
 import jsonschema
 import unittest
+import filecmp
 
 sys.path.append('..')
-from wcon import WCONWorm, MeasurementUnit
+from wcon import WCONWorms, MeasurementUnit
 from wcon.measurement_unit import MeasurementUnitAtom
 
 class TestMeasurementUnit(unittest.TestCase):
@@ -84,7 +85,6 @@ class TestWCONParser(unittest.TestCase):
         # Schema had to be saved in two places, since it's common to the repo
         # but also needs to be found by the PyPi packager for pip.
         # Here we confirm that the files are identical.
-        import filecmp
         self.assertTrue(filecmp.cmp('../wcon/wcon_schema.json', 
                                     '../../../wcon_schema.json'))
 
@@ -95,7 +95,7 @@ class TestWCONParser(unittest.TestCase):
 
     def test_equality_operator(self):
         JSON_path = '../../../tests/minimax.wcon'
-        w2 = WCONWorm.load_from_file(JSON_path)
+        w2 = WCONWorms.load_from_file(JSON_path)
         w2.units['y'] = MeasurementUnit.create('m')
         w2data = w2.data.copy()
         
@@ -104,7 +104,7 @@ class TestWCONParser(unittest.TestCase):
         # should remain
         self.assertFalse((w2.data == w2c.data).all().all())
         # This has the same effect as above
-        self.assertFalse(WCONWorm.is_data_equal(w2,w2c,convert_units=False))
+        self.assertFalse(WCONWorms.is_data_equal(w2,w2c,convert_units=False))
         self.assertEqual(w2, w2)
         self.assertEqual(w2c, w2c)
         self.assertEqual(w2, w2c)
@@ -122,111 +122,111 @@ class TestWCONParser(unittest.TestCase):
         with self.assertRaises(ValueError):
             # The JSON parser shouldn't accept this as valid JSON
             # "ValueError: Expecting ',' delimiter: line 1 column 25 (char 24)"
-            WCONWorm.load(StringIO('{"tracker-commons":blahblah}'))
+            WCONWorms.load(StringIO('{"tracker-commons":blahblah}'))
         
         # Errors because "tracker-commons":true is not present
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            WCONWorm.load(StringIO('{"tracker-blah":true, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
+            WCONWorms.load(StringIO('{"tracker-blah":true, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
 
         if six.PY3:  # since assertWarns is not available in Python 2
             with self.assertWarns(UserWarning):
-                WCONWorm.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
+                WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
 
         # If we're being explicitly told that this is NOT a WCON file,
         # the parser should raise an error.
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            WCONWorm.load(StringIO('{"tracker-commons":false, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
+            WCONWorms.load(StringIO('{"tracker-commons":false, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
 
         # This should fail because "units" is required
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, "data":[]}'))
+            WCONWorms.load(StringIO('{"tracker-commons":true, "data":[]}'))
 
         # The smallest valid WCON file (Empty data array should be fine)
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
+        WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
 
         # Duplicate keys should cause the parser to fail
         with self.assertRaises(KeyError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, '
+            WCONWorms.load(StringIO('{"tracker-commons":true, '
                                     '"units":{"t":"s","t":"s","x":"mm","y":"mm"}'
                                     ', "data":[]}'))
 
 
     def test_data1(self):
         # Single-valued 't' subelement should be fine
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                                  '"data":[{"id":3, "t":1.3, '
                                           '"x":[3,4], "y":[5.4,3]}]}'))
 
         # Two values for 'x' but four values for 'y': error
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+            WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                                      '"data":[{"id":3, "t":1.3, '
                                               '"x":[3,4], '
                                               '"y":[5.4,3,1,-3]}]}'))
 
         # Two values for 't' but 3 for 'x' and 'y': error
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+            WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                                      '"data":[{"id":3, "t":[1.3,8], '
                                               '"x":[3,4,5], "y":[5.4,3,5]}]}'))
 
         # Duplicated segments are OK if there are no differences
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
                     '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
 
         # Duplicated time indices are OK if the earlier entry was for a 
         # different worm 
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":2, "t":1.3, "x":[3,4], "y":[5.4,3]},'
                     '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
 
         # Duplicated time indices are OK if the earlier entry had those entries
         # missing
-        WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "x":[null,null], "y":[null,null]},'
                     '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
 
         # Error if data from a later segment conflicts with earlier segments
         with self.assertRaises(AssertionError):
-            WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+            WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                 '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
                         '{"id":1, "t":1.3, "x":[3,4], "y":[5.5,3]}]}'))
 
     @unittest.skip("TODO: enable these once we have __eq__ implemented")
     def test_origin_offset(self):
         # ox, without optional bracket
-        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "ox":5000, '
             '"x":[3,4], "y":[5.4,3]}]}'))
-        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w2 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, '
             '"x":[5003,5004], "y":[5.4,3]}]}'))
         self.assertEqual(w1, w2)
 
         # oy, with optional bracket
-        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "oy":[4000], '
             '"x":[3,4], "y":[5.4,3]}]}'))
-        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w2 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, '
             '"x":[3,4], "y":[4005.4,4003]}]}'))
         self.assertEqual(w1, w2)
 
         # ox and oy, without optional brackets
-        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, "ox":500, "oy":4000, '
             '"x":[3,4], "y":[4005.4,4003]}]}'))
-        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w2 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, '
             '"x":[503,504], "y":[4005.4,4003]}]}'))
         self.assertEqual(w1, w2)
 
         # ox, with two time points
-        w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, '
             '"x":[3,4], "y":[5.4,3]}]}'))
-        w2 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w2 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":[1.3,1.4], '
             '"x":[5003,5004], "y":[5.4,3]}]}'))
         self.assertEqual(w1, w2)
@@ -248,7 +248,7 @@ class TestWCONParser(unittest.TestCase):
             }
             """
         self._validate_from_schema(WCON_string)
-        WCONWorm.load(StringIO(WCON_string))
+        WCONWorms.load(StringIO(WCON_string))
 
         # order permuted from previous example
         WCON_string2 = \
@@ -265,7 +265,7 @@ class TestWCONParser(unittest.TestCase):
             }
             """
         self._validate_from_schema(WCON_string2)
-        WCONWorm.load(StringIO(WCON_string2))
+        WCONWorms.load(StringIO(WCON_string2))
 
         # Origin values
         WCON_string3 = \
@@ -281,7 +281,7 @@ class TestWCONParser(unittest.TestCase):
             }
             """
         self._validate_from_schema(WCON_string3)
-        WCONWorm.load(StringIO(WCON_string3))
+        WCONWorms.load(StringIO(WCON_string3))
 
     def test_metadata(self):
         WCON_string1 = \
@@ -315,7 +315,7 @@ class TestWCONParser(unittest.TestCase):
                 ]                
             }        
             """
-        w1 = WCONWorm.load(StringIO(WCON_string1))
+        w1 = WCONWorms.load(StringIO(WCON_string1))
 
         self.assertEqual(w1.metadata["strain"], "CB4856")
         self.assertEqual(w1.metadata["dish"]["size"], 35)
@@ -331,7 +331,7 @@ class TestWCONParser(unittest.TestCase):
                             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
                                                 '"x":[3,4], "y":[5.4,3]}]}'))
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            WCONWorm.load(StringIO(worm_file_text1))
+            WCONWorms.load(StringIO(worm_file_text1))
 
         # "this":"" should be disallowed by the schema
         worm_file_text2 = (('{"tracker-commons":true,'
@@ -339,7 +339,7 @@ class TestWCONParser(unittest.TestCase):
                             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
                                                 '"x":[3,4], "y":[5.4,3]}]}'))
         with self.assertRaises(jsonschema.exceptions.ValidationError):
-            WCONWorm.load(StringIO(worm_file_text2))
+            WCONWorms.load(StringIO(worm_file_text2))
 
     @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_load_from_file(self):
@@ -352,12 +352,12 @@ class TestWCONParser(unittest.TestCase):
                                                 '"x":[3,4], "y":[5.4,3]}]}'))
 
         # STREAM
-        worm_from_stream = WCONWorm.load(StringIO(worm_file_text3))
+        worm_from_stream = WCONWorms.load(StringIO(worm_file_text3))
 
         # FILE
         with open("test.wcon", 'w') as outfile:
             outfile.write(worm_file_text3)        
-        worm_from_file = WCONWorm.load_from_file("test.wcon")
+        worm_from_file = WCONWorms.load_from_file("test.wcon")
         os.remove("test.wcon")
         
         # COMPARISON
@@ -396,12 +396,12 @@ class TestWCONParser(unittest.TestCase):
                 outfile.write(chunk)
 
         # First load one of them
-        worm_combined_manually = WCONWorm.load(StringIO(chunks[0]))
+        worm_combined_manually = WCONWorms.load(StringIO(chunks[0]))
 
         # Then merge the others sequentially to the first one
         for chunk in chunks[1:]:
-            worm_chunk = WCONWorm.load(StringIO(chunk))
-            worm_combined_manually = WCONWorm.merge(worm_combined_manually, 
+            worm_chunk = WCONWorms.load(StringIO(chunk))
+            worm_combined_manually = WCONWorms.merge(worm_combined_manually, 
                                                     worm_chunk)
 
         # Validate that the chunks together are __eq__ to the files
@@ -410,7 +410,7 @@ class TestWCONParser(unittest.TestCase):
             # Worm from files that found each other through 
             # the "files" object
             #pdb.set_trace()
-            worm_from_files = WCONWorm.load_from_file(chunk_filename)
+            worm_from_files = WCONWorms.load_from_file(chunk_filename)
             
             self.assertEqual(worm_from_files, worm_combined_manually)
 

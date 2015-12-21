@@ -43,17 +43,17 @@ Using this `wcon` Python package, something similar can be accomplished:
 
     JSON_path = '../../tests/minimax.wcon'
     with open(JSON_path, 'r') as infile:
-    	w = wcon.WCONWorm.load(infile)
+    	w = wcon.WCONWorms.load(infile)
 
-Here, instead of being a nested dictionary, `w` is a `WCONWorm` object that is more powerful.  Here are some of the additional things that can be accomplished with the `WCONWorm` object:
+Here, instead of being a nested dictionary, `w` is a `WCONWorms` object that is more powerful.  Here are some of the additional things that can be accomplished with the `WCONWorms` object:
 
-- The WCON file is validated not just against the WCON schema, but also to ensure units are valid, that every data key has a corresponding unit, and that every data segment has "aspects" of the same length.  (e.g. if a skeleton at time `1.3` has 45 `x`-coordinates, it should also have 45 `y`-coordinates.  This condition is not expressible in a JSON schema but it is validated programatically by the WCONWorm initializer.
+- The WCON file is validated not just against the WCON schema, but also to ensure units are valid, that every data key has a corresponding unit, and that every data segment has "aspects" of the same length.  (e.g. if a skeleton at time `1.3` has 45 `x`-coordinates, it should also have 45 `y`-coordinates.  This condition is not expressible in a JSON schema but it is validated programatically by the WCONWorms initializer.
 - Units are expressed as `MeasurementUnit` objects, which can be compared with other such objects, to verify that "mm" and "millimetres" refer to the same units, for instance.  (see the below section for more details)
-- WCONWorm objects can have their data be converted into canonical units, and then saved again.
-- WCONWorm objects can be loaded from multiple files and combined together, via the `"files"` object.
+- WCONWorms objects can have their data be converted into canonical units, and then saved again.
+- WCONWorms objects can be loaded from multiple files and combined together, via the `"files"` object.
 - Worm data recorded in multiple "tracks", or elements, in the `"data"` object, can have such tracks merged.
 - Worm data can be extracted in a Pandas DataFrame format for easier downstream processing, since the dimensions of the data have been placed into one two-dimensional array, rather than in a nested arrays.
-- WCONWorm can be subclassed by labs implementing "special features", i.e. top-level objects starting with "@" or objects within individual data array objects starting with "@".
+- WCONWorms can be subclassed by labs implementing "special features", i.e. top-level objects starting with "@" or objects within individual data array objects starting with "@".
 
 
 ### MeasurementUnit

@@ -9,7 +9,7 @@ import pandas as pd
 import warnings
 from six import StringIO
 
-from wcon import WCONWorm, MeasurementUnit
+from wcon import WCONWorms, MeasurementUnit
 
 pd.set_option('display.expand_frame_repr', False)
 
@@ -24,10 +24,10 @@ if __name__ == '__main__':
 
     print("Loading " + JSON_path)
 
-    w2 = WCONWorm.load_from_file(JSON_path)
+    w2 = WCONWorms.load_from_file(JSON_path)
 
     with open(JSON_path, 'r') as infile:
-        w1 = WCONWorm.load(infile)
+        w1 = WCONWorms.load(infile)
     
     u = MeasurementUnit.create('cm')
 
@@ -40,12 +40,12 @@ if __name__ == '__main__2':
                         '"data":[{"id":3, "t":1.3, '
                                  '"x":[3,4], "y":[5.4,3]}]}'))
 
-    w1 = WCONWorm.load(StringIO(worm_file_text2))
+    w1 = WCONWorms.load(StringIO(worm_file_text2))
     
     #w2 = w1.standard_form
 
 if __name__ == '__main__3':
-    w1 = WCONWorm.load(StringIO('{"tracker-commons":true, "units":{},'
+    w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{},'
                                 '"data":[{"id":3, "t":1.3, '
                                          '"x":[3,4,4,3.2], '
                                          '"y":[5.4,3,1,-3]}]}'))
