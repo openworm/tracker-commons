@@ -18,7 +18,7 @@ pd.set_option('display.expand_frame_repr', False)
 warnings.simplefilter(action = "ignore", category = RuntimeWarning)
 
 
-if __name__ == '__main__1':
+if __name__ == '__main__':
 
     JSON_path = '../../tests/minimax.wcon'
 
@@ -34,7 +34,7 @@ if __name__ == '__main__1':
 
 
     
-if __name__ == '__main__':
+if __name__ == '__main__2':
     worm_file_text2 = (('{"tracker-commons":true,'
                         '"units":{"t":"s","x":"m","y":"m"},'
                         '"data":[{"id":3, "t":1.3, '

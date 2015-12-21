@@ -136,20 +136,31 @@ class WCONWorm():
     @property
     def to_canon(self):
         """
-        Return a new WCONWorm object, with .units and .data changed so they
-        are in standard form.
+        Return a new WCONWorm object, with the same .metadata, but with
+        .units and .data changed so they are in standard form.
         
         """
+        w = WCONWorm()
+        w.metadata = self.metadata
+        w.units = self.canonical_units
+
+        w.data = self.data
         
-        # TODO
         for data_key in self.units:
             mu = self.units[data_key]
-            self.data.loc[:,(4,data_key)].apply(mu.to_canon)
-            #DEBUG
-            #TODO
+            #self.data.loc[:,(4,data_key)].apply(mu.to_canon)
+            try:
+                # apply across all worm ids and all aspects
+                mu_slice = w.data.loc[:,(slice(None),data_key,slice(None))]
+                w.data.loc[:,(slice(None),data_key,slice(None))] = \
+                    mu_slice.applymap(mu.to_canon)
+            except KeyError:
+                # Just ignore cases where there are "units" entries but no
+                # corresponding data
+                pass
             
         # Go through each "units" attribute
-        return self
+        return w
 
     @classmethod
     def is_metadata_equal(cls, w1, w2):
@@ -236,12 +247,16 @@ class WCONWorm():
         JSON_path: str
             The path to save this object to.  A warning is raised if the path
             does not end in ".WCON"
+        pretty_print: bool
+            If True, adds newlines and spaces to make the file more human-
+            readable.  Otherwise, the JSON output will use as few characters 
+            as possible.
         num_chunks: int
             The number of chunks to break this object into.  If
             num_chunks > 1 then num_chunks files will be created.
             Filenames will have "_1", "_2", etc., added
-            to the end of the filename after the last path separator (e.g. "/")
-            and then, before the last "." (if any)
+            to the end of the filename after the last path separator
+            (e.g. "/") and then, before the last "." (if any)
             
         """
         if num_chunks > 1:
@@ -255,6 +270,14 @@ class WCONWorm():
                       indent=4 if pretty_print else None)
 
     @property
+    def canonical_units(self):
+        """
+        A dictionary of canonical versions of the unit for all quantities
+        
+        """
+        return {k: self.units[k].canonical_unit for k in self.units.keys()}
+
+    @property
     def as_ordered_dict(self):
         """
         Return a representation of the worm as an OrderedDict.  This is most
@@ -264,8 +287,8 @@ class WCONWorm():
         # A dictionary of the canonical unit strings for all quantities except
         # aspect_size, which is generated at runtime.
         units_obj = {k: self.units[k].canonical_unit_string 
-                     for k in self.units.keys() if k != 'aspect_size'}
-        
+                     for k in self.units.keys() if k != 'aspect_size'}        
+
         data_array = [] # TODO
         
         w_dict = {'tracker-commons':True,
