@@ -1,7 +1,7 @@
 #!usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Two classes:
+Two classes:  (only the second of which is generally public-facing)
 
 - MeasurementUnitAtom, which handles just a single prefix and suffix
    e.g. mm, celsius, kilograms, etc.
@@ -384,14 +384,14 @@ class MeasurementUnit():
     
     Since there can be multiple prefixes and suffixes, the only attributes are:
 
-    Attributes
+    Attributes (public-facing)
     ------------
     unit_string: str
         The original string
     canonical_unit_string: str
         The canonical form for all units within the original string
 
-    Methods
+    Methods (public-facing)
     ------------
     create
         The only public-facing factory method for this class

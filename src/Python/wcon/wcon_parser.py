@@ -10,7 +10,6 @@ Classes
 WCONWorm
 
 """
-
 import warnings
 from collections import OrderedDict
 from six import StringIO
@@ -19,18 +18,6 @@ import json, jsonschema
 
 from .wcon_data import parse_data, convert_origin
 from .measurement_unit import MeasurementUnit
-
-
-def reject_duplicates(ordered_pairs):
-    """Reject duplicate keys."""
-    unique_dict = {}
-    for key, val in ordered_pairs:
-        if key in unique_dict:
-           raise KeyError("Duplicate key: %r" % (key,))
-        else:
-           unique_dict[key] = val
-
-    return unique_dict
 
 
 class WCONWorm():
@@ -70,7 +57,8 @@ class WCONWorm():
     # From a string literal:
     from io import StringIO
     w2 = WCONWorm.load(StringIO('{"tracker-commons":true, '
-                                '"units":{},"data":{}}'))
+                                '"units":{"t":"s","x":"mm","y":"mm"}, '
+                                '"data":[]}'))
 
     # WCONWorm.load_from_file accepts any valid WCON, but .save_to_file 
     # output is always "canonical" WCON, which makes specific choices about 
@@ -380,7 +368,7 @@ class WCONWorm():
         except internally for this class.
         
         """
-        return cls._load_from_file(JSON_path)
+        return cls._load_from_file(cls, JSON_path)
   
   
     def _load_from_file(cls, JSON_path,
@@ -552,4 +540,15 @@ class WCONWorm():
 
         return w
 
+
+def reject_duplicates(ordered_pairs):
+    """Reject duplicate keys."""
+    unique_dict = {}
+    for key, val in ordered_pairs:
+        if key in unique_dict:
+           raise KeyError("Duplicate key: %r" % (key,))
+        else:
+           unique_dict[key] = val
+
+    return unique_dict
 
