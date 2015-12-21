@@ -24,7 +24,8 @@ assert(filecmp.cmp('file1.wcon', file2.wcon'))
 """
 
 import warnings
-from io import StringIO
+from collections import OrderedDict
+from six import StringIO
 from os import path
 import json, jsonschema
 
@@ -225,7 +226,7 @@ class WCONWorm():
         # TODO: implement this properly
         return w1
 
-    def save_to_file(self, JSON_path, num_chunks=1):
+    def save_to_file(self, JSON_path, pretty_print=False, num_chunks=1):
         """
         Save this object to the path specified.  The object
         will be serialized as a WCON JSON text file.
@@ -243,9 +244,63 @@ class WCONWorm():
             and then, before the last "." (if any)
             
         """
-        # TODO
-        pass
+        if num_chunks > 1:
+            raise NotImplementedError("Saving a worm to more than one chunk "
+                                      "has not yet been implemented")
 
+        self.validate_filename(JSON_path)
+
+        with open(JSON_path, 'w') as outfile:
+            json.dump(self.as_ordered_dict, outfile, 
+                      indent=4 if pretty_print else None)
+
+    @property
+    def as_ordered_dict(self):
+        """
+        Return a representation of the worm as an OrderedDict.  This is most
+        useful when saving to a file.
+
+        """
+        # A dictionary of the canonical unit strings for all quantities except
+        # aspect_size, which is generated at runtime.
+        units_obj = {k: self.units[k].canonical_unit_string 
+                     for k in self.units.keys() if k != 'aspect_size'}
+        
+        data_array = [] # TODO
+        
+        w_dict = {'tracker-commons':True,
+                  'units': units_obj,
+                  'data': data_array}
+        
+        # The only optional object is "metadata" since "files" is not 
+        # necessary since we don't currently support saving to more than 
+        # one chunk.
+        if self.metadata:
+            w_dict['metadata'] = self.metadata
+        
+        # It's nice to order the elements:
+        # 'tracker-commons', 'units', 'metadata', 'data'
+        w_dict = OrderedDict(w_dict)
+        w_dict.move_to_end('units')
+        w_dict.move_to_end('metadata')
+        w_dict.move_to_end('data')
+
+        return w_dict
+
+    @classmethod
+    def validate_filename(cls, JSON_path):
+        """
+        Perform simple checks on the file path
+        
+        """
+        assert(isinstance(JSON_path, str))
+        assert(len(JSON_path)>0)
+        
+        if len(JSON_path) <= 5 or JSON_path[-5:].upper() != '.WCON':
+            warnings.warn('The file name is either less than 5 characters,'
+                          'consists of only the extension ".WCON", or '
+                          'does not end in ".WCON", the recommended'
+                          'file extension.')
 
     @classmethod
     def load_from_file(cls, JSON_path, 
@@ -275,16 +330,7 @@ class WCONWorm():
         """
         print("Loading file: " + JSON_path)
 
-        assert(isinstance(JSON_path, str))
-        assert(len(JSON_path)>0)
-        
-
-        if len(JSON_path) <= 5 or JSON_path[-5:].upper() != '.WCON':
-            warnings.warn('The file name is either less than 5 characters,'
-                          'consists of only the extension ".WCON", or '
-                          'does not end in ".WCON", the recommended'
-                          'file extension.')
-
+        cls.validate_filename(JSON_path)
 
         with open(JSON_path, 'r') as infile:
             w_current = cls.load(infile)
@@ -384,7 +430,7 @@ class WCONWorm():
         # The only data key without units should be aspect_size, since it's
         # generated during the construction of the pandas dataframe
         # it is a dimensionless quantity
-        w.units['aspect_size'] = ''
+        w.units['aspect_size'] = MeasurementUnit.create('')
         
         if len(root['data']) > 0:
             w.data = parse_data(root['data'])
