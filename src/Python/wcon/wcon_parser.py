@@ -235,7 +235,7 @@ class WCONWorms():
             d1 = w1.data
             d2 = w2.data
         
-        return (d1.data.equals(d2.data) and 
+        return (d1.equals(d2) and 
                 d1.columns.identical(d2.columns) and
                 d1.index.identical(d2.index))
 

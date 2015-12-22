@@ -26,6 +26,7 @@ if __name__ == '__main__':
 
     w2 = WCONWorms.load_from_file(JSON_path)
 
+
     #with open(JSON_path, 'r') as infile:
     #    w1 = WCONWorms.load(infile)
     

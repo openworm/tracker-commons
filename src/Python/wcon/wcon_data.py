@@ -109,10 +109,7 @@ def df_upsert(src, dest):
     return dest
 
 
-
-
-
-def convert_origin(data):
+def convert_origin(data, offset_keys=['ox', 'oy'], coord_keys=['x', 'y']):
     """
     Add the offset values 'ox' and 'oy' to the 'x' and 'y' 
     coordinates in the dataframe
@@ -120,12 +117,25 @@ def convert_origin(data):
     Offset values that are NaN are considered to be zero.
     
     After this is done, set all offset values to zero.
+
+    Parameters
+    ------------
+    data: Pandas DataFrame
+    offset_keys: list of strings
+        The offsets
+    coord_keys: list of strings
+        The corresponding coordinates to be offset
+    
+    Returns
+    ------------
+    None.  Modifies `data` in place.
+    
     
     """
     for worm_id in data.columns.get_level_values(0).unique():
         cur_worms = data.loc[:,(worm_id)]
 
-        for offset, coord in zip(['ox', 'oy'], ['x', 'y']):
+        for offset, coord in zip(offset_keys, coord_keys):
             if offset in cur_worms.columns.get_level_values(0):
                 all_x_columns = cur_worms.loc[:,(coord)]
                 ox_column = cur_worms.loc[:,(offset)].fillna(0)
@@ -136,8 +146,13 @@ def convert_origin(data):
                 data.loc[:,(worm_id,coord)] = all_x_columns.values
                 
                 # Now reset our 'ox' values to zero.
-                data.loc[:,(worm_id,offset)] = \
-                                                np.zeros(ox_column.shape)
+                data.loc[:,(worm_id,offset)] = np.zeros(ox_column.shape)
+
+    # For simplicity let's actually just drop the offset columns entirely
+    # from the dataframe.  This is so DataFrames with and without offsets
+    # will show as comparing identically.
+    for offset_key in offset_keys:
+        data.drop(offset_key, axis=1, level='key', inplace=True)
 
 
 def parse_data(data):
@@ -309,7 +324,8 @@ def _validate_time_series_data(time_series_data):
                 if type(data_segment[subkey]) != list:
                     data_segment[subkey] = [[data_segment[subkey]]]
                 else:
-                    data_segment[subkey] = [[x] for x in data_segment[subkey]]
+                    if type(data_segment[subkey][0]) != list:
+                        data_segment[subkey] = [[x] for x in data_segment[subkey]]
 
         subelement_length = len(data_segment['t'])
 
@@ -350,9 +366,15 @@ def _validate_time_series_data(time_series_data):
         for t in range(subelement_length):
             # The x and y arrays for element i of the data segment
             # must have the same length
-            cur_aspect_sizes = [len(data_segment[k][t]) for k in 
-                                     elements_with_aspect]
-            
+            try:
+                cur_aspect_sizes = [len(data_segment[k][t]) for k in 
+                                         elements_with_aspect]
+            except TypeError as err:
+                raise TypeError("In the following data segment, an "
+                    "element with aspect (x, y, etc.) was not "
+                    "double-wrapped in arrays, even "
+                    "though time ('t') was. {0}".format(err))
+
             if len(set(cur_aspect_sizes)) > 1:
                 raise AssertionError(
                     "Error: Aspects x and y, etc. must have same "

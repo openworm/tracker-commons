@@ -93,7 +93,6 @@ class TestWCONParser(unittest.TestCase):
         
         self._validate_from_schema(basic_wcon)
 
-    @unittest.skip("TODO: enable these once we have __eq__ implemented")
     def test_equality_operator(self):
         JSON_path = '../../../tests/minimax.wcon'
         w2 = WCONWorms.load_from_file(JSON_path)
@@ -194,10 +193,9 @@ class TestWCONParser(unittest.TestCase):
                 '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
                         '{"id":1, "t":1.3, "x":[3,4], "y":[5.5,3]}]}'))
 
-    @unittest.skip("TODO: enable these once we have __eq__ implemented")
     def test_origin_offset(self):
         # ox, without optional bracket
-        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
             '"data":[{"id":1, "t":1.3, "ox":5000, '
             '"x":[3,4], "y":[5.4,3]}]}'))
         w2 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
@@ -206,7 +204,7 @@ class TestWCONParser(unittest.TestCase):
         self.assertEqual(w1, w2)
 
         # oy, with optional bracket
-        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm","oy":"mm"},'
             '"data":[{"id":1, "t":1.3, "oy":[4000], '
             '"x":[3,4], "y":[5.4,3]}]}'))
         w2 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
@@ -215,21 +213,21 @@ class TestWCONParser(unittest.TestCase):
         self.assertEqual(w1, w2)
 
         # ox and oy, without optional brackets
-        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
-            '"data":[{"id":1, "t":1.3, "ox":500, "oy":4000, '
-            '"x":[3,4], "y":[4005.4,4003]}]}'))
+        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
+            '"data":[{"id":1, "t":1.3, "ox":-500, "oy":4000, '
+            '"x":[3,4], "y":[5.4,3]}]}'))
         w2 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":1.3, '
-            '"x":[503,504], "y":[4005.4,4003]}]}'))
+            '"x":[-497,-496], "y":[4005.4,4003]}]}'))
         self.assertEqual(w1, w2)
 
         # ox, with two time points
-        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
+        w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
             '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, '
-            '"x":[3,4], "y":[5.4,3]}]}'))
+            '"x":[[3],[4]], "y":[[5.4],[3]]}]}'))
         w2 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
             '"data":[{"id":1, "t":[1.3,1.4], '
-            '"x":[5003,5004], "y":[5.4,3]}]}'))
+            '"x":[[5003],[5004]], "y":[[5.4],[3]]}]}'))
         self.assertEqual(w1, w2)
 
 
