@@ -231,7 +231,27 @@ class TestWCONParser(unittest.TestCase):
         self.assertEqual(w1, w2)
 
 
+    def test_merge(self):
+        JSON_path = '../../../tests/minimax.wcon'
+        w2 = WCONWorms.load_from_file(JSON_path)
+        w3 = WCONWorms.load_from_file(JSON_path)
+        
+        # This should work, since the data is the same
+        w4 = w2 + w3
 
+        # Modifying w2's data in just one spot is enough to make the data
+        # clash and the merge should fail        
+        w2.data.loc[1.3,(1,'x',0)] = 4000        
+        with self.assertRaises(AssertionError):
+            w4 = w2 + w3
+        
+        # But if we drop that entire row in w2, it should accomodate the new 
+        # figure        
+        w3.data.drop(1.3, axis=0, inplace=True)
+        w4 = w2 + w3
+        self.assertEqual(w4.data.loc[1.3,(1,'x',0)], 4000)
+
+                
     def test_data2(self):
         WCON_string = \
             """
@@ -281,6 +301,7 @@ class TestWCONParser(unittest.TestCase):
             """
         self._validate_from_schema(WCON_string3)
         WCONWorms.load(StringIO(WCON_string3))
+
 
     def test_metadata(self):
         WCON_string1 = \
