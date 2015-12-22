@@ -550,7 +550,8 @@ class WCONWorms():
         else:
             data_keys = set(w.data.columns.get_level_values(1))
         units_keys = set(w.units.keys())
-        keys_missing_units = data_keys - units_keys
+        # "head" and "ventral" don't require units.
+        keys_missing_units = data_keys - units_keys - set(['head', 'ventral'])
         if keys_missing_units != set():
             raise AssertionError('The following data keys are missing '
                                  'entries in the "units" object: ' + 
