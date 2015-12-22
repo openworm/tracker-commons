@@ -18,7 +18,7 @@ import json, jsonschema
 import numpy as np
 
 from .wcon_data import parse_data, convert_origin
-from .wcon_data import df_upsert, dataframes_are_same
+from .wcon_data import df_upsert
 from .measurement_unit import MeasurementUnit
 
 
