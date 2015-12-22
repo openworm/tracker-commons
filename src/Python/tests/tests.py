@@ -93,6 +93,7 @@ class TestWCONParser(unittest.TestCase):
         
         self._validate_from_schema(basic_wcon)
 
+    @unittest.skip("TODO: enable these once we have __eq__ implemented")
     def test_equality_operator(self):
         JSON_path = '../../../tests/minimax.wcon'
         w2 = WCONWorms.load_from_file(JSON_path)

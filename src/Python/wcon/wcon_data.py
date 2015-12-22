@@ -49,6 +49,8 @@ def df_upsert(src, dest):
     Append src to dest, doing an "update/insert" where
     conflicts cause an AssertionError to be raised.
     
+    Return the new dest
+    
     Parameters
     -----------
     src, dest: pandas DataFrames
@@ -103,6 +105,8 @@ def df_upsert(src, dest):
 
     # Replace any rows that do exist with the src version
     dest.update(src)
+    
+    return dest
 
 
 
@@ -265,7 +269,7 @@ def _obtain_time_series_data_frame(time_series_data):
         if time_df is None:
             time_df = cur_df
         else:
-            df_upsert(src=cur_df, dest=time_df)
+            time_df = df_upsert(src=cur_df, dest=time_df)
 
     # We want the index (time) to be in order.
     time_df.sort_index(axis=0, inplace=True)

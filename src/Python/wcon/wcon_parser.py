@@ -16,7 +16,7 @@ from six import StringIO
 from os import path
 import json, jsonschema
 
-from .wcon_data import parse_data, convert_origin
+from .wcon_data import parse_data, convert_origin, df_upsert
 from .measurement_unit import MeasurementUnit
 
 
@@ -223,19 +223,11 @@ class WCONWorms():
             
         """
         if convert_units:
+            data_compared = w1.to_canon.data == w2.to_canon.data
+            
             return (w1.to_canon.data == w2.to_canon.data).all().all()
         else:
             return (w1.data == w2.data).all().all()
-        
-    @classmethod
-    def does_data_clash(cls, w1, w2):
-        """
-        Return True if any shared data between w1 and w2 clashes.
-        
-        """
-        pass
-        # TODO: maybe use the upsert functionality
-        return True
 
     def __eq__(self, other):
         """
@@ -261,6 +253,18 @@ class WCONWorms():
         """
         return self.merge(self, other)
 
+    def is_canon(self):
+        """
+        Returns whether all units are already in their canonical forms.
+
+        """
+        for data_key in self.units:
+            mu = self.units[data_key]
+            if mu.unit_string != mu.canonical_unit_string:
+                return False
+
+        return True        
+
     @property
     def to_canon(self):
         """
@@ -276,9 +280,14 @@ class WCONWorms():
         
         for data_key in self.units:
             mu = self.units[data_key]
-            #self.data.loc[:,(4,data_key)].apply(mu.to_canon)
+            
+            # Don't bother to "convert" units that are already in their
+            # canonical form.
+            if mu.unit_string == mu.canonical_unit_string:
+                continue
+            
             try:
-                # apply across all worm ids and all aspects
+                # Apply across all worm ids and all aspects
                 mu_slice = w.data.loc[:,(slice(None),data_key,slice(None))]
                 w.data.loc[:,(slice(None),data_key,slice(None))] = \
                     mu_slice.applymap(mu.to_canon)
@@ -293,9 +302,13 @@ class WCONWorms():
     @classmethod
     def merge(cls, w1, w2):
         """
-        Merge two worms
+        Merge two worms, in their standard forms.
 
-        Any clashing data found will cause an exception to be raised.
+        Units can differ, but not in their standard forms.
+
+        Metadata must be identical.
+
+        Data can overlap, as long as it does not clash.
         
         Clashes are checked at a low level of granularity: 
         e.g. if two worms have different metadata but the individual metadata
@@ -303,11 +316,22 @@ class WCONWorms():
         AssertionError.
         
         """
-        if cls.does_data_clash(w1, w2):
-            raise AssertionError("Data conflicts between worms to be merged")
-            
-        # TODO: implement this properly
-        return w1
+        if not cls.is_metadata_equal(w1, w2):
+            raise AssertionError("Metadata conflicts between worms to be "
+                                 "merged.")
+
+        w1c = w1.to_canon
+        w2c = w2.to_canon
+
+        try:
+            # Try to upsert w2c's data into w1c.  If we cannot 
+            # without an error being raised, the data clashes.
+            w1c.data = df_upsert(w1c.data, w2c.data)
+        except AssertionError as err:
+            raise AssertionError("Data conflicts between worms to "
+                                 "be merged: {0}".format(err))
+        
+        return w1c
 
     """
     ================================================================
