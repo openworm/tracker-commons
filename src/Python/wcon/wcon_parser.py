@@ -151,6 +151,18 @@ class WCONWorms():
         # USE self.data.to_dict()
         # but you'll first have to simplify the multiindex, by taking slices
         # (across time) and then interating over those slices 
+        for worm_id in set(self.data.columns.get_level_values('id')):
+            data_segment = {}
+            # then loop over the keys
+            # (this is too many keys, I need just the ones that apply to this worm)
+            # TODO
+            for key in set(self.data.columns.get_level_values('key')):
+                data_segment[key] = np.array(self.data.loc[:,(1,'x')])
+                
+            # then cut this thing down by "aspect size"
+            # TODO
+
+            
         
         w_dict = {'tracker-commons':True,
                   'units': units_obj,
