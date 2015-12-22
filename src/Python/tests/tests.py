@@ -361,7 +361,6 @@ class TestWCONParser(unittest.TestCase):
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorms.load(StringIO(worm_file_text2))
 
-    @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_load_from_file(self):
         """
         Test that .load_from_file works identically to .load
@@ -383,7 +382,6 @@ class TestWCONParser(unittest.TestCase):
         # COMPARISON
         self.assertEqual(worm_from_file, worm_from_stream)
 
-    @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_chunks(self):
         """
         Test load_from_file with two or more chunks
@@ -397,12 +395,12 @@ class TestWCONParser(unittest.TestCase):
                                           '"x":[3,4], "y":[5.4,3]}]}'))
         chunks.append(('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                        '"files":{"this":"_1", "prev":["_0"], "next":["_2"]},'
-                                 '"data":[{"id":3, "t":1.3, '
-                                          '"x":[3,4], "y":[5.4,3]}]}'))
+                                 '"data":[{"id":3, "t":1.4, '
+                                          '"x":[5,1], "y":[15.4,3]}]}'))
         chunks.append(('{"tracker-commons":true, "units":{"t":"s","x":"mm","y":"mm"},'
                        '"files":{"this":"_2", "prev":["_1", "_0"], "next":null},'
-                                 '"data":[{"id":3, "t":1.3, '
-                                          '"x":[3,4], "y":[5.4,3]}]}'))
+                                 '"data":[{"id":3, "t":1.5, '
+                                          '"x":[8,4.2], "y":[35.4,3]}]}'))
         
         # Create filenames for our chunks
         chunk_filenames = ['']*len(chunks)
@@ -421,15 +419,13 @@ class TestWCONParser(unittest.TestCase):
         # Then merge the others sequentially to the first one
         for chunk in chunks[1:]:
             worm_chunk = WCONWorms.load(StringIO(chunk))
-            worm_combined_manually = WCONWorms.merge(worm_combined_manually, 
-                                                    worm_chunk)
+            worm_combined_manually += worm_chunk
 
         # Validate that the chunks together are __eq__ to the files
         # that find each other through their "files" object
         for chunk_filename in chunk_filenames:
             # Worm from files that found each other through 
             # the "files" object
-            #pdb.set_trace()
             worm_from_files = WCONWorms.load_from_file(chunk_filename)
             
             self.assertEqual(worm_from_files, worm_combined_manually)
@@ -439,7 +435,7 @@ class TestWCONParser(unittest.TestCase):
             os.remove(chunk_filename)
             
 
-    @unittest.skip("DEBUG: to see if tests pass if we skip these")
+    #@unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_data3(self):
         pass
 

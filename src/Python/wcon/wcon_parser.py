@@ -399,16 +399,7 @@ class WCONWorms():
 
 
     @classmethod
-    def load_from_file(cls, JSON_path):
-        """
-        Public-facing factory method, without options for chunks not needed
-        except internally for this class.
-        
-        """
-        return cls._load_from_file(cls, JSON_path)
-  
-  
-    def _load_from_file(cls, JSON_path,
+    def load_from_file(cls, JSON_path,
                         load_prev_chunks=True, 
                         load_next_chunks=True):
         """
@@ -443,6 +434,10 @@ class WCONWorms():
         # CASE 1: NO "files" OBJECT, hence no multiple files.  We are done.
         if w_current.files is None:
             return w_current
+        else:
+            # The merge operations below will blast away the .files attribute
+            # so we need to save a local copy
+            current_files = w_current.files
 
         # OTHERWISE, CASE 2: MULTIPLE FILES
 
@@ -450,7 +445,7 @@ class WCONWorms():
         # "this", "prev" and "next" will exist.  Also, that "this" is not
         # null and whose corresponding value is a string at least one 
         # character in length.
-        cur_ext = w_current.files['this']
+        cur_ext = current_files['this']
 
         # e.g. cur_filename = 'filename_2.wcon'
         # cur_ext = '_2', prefix = 'filename', suffix = '.wcon'
@@ -470,20 +465,22 @@ class WCONWorms():
             # load it and merge it with the current chunk
             # Same with the "next" chunks
             if (load_chunks[direction] and 
-                not w_current.files is None and 
-                not w_current.files[direction] is None):
+                not current_files is None and 
+                not current_files[direction] is None):
                     cur_load_prev_chunks = (direction == 'prev')
                     cur_load_next_chunks = (direction == 'next')
     
-                    new_file_name = (prefix + w_current.files[direction][0] + 
+                    new_file_name = (prefix + current_files[direction][0] + 
                                      suffix)
                     w_new = cls.load_from_file(new_file_name,
                                                cur_load_prev_chunks,
                                                cur_load_next_chunks)
-                    w_current = cls.merge(w_current, w_new)
+                    w_current = w_current + w_new
 
-        # We don't want 'files' to stay after loading
-        del(w_current.files)
+        # If no merging took place, we'll still need to delete the "files"
+        # attribute if it's present (i.e. if both "prev" and "next" were null):
+        if hasattr(w_current, "files"):
+            del(w_current.files)
 
         return w_current
         
