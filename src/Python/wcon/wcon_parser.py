@@ -15,8 +15,10 @@ from collections import OrderedDict
 from six import StringIO
 from os import path
 import json, jsonschema
+import numpy as np
 
-from .wcon_data import parse_data, convert_origin, df_upsert
+from .wcon_data import parse_data, convert_origin
+from .wcon_data import df_upsert, dataframes_are_same
 from .measurement_unit import MeasurementUnit
 
 
@@ -146,6 +148,9 @@ class WCONWorms():
                      for k in self.units.keys() if k != 'aspect_size'}        
 
         data_array = [] # TODO
+        # USE self.data.to_dict()
+        # but you'll first have to simplify the multiindex, by taking slices
+        # (across time) and then interating over those slices 
         
         w_dict = {'tracker-commons':True,
                   'units': units_obj,
@@ -223,11 +228,17 @@ class WCONWorms():
             
         """
         if convert_units:
-            data_compared = w1.to_canon.data == w2.to_canon.data
-            
-            return (w1.to_canon.data == w2.to_canon.data).all().all()
+            d1 = w1.to_canon.data
+            d2 = w2.to_canon.data
+    
         else:
-            return (w1.data == w2.data).all().all()
+            d1 = w1.data
+            d2 = w2.data
+        
+        return (d1.data.equals(d2.data) and 
+                d1.columns.identical(d2.columns) and
+                d1.index.identical(d2.index))
+
 
     def __eq__(self, other):
         """
