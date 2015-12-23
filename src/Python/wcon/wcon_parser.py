@@ -15,10 +15,9 @@ from collections import OrderedDict
 from six import StringIO
 from os import path
 import json, jsonschema
-import numpy as np
 
 from .wcon_data import parse_data, convert_origin
-from .wcon_data import df_upsert
+from .wcon_data import df_upsert, data_as_array
 from .measurement_unit import MeasurementUnit
 
 
@@ -147,26 +146,9 @@ class WCONWorms():
         units_obj = {k: self.units[k].canonical_unit_string 
                      for k in self.units.keys() if k != 'aspect_size'}        
 
-        data_array = [] # TODO
-        # USE self.data.to_dict()
-        # but you'll first have to simplify the multiindex, by taking slices
-        # (across time) and then interating over those slices 
-        for worm_id in set(self.data.columns.get_level_values('id')):
-            data_segment = {}
-            # then loop over the keys
-            # (this is too many keys, I need just the ones that apply to this worm)
-            # TODO
-            for key in set(self.data.columns.get_level_values('key')):
-                data_segment[key] = np.array(self.data.loc[:,(1,'x')])
-                
-            # then cut this thing down by "aspect size"
-            # TODO
-
-            
-        
         w_dict = {'tracker-commons':True,
                   'units': units_obj,
-                  'data': data_array}
+                  'data': data_as_array(self.data)}
         
         # The only optional object is "metadata" since "files" is not 
         # necessary since we don't currently support saving to more than 

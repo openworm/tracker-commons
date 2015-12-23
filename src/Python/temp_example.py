@@ -5,9 +5,12 @@ Created on Sun Dec 13 00:47:21 2015
 
 @author: Michael
 """
+import numpy as np
 import pandas as pd
 import warnings
 from six import StringIO
+
+from wcon.wcon_data import data_as_array
 
 from wcon import WCONWorms, MeasurementUnit
 
@@ -26,6 +29,7 @@ if __name__ == '__main__':
 
     w2 = WCONWorms.load_from_file(JSON_path)
 
+    dd = data_as_array(w2.data)
 
     #with open(JSON_path, 'r') as infile:
     #    w1 = WCONWorms.load(infile)

@@ -388,3 +388,71 @@ def _validate_time_series_data(time_series_data):
         
         data_segment['aspect_size'] = aspect_size_over_time
 
+
+def data_as_array(df):
+    """
+    Convert a pandas dataframe into an array of objects conforming
+    to the WCON standard.
+    
+    Parameters
+    ------------
+    df: Pandas DataFrame
+    
+    Returns
+    ------------
+    A list of dictionaries
+        Conforms to WCON standard
+    
+    """
+    arr = []
+    
+    # USE self.data.to_dict()
+    # but you'll first have to simplify the multiindex, by taking slices
+    # (across time) and then interating over those slices 
+    for worm_id in set(df.columns.get_level_values('id')):
+        data_segment = {"id": worm_id}
+
+        df_segment = df.loc[:,(worm_id)]
+
+        data_segment['t'] = list(np.array(df_segment.index))
+
+        # We must make the array "jagged" according to the "aspect size", 
+        # since aspect size may differ frame-by-frame
+        worm_aspect_size = df_segment.loc[:,('aspect_size')]
+        
+        keys_used = set(df.columns.get_level_values('key')) - set(['aspect_size'])
+
+        # e.g. ox, oy, head, ventral
+        for key in keys_used.intersection(elements_without_aspect):
+            data_segment[key] = list(np.array(df_segment.loc[:,(key)]))
+            
+        # e.g. x, y
+        for key in keys_used.intersection(elements_with_aspect):
+            #data_segment[key] = np.array(df.loc[:,(worm_id,key)])
+            non_jagged_array = df_segment.loc[:,(key)]
+        
+            jagged_array = []
+
+            #import pdb
+            #pdb.set_trace()    
+            
+            for t in non_jagged_array.index:
+                # If aspect size isn't defined, don't bother adding data here:
+                if np.isnan(worm_aspect_size.loc[t,0]):
+                    jagged_array.append([])
+                else:
+                    cur_aspect_size = int(worm_aspect_size.loc[t,0])
+                    # For some reason loc's slice notation is INCLUSIVE!
+                    # so we must subtract one from cur_aspect_size, so if it's
+                    # 3, for instance, we get onl entries 0,1, and 2, as required.
+                    jagged_array.append(np.array(non_jagged_array.loc[t,0:cur_aspect_size-1]))
+            
+            data_segment[key] = jagged_array
+
+    arr.append(data_segment)
+    
+    return arr
+
+
+elements_with_aspect = ['x', 'y']
+elements_without_aspect = ['ox', 'oy', 'head', 'ventral']
