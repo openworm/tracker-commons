@@ -27,14 +27,10 @@ if __name__ == '__main__':
 
     w2 = WCONWorms.load_from_file(JSON_path)
 
-    #dd = data_as_array(w2.data)
     w2.save_to_file('fwefwef.WCON', pretty_print=True)
     w3 = WCONWorms.load_from_file('fwefwef.WCON')
-
-    #with open(JSON_path, 'r') as infile:
-    #    w1 = WCONWorms.load(infile)
     
-    #u = MeasurementUnit.create('cm')
+    u = MeasurementUnit.create('cm')
 
     
 if __name__ == '__main__2':
@@ -44,8 +40,7 @@ if __name__ == '__main__2':
                                  '"x":[3,4], "y":[5.4,3]}]}'))
 
     w1 = WCONWorms.load(StringIO(worm_file_text2))
-    
-    #w2 = w1.standard_form
+
 
 if __name__ == '__main__3':
     w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{},'

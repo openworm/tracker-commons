@@ -189,29 +189,16 @@ def parse_data(data):
 
     data = np.array(data)
 
-    # Get a list of all ids in data
-    #ids = list(set([x['id'] for x in data if 'id' in x]))
-
-    is_time_series_mask = get_mask(data, 't')
-    has_id_mask = get_mask(data, 'id')
-
     # We only care about data that have all the mandatory fields.
     # the Custom Feature Type 2 objects are suppresed by this filter:
+    is_time_series_mask = get_mask(data, 't')
+    has_id_mask = get_mask(data, 'id')
     data = data[is_time_series_mask & has_id_mask]
 
-    #pdb.set_trace()
     # Clean up and validate all time-series data segments
     _validate_time_series_data(data)
 
-    # Obtain a numpy array of all unique timestamps used
-    #timeframes = []
-    #for data_segment in data[is_time_series_mask]:
-    #    timeframes.extend(data_segment['t'])
-    #timeframes = np.array(list(set(timeframes)))
-
-    time_df = _obtain_time_series_data_frame(data)
-
-    return time_df
+    return _obtain_time_series_data_frame(data)
 
 
 def _obtain_time_series_data_frame(time_series_data):
@@ -274,19 +261,12 @@ def _obtain_time_series_data_frame(time_series_data):
         cur_data_keys = cur_elements_with_aspect + \
                         cur_elements_without_aspect  
 
-        #import pdb
-        #pdb.set_trace()
-
         # We must pad the timeframes where the data doesn't have maximal
         # aspect or else the concatenation step below will fail.
         for k in cur_elements_with_aspect:
             for i in range(len(cur_timeframes)):
                 data_segment[k][i] = (data_segment[k][i] + 
                     [np.NaN] * (max_aspect_size - len(data_segment[k][i])))
-
-        #import pdb
-        #pdb.set_trace()
-                    
 
         # Stage the data for addition to our DataFrame.
         # Shape KxI where K is the number of keys and 
@@ -476,9 +456,6 @@ def data_as_array(df):
             non_jagged_array = df_segment.loc[:,(key)]
         
             jagged_array = []
-
-            #import pdb
-            #pdb.set_trace()    
             
             for t in non_jagged_array.index:
                 # If aspect size isn't defined, don't bother adding data here:

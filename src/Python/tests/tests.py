@@ -134,10 +134,7 @@ class TestWCONParser(unittest.TestCase):
             for pretty in [True, False]:
                 print("LOADING FOR TEST: " + JSON_path + 
                       " (PRETTY = " + str(pretty) + ")")
-                if JSON_path == '../../../tests\maximal_0.wcon':
-                    #import pdb
-                    #pdb.set_trace()
-                    pass
+
                 w_loaded = WCONWorms.load_from_file(JSON_path)
         
                 # Save these worm tracks to a file, then load that file
