@@ -158,6 +158,14 @@ def convert_origin(data, offset_keys=['ox', 'oy'], coord_keys=['x', 'y']):
     for offset_key in offset_keys:
         data.drop(offset_key, axis=1, level='key', inplace=True)
 
+    # Because of a known issue in Pandas 
+    # (https://github.com/pydata/pandas/issues/2770), the dropped columns 
+    # remain in the "levels" attribute of MultiIndex, even if they don't 
+    # appear in the "labels" and are thus not 'observed'.
+    # The workaround is to reconstitute the MultiIndex from tuples:
+    data.columns = pd.MultiIndex.from_tuples(data.columns.values,
+                                             names=data.columns.names)
+
 
 def parse_data(data):
     """
@@ -496,5 +504,26 @@ def data_as_array(df):
     return arr
 
 
-elements_with_aspect = ['x', 'y']
-elements_without_aspect = ['ox', 'oy', 'head', 'ventral']
+def get_sorted_ordered_dict(d):
+    """
+    Recursively sort all levels of a potentially nested dict.
+    
+    From http://stackoverflow.com/questions/22721579/    
+    
+    Parameters
+    -----------
+    d: a potentially nested dict
+    
+    Returns
+    -----------
+    A potentially nested OrderedDict object
+        All keys at each nesting level are sorted alphabetically
+    
+    """
+    od = OrderedDict()
+    for k, v in sorted(d.items()):
+        if isinstance(v, dict):
+            od[k] = get_sorted_ordered_dict(v)
+        else:
+            od[k] = v
+    return od

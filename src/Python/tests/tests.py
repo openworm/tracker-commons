@@ -11,6 +11,7 @@ import json
 import jsonschema
 import unittest
 import filecmp
+import glob
 
 sys.path.append('..')
 from wcon import WCONWorms, MeasurementUnit
@@ -118,30 +119,54 @@ class TestWCONParser(unittest.TestCase):
         # the to_canon operation
         self.assertTrue((w2data == w2.data).any().any())
 
-    @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_save_and_load(self):
         """
-        We save a 
+        All .wcon files in the tests folder are loaded, saved, then loaded 
+        again, and compared with the original loaded file.
+        
+        This is one of the best and most comprehensive tests in this suite.
         
         """
-        JSON_path = '../../../tests/minimax.wcon'
-        w_loaded = WCONWorms.load_from_file(JSON_path)
-
-        # Save these worm tracks to a file, then load that file
-        test_path = 'test.wcon'
-        w_loaded.save_to_file(test_path)
-        w_from_saved = WCONWorms.load_from_file(test_path)
+        print("BIG TEST: Test load and save and load and save")
+        files_to_test = glob.glob('../../../tests/*.wcon')
         
-        self.assertEqual(w_loaded, w_from_saved)
-        os.remove(test_path)
+        for JSON_path in files_to_test:
+            for pretty in [True, False]:
+                print("LOADING FOR TEST: " + JSON_path + 
+                      " (PRETTY = " + str(pretty) + ")")
+                if JSON_path == '../../../tests\maximal_0.wcon':
+                    #import pdb
+                    #pdb.set_trace()
+                    pass
+                w_loaded = WCONWorms.load_from_file(JSON_path)
         
-        # then load and save AGAIN and do a file comparison to make sure 
-        # it's the same        
-        # this will test that we order the keys (even though this isn't 
-        # in the WCON standard it's nice for human readability, i.e. to have
-        # "tracker-commons" first, "id" first in a data segment, etc.)
-        
-        # TODO
+                # Save these worm tracks to a file, then load that file
+                test_path = 'test.wcon'
+                w_loaded.save_to_file(test_path, pretty_print=pretty)
+                w_from_saved = WCONWorms.load_from_file(test_path)
+                
+                self.assertEqual(w_loaded, w_from_saved)
+            
+                # then load and save AGAIN and do a file comparison to make
+                # sure it's the same        
+                # this will test that we order the keys (even though this 
+                # isn't in the WCON standard it's nice for human 
+                # readability, i.e. to have "tracker-commons" first, 
+                # "id" first in a data segment, etc.)
+                w_loaded_again = WCONWorms.load_from_file(test_path)
+                self.assertEqual(w_loaded, w_loaded_again)
+                self.assertEqual(w_loaded, w_from_saved)
+                self.assertEqual(w_loaded_again, w_from_saved)
+    
+                test_path2 = 'test2.wcon'
+                w_loaded_again.save_to_file(test_path2, pretty_print=pretty)
+    
+                # As described in the above comment: check that running
+                # load/save twice should generate an IDENTICAL file.
+                self.assertTrue(filecmp.cmp(test_path, test_path2))
+                
+                os.remove(test_path)
+                os.remove(test_path2)
         
 
         

@@ -17,7 +17,7 @@ from os import path
 import json, jsonschema
 
 from .wcon_data import parse_data, convert_origin
-from .wcon_data import df_upsert, data_as_array
+from .wcon_data import df_upsert, data_as_array, get_sorted_ordered_dict
 from .measurement_unit import MeasurementUnit
 
 
@@ -139,32 +139,49 @@ class WCONWorms():
         """
         Return a representation of the worm as an OrderedDict.  This is most
         useful when saving to a file.
+        
+        Returns the canonical version of the data, with units in 
+        canonical form, and the data converted to canonical form.
+        
+        The four keys are:
+        
+        - 'tracker-commons'
+        - 'units'
+        - 'metadata'
+        - 'data'
 
         """
+        ord_dict = OrderedDict({'tracker-commons':True})
+
         # A dictionary of the canonical unit strings for all quantities except
         # aspect_size, which is generated at runtime.
         units_obj = {k: self.units[k].canonical_unit_string 
                      for k in self.units.keys() if k != 'aspect_size'}        
+        # Sort the units so that every time we save this file, it produces
+        # exactly the same output.  Not required in the JSON standard, but
+        # nice to have.
+        units_obj = get_sorted_ordered_dict(units_obj)
+        ord_dict.update({'units': units_obj})
 
-        w_dict = {'tracker-commons':True,
-                  'units': units_obj,
-                  'data': data_as_array(self.data)}
-        
         # The only optional object is "metadata" since "files" is not 
         # necessary since we don't currently support saving to more than 
         # one chunk.
         if self.metadata:
-            w_dict['metadata'] = self.metadata
+            # Again, sort the metadata (recursively) so that the same file
+            # is produced each time that can stand up to diffing
+            metadata_obj = get_sorted_ordered_dict(self.metadata)
+            ord_dict.update({'metadata': metadata_obj})
+
+        canonical_data = self.to_canon.data
+        if canonical_data is None:
+            data_arr = []
+        else:
+            data_arr = data_as_array(canonical_data)
+        ord_dict.update({'data': data_arr})
         
-        # It's nice to order the elements:
-        # 'tracker-commons', 'units', 'metadata', 'data'
-        w_dict = OrderedDict(w_dict)
-        w_dict.move_to_end('units')
-        w_dict.move_to_end('metadata')
-        w_dict.move_to_end('data')
+        return ord_dict
 
-        return w_dict
-
+        
     """
     ================================================================
     Comparison Methods
@@ -220,7 +237,8 @@ class WCONWorms():
             Add a "threshold" parameter so that perfect equality is not
             the only option
             
-        """
+        """        
+        
         if convert_units:
             d1 = w1.to_canon.data
             d2 = w2.to_canon.data
@@ -228,6 +246,13 @@ class WCONWorms():
         else:
             d1 = w1.data
             d2 = w2.data
+
+        if (d1 is None) ^ (d2 is None):
+            # If one is None but the other is not (XOR), data is not equal
+            return False
+        elif d1 is None and d2 is None:
+            # If both None, they are equal
+            return True
         
         return (d1.equals(d2) and 
                 d1.columns.identical(d2.columns) and
@@ -258,6 +283,7 @@ class WCONWorms():
         """
         return self.merge(self, other)
 
+    @property
     def is_canon(self):
         """
         Returns whether all units are already in their canonical forms.
@@ -280,6 +306,11 @@ class WCONWorms():
         w = WCONWorms()
         w.metadata = self.metadata
         w.units = self.canonical_units
+
+        # Corner case
+        if self.data is None:
+            w.data = None
+            return w
 
         w.data = self.data.copy()
         
