@@ -13,8 +13,6 @@ Here are the complete installation instructions to get from a freshly provisione
 sudo apt-get update
 sudo apt-get -y install python-pip
 
-sudo apt-get -y install default-jdk
-sudo apt-get -y install unzip
 # cython will fail if you don't install this:
 # (see http://stackoverflow.com/questions/11094718/)
 sudo apt-get -y install python-dev
