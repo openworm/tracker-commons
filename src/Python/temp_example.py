@@ -25,11 +25,11 @@ if __name__ == '__main__':
 
     JSON_path = '../../tests/minimax.wcon'
 
-    #w2 = WCONWorms.load_from_file(JSON_path)
+    w2 = WCONWorms.load_from_file(JSON_path)
 
     #dd = data_as_array(w2.data)
-    #w2.save_to_file('fwefwef.WCON', pretty_print=True)
-    w3 = WCONWorms.load_from_file('fwefwe1f.WCON')
+    w2.save_to_file('fwefwef.WCON', pretty_print=True)
+    w3 = WCONWorms.load_from_file('fwefwef.WCON')
 
     #with open(JSON_path, 'r') as infile:
     #    w1 = WCONWorms.load(infile)

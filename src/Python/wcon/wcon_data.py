@@ -266,6 +266,20 @@ def _obtain_time_series_data_frame(time_series_data):
         cur_data_keys = cur_elements_with_aspect + \
                         cur_elements_without_aspect  
 
+        #import pdb
+        #pdb.set_trace()
+
+        # We must pad the timeframes where the data doesn't have maximal
+        # aspect or else the concatenation step below will fail.
+        for k in cur_elements_with_aspect:
+            for i in range(len(cur_timeframes)):
+                data_segment[k][i] = (data_segment[k][i] + 
+                    [np.NaN] * (max_aspect_size - len(data_segment[k][i])))
+
+        #import pdb
+        #pdb.set_trace()
+                    
+
         # Stage the data for addition to our DataFrame.
         # Shape KxI where K is the number of keys and 
         #                 I is the number of "aspects"
@@ -414,7 +428,16 @@ def data_as_array(df):
     # but you'll first have to simplify the multiindex, by taking slices
     # (across time) and then interating over those slices 
     for worm_id in set(df.columns.get_level_values('id')):
-        data_segment = [("id", str(worm_id))]
+        try:
+            # Downconvert any numpy data types (which are not 
+            # JSON-serializable) into native Python data types
+            worm_id = worm_id.item()
+        except AttributeError:
+            # If the item wasn't a numpy data type, .item() won't be available
+            # just ignore this error
+            pass
+            
+        data_segment = [("id", worm_id)]
 
         df_segment = df.loc[:,(worm_id)]
 
