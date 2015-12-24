@@ -32,6 +32,6 @@ before_install:
 #  - pip install --upgrade pip
 #  - pip install numpy pandas jsonschema
 script:
-  - cd src/Python/
+  - cd src/Python/tests/
   - pwd
   - python -m unittest discover
