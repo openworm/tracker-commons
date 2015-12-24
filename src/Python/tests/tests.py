@@ -117,6 +117,33 @@ class TestWCONParser(unittest.TestCase):
         # Confirm that data was not altered in situ after performing 
         # the to_canon operation
         self.assertTrue((w2data == w2.data).any().any())
+
+    @unittest.skip("DEBUG: to see if tests pass if we skip these")
+    def test_save_and_load(self):
+        """
+        We save a 
+        
+        """
+        JSON_path = '../../../tests/minimax.wcon'
+        w_loaded = WCONWorms.load_from_file(JSON_path)
+
+        # Save these worm tracks to a file, then load that file
+        test_path = 'test.wcon'
+        w_loaded.save_to_file(test_path)
+        w_from_saved = WCONWorms.load_from_file(test_path)
+        
+        self.assertEqual(w_loaded, w_from_saved)
+        os.remove(test_path)
+        
+        # then load and save AGAIN and do a file comparison to make sure 
+        # it's the same        
+        # this will test that we order the keys (even though this isn't 
+        # in the WCON standard it's nice for human readability, i.e. to have
+        # "tracker-commons" first, "id" first in a data segment, etc.)
+        
+        # TODO
+        
+
         
     def test_tracker_commons_and_units(self):
         with self.assertRaises(ValueError):
