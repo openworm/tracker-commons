@@ -10,6 +10,7 @@ Classes
 WCONWorms
 
 """
+import six
 import warnings
 from collections import OrderedDict
 from six import StringIO
@@ -374,7 +375,8 @@ class WCONWorms():
         Perform simple checks on the file path
         
         """
-        assert(isinstance(JSON_path, str))
+        # six.text_type is str for Python 3.x and unicode() for Python 2.x
+        assert(isinstance(JSON_path, six.text_type))
         assert(len(JSON_path)>0)
         
         if len(JSON_path) <= 5 or JSON_path[-5:].upper() != '.WCON':
