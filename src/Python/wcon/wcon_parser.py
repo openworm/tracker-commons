@@ -52,10 +52,6 @@ class WCONWorms():
 
     Usage
     -------------
-    # From a file:
-    with open('my_worm.wcon', 'r') as infile:
-        w1 = WCONWorms.load(infile)
-    
     # From a string literal:
     from io import StringIO
     w2 = WCONWorms.load(StringIO('{"tracker-commons":true, '
@@ -90,11 +86,8 @@ class WCONWorms():
     - units
     - metadata
     - data
-    
-    Is assigned to the dictionary object special_root
-    
-    To process these items, this class should be subclassed and this method
-    overwritten.
+
+    ... is ignored.  Handling them requires subclassing WCONWorms.
     
     """
     """
@@ -390,6 +383,7 @@ class WCONWorms():
                           'does not end in ".WCON", the recommended'
                           'file extension.')
 
+
     def save_to_file(self, JSON_path, pretty_print=False, num_chunks=1):
         """
         Save this object to the path specified.  The object
@@ -508,9 +502,8 @@ class WCONWorms():
             del(w_current.files)
 
         return w_current
+
         
-
-
     @classmethod
     def load(cls, JSON_stream):
         """
@@ -594,9 +587,6 @@ class WCONWorms():
             w.metadata = root['metadata']
         else:
             w.metadata = None
-
-        # DEBUG: temporary
-        w.root = root
 
         return w
 
