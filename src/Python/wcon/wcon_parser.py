@@ -321,9 +321,7 @@ class WCONWorms():
             
             try:
                 # Apply across all worm ids and all aspects
-                #mu_slice = w.data.loc[:,(slice(None),data_key,slice(None))]
-                mu_slice = w.data.loc[:,idx[:,data_key,:]]
-                #w.data.loc[:,(slice(None),data_key,slice(None))] = \
+                mu_slice = w.data.loc[:,idx[:,data_key,:]].copy()
                 w.data.loc[:,idx[:,data_key,:]] = \
                     mu_slice.applymap(mu.to_canon)
             except KeyError:
