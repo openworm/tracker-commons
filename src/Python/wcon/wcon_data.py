@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import itertools
 from collections import OrderedDict
+idx = pd.IndexSlice
 
 # "Aspect" is my term for the articulation points at a given time frame
 # So if you track 49 skeleton points per frame, then x and y have
@@ -300,7 +301,20 @@ def _obtain_time_series_data_frame(time_series_data):
     # We want the index (time) to be in order.
     time_df.sort_index(axis=0, inplace=True)
 
+    # If 'head' or 'ventral' is NaN, we must specify '?' since
+    # otherwise, when saving this object, to specify "no value" we would 
+    # have to create a new data segment with no 'head' column at all.  
+    # But since both 'head' and 'ventral' have this issue, we might need 
+    # segments with just 'head', just 'ventral', and both 'head' and 
+    # 'ventral', and none.  That's too unwieldy for a rare use case.  
+    #So instead we treat nan as '?'.
+    df_keys = set(time_df.columns.get_level_values('key'))
+    for k in ['head', 'ventral']:
+        if k in df_keys:
+            time_df.loc[:,idx[:,k,:]] = time_df.loc[:,idx[:,k,:]].fillna('?')
+
     return time_df
+
 
 def _validate_time_series_data(time_series_data):
     """
@@ -399,6 +413,65 @@ def _validate_time_series_data(time_series_data):
 
 precision = 2 # TODO
 
+
+def _data_segment_as_odict(worm_id, df_segment):
+    """
+    Convert a pandas dataframe into an ordered_dictionary.  This is a support
+    method of data_as_array.
+    
+    """
+    data_segment = [("id", worm_id)]
+
+    ## We only care about time indices for which we have some "aspect" or
+    # else which have some non-aspect
+    #data_segment['t'] = list(np.array(worm_aspect_size.dropna(axis=0).index))
+    #df_segment = df_segment[(~np.isnan(df_segment).all(axis=1))]
+    df_segment = df_segment[(~df_segment.isnull()).any(axis=1)] 
+
+    # We must make the array "jagged" according to the "aspect size", 
+    # since aspect size may differ frame-by-frame
+    worm_aspect_size = df_segment.loc[:,('aspect_size')]
+
+    data_segment.append(('t', list(df_segment.index)))
+    
+    #keys_used = set(df_segment.columns.get_level_values('key')) - set(['aspect_size'])
+    keys_used = [k for k in df_segment.columns.get_level_values('key')
+                 if k != 'aspect_size']
+        
+    # e.g. ox, oy, head, ventral
+    #@for key in keys_used.intersection(elements_without_aspect):
+    for key in [k for k in keys_used if k in elements_without_aspect]:
+        cur_segment_slice = df_segment.loc[:,idx[key,0]]
+        cur_list = list(np.array(cur_segment_slice))
+        data_segment.append((key, cur_list))
+        
+    # e.g. x, y
+    #for key in keys_used.intersection(elements_with_aspect):
+    for key in [k for k in keys_used if k in elements_with_aspect]:
+        #data_segment[key] = np.array(df.loc[:,(worm_id,key)])
+        non_jagged_array = df_segment.loc[:,(key)]
+    
+        jagged_array = []
+        
+        for t in non_jagged_array.index:
+            # If aspect size isn't defined, don't bother adding data here:
+            if np.isnan(worm_aspect_size.loc[t,0]):
+                jagged_array.append([])
+            else:
+                cur_aspect_size = int(worm_aspect_size.loc[t,0])
+                # For some reason loc's slice notation is INCLUSIVE!
+                # so we must subtract one from cur_aspect_size, so if 
+                # it's 3, for instance, we get only entries 
+                # 0, 1, and 2, as required.
+                cur_entry = non_jagged_array.loc[t,0:cur_aspect_size-1]
+                cur_entry = list(np.array(cur_entry))
+                jagged_array.append(cur_entry)
+        
+        data_segment.append((key, jagged_array))
+
+    return OrderedDict(data_segment)
+
+
 def data_as_array(df):
     """
     Convert a pandas dataframe into an array of objects conforming
@@ -430,63 +503,11 @@ def data_as_array(df):
             # If the item wasn't a numpy data type, .item() won't be available
             # just ignore this error
             pass
-            
-        data_segment = [("id", worm_id)]
 
-        df_segment = df.loc[:,(worm_id)]
-
-        import pdb
-        pdb.set_trace()
-
-        ## We only care about time indices for which we have some "aspect" or
-        # else which have some non-aspect
-        #data_segment['t'] = list(np.array(worm_aspect_size.dropna(axis=0).index))
-        #df_segment = df_segment[(~np.isnan(df_segment).all(axis=1))]
-        df_segment = df_segment[(~df_segment.isnull()).any(axis=1)]
-
-        # We must make the array "jagged" according to the "aspect size", 
-        # since aspect size may differ frame-by-frame
-        worm_aspect_size = df_segment.loc[:,('aspect_size')]
-
-        data_segment.append(('t', list(df_segment.index)))
+        #df_segment = df.loc[:,idx[worm_id,:,:]]
+        df_segment = df.xs(worm_id, level='id', axis=1)
         
-        #keys_used = set(df_segment.columns.get_level_values('key')) - set(['aspect_size'])
-        keys_used = [k for k in df_segment.columns.get_level_values('key')
-                     if k != 'aspect_size']
-
-        # e.g. ox, oy, head, ventral
-        #@for key in keys_used.intersection(elements_without_aspect):
-        for key in [k for k in keys_used if k in elements_without_aspect]:
-            data_segment[key] = list(df_segment.loc[:,(key)])
-            
-        # e.g. x, y
-        #for key in keys_used.intersection(elements_with_aspect):
-        for key in [k for k in keys_used if k in elements_with_aspect]:
-            #data_segment[key] = np.array(df.loc[:,(worm_id,key)])
-            non_jagged_array = df_segment.loc[:,(key)]
-        
-            jagged_array = []
-            
-            for t in non_jagged_array.index:
-                # If aspect size isn't defined, don't bother adding data here:
-                if np.isnan(worm_aspect_size.loc[t,0]):
-                    jagged_array.append([])
-                else:
-                    cur_aspect_size = int(worm_aspect_size.loc[t,0])
-                    # For some reason loc's slice notation is INCLUSIVE!
-                    # so we must subtract one from cur_aspect_size, so if 
-                    # it's 3, for instance, we get only entries 
-                    # 0, 1, and 2, as required.
-                    cur_entry = non_jagged_array.loc[t,0:cur_aspect_size-1]
-                    cur_entry = list(np.array(cur_entry))
-                    jagged_array.append(cur_entry)
-            
-            data_segment.append((key, jagged_array))
-
-        # TODO: order the data segment as id, t, elements_without_aspect (ascending), elements_with_aspect (ascending)
-        #data_segment = OrderedDict(data_segment)  # TODO
-
-        arr.append(OrderedDict(data_segment))
+        arr.append(_data_segment_as_odict(worm_id, df_segment))
 
     df = head_and_ventral_to_int(df)
     
@@ -495,7 +516,6 @@ def data_as_array(df):
 
 key_codes = {'head': ['L', 'R', '?'], 'ventral': ['CCW', 'CW', '?']}
 replacement_values = [-1,1,0]
-idx = pd.IndexSlice
 
 def head_and_ventral_to_int(df):
     """
@@ -504,10 +524,10 @@ def head_and_ventral_to_int(df):
     values.
     
     """
-    key_values = set(df.columns.get_level_values('key'))
+    df_keys = set(df.columns.get_level_values('key'))
     
     for key in key_codes:
-        if key in key_values:
+        if key in df_keys:
             df.loc[:,idx[:,key,:]] = \
                 df.loc[:,idx[:,key,:]].replace(key_codes[key], replacement_values)
 
@@ -523,10 +543,10 @@ def int_to_head_and_ventral(df):
     Helper method to reverse head_and_ventral_to_int above
     
     """
-    key_values = set(df.columns.get_level_values('key'))
+    df_keys = set(df.columns.get_level_values('key'))
     
     for key in key_codes:
-        if key in key_values:
+        if key in df_keys:
             df.loc[:,idx[:,key,:]] = \
                 df.loc[:,idx[:,key,:]].replace(replacement_values, key_codes[key])
 
