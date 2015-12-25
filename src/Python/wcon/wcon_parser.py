@@ -146,6 +146,8 @@ class WCONWorms():
         - 'data'
 
         """
+        # Not strictly required by JSON but nice to order the four top-level
+        # keys so we use OrderedDict here instead of dict.
         ord_dict = OrderedDict({'tracker-commons':True})
 
         # A dictionary of the canonical unit strings for all quantities except

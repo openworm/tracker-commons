@@ -200,7 +200,7 @@ def parse_data(data):
 
     time_df = _obtain_time_series_data_frame(data)
     
-    head_and_ventral_to_int(time_df)
+    time_df = head_and_ventral_to_int(time_df)
 
     return time_df
 
@@ -416,7 +416,7 @@ def data_as_array(df):
     """
     arr = []
     
-    int_to_head_and_ventral(df)
+    df = int_to_head_and_ventral(df)
 
     # USE self.data.to_dict()
     # but you'll first have to simplify the multiindex, by taking slices
@@ -484,7 +484,7 @@ def data_as_array(df):
 
         arr.append(OrderedDict(data_segment))
 
-    head_and_ventral_to_int(df)
+    df = head_and_ventral_to_int(df)
     
     return arr
 
@@ -499,8 +499,6 @@ def head_and_ventral_to_int(df):
     since pandas does not do well with DataFrames having strings and numeric
     values.
     
-    Modifies df in-place.
-    
     """
     key_values = set(df.columns.get_level_values('key'))
     
@@ -509,12 +507,16 @@ def head_and_ventral_to_int(df):
             df.loc[:,idx[:,key,:]] = \
                 df.loc[:,idx[:,key,:]].replace(key_codes[key], replacement_values)
 
+    # .replace changes dtypes in the entire searched area to `object` 
+    # for some reason.  so let's force everything to go to float (float64)
+    df = df.astype(float)
+    
+    return df
+
 
 def int_to_head_and_ventral(df):
     """
     Helper method to reverse head_and_ventral_to_int above
-    
-    Modifies df in-place.
     
     """
     key_values = set(df.columns.get_level_values('key'))
@@ -523,6 +525,8 @@ def int_to_head_and_ventral(df):
         if key in key_values:
             df.loc[:,idx[:,key,:]] = \
                 df.loc[:,idx[:,key,:]].replace(replacement_values, key_codes[key])
+
+    return df
 
 
 def get_sorted_ordered_dict(d):
