@@ -435,16 +435,20 @@ def data_as_array(df):
 
         df_segment = df.loc[:,(worm_id)]
 
+        import pdb
+        pdb.set_trace()
+
         ## We only care about time indices for which we have some "aspect" or
         # else which have some non-aspect
         #data_segment['t'] = list(np.array(worm_aspect_size.dropna(axis=0).index))
-        df_segment = df_segment[(~np.isnan(df_segment).all(axis=1))]
+        #df_segment = df_segment[(~np.isnan(df_segment).all(axis=1))]
+        df_segment = df_segment[(~df_segment.isnull()).any(axis=1)]
 
         # We must make the array "jagged" according to the "aspect size", 
         # since aspect size may differ frame-by-frame
         worm_aspect_size = df_segment.loc[:,('aspect_size')]
 
-        data_segment.append(('t', list(np.array(df_segment.index))))
+        data_segment.append(('t', list(df_segment.index)))
         
         #keys_used = set(df_segment.columns.get_level_values('key')) - set(['aspect_size'])
         keys_used = [k for k in df_segment.columns.get_level_values('key')
@@ -453,7 +457,7 @@ def data_as_array(df):
         # e.g. ox, oy, head, ventral
         #@for key in keys_used.intersection(elements_without_aspect):
         for key in [k for k in keys_used if k in elements_without_aspect]:
-            data_segment[key] = list(np.array(df_segment.loc[:,(key)]))
+            data_segment[key] = list(df_segment.loc[:,(key)])
             
         # e.g. x, y
         #for key in keys_used.intersection(elements_with_aspect):
