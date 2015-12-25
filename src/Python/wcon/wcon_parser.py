@@ -16,6 +16,7 @@ from collections import OrderedDict
 from six import StringIO
 from os import path
 import json, jsonschema
+import pandas as pd
 
 from .wcon_data import parse_data, convert_origin
 from .wcon_data import df_upsert, data_as_array, get_sorted_ordered_dict
@@ -307,6 +308,8 @@ class WCONWorms():
             return w
 
         w.data = self.data.copy()
+
+        idx = pd.IndexSlice
         
         for data_key in self.units:
             mu = self.units[data_key]
@@ -318,8 +321,10 @@ class WCONWorms():
             
             try:
                 # Apply across all worm ids and all aspects
-                mu_slice = w.data.loc[:,(slice(None),data_key,slice(None))]
-                w.data.loc[:,(slice(None),data_key,slice(None))] = \
+                #mu_slice = w.data.loc[:,(slice(None),data_key,slice(None))]
+                mu_slice = w.data.loc[:,idx[:,data_key,:]]
+                #w.data.loc[:,(slice(None),data_key,slice(None))] = \
+                w.data.loc[:,idx[:,data_key,:]] = \
                     mu_slice.applymap(mu.to_canon)
             except KeyError:
                 # Just ignore cases where there are "units" entries but no
@@ -375,8 +380,7 @@ class WCONWorms():
         Perform simple checks on the file path
         
         """
-        # six.text_type is str for Python 3.x and unicode() for Python 2.x
-        assert(isinstance(JSON_path, six.text_type))
+        assert(isinstance(JSON_path, six.string_types))
         assert(len(JSON_path)>0)
         
         if len(JSON_path) <= 5 or JSON_path[-5:].upper() != '.WCON':
