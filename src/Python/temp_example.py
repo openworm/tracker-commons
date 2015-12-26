@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import warnings
 from six import StringIO
+import json
 
 #from wcon.wcon_data import data_as_array
 
@@ -32,6 +33,9 @@ if __name__ == '__main__':
     
     u = MeasurementUnit.create('cm')
 
+    #io=StringIO()
+    #json.dump([None], io)
+    #io.getvalue()
     
 if __name__ == '__main__2':
     worm_file_text2 = (('{"tracker-commons":true,'

@@ -115,14 +115,14 @@
 					"y": { "$ref": "#/definitions/element_with_aspect" },
 					"head": {
 						"oneOf": [
-							{"type":"string", "enum":["L","R","?"]},
-							{"type":"array", "items":{"type":"string", "enum":["L","R","?"]}}
+							{"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]},
+							{"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]}}
 						]
 					},
 					"ventral": {
 						"oneOf": [
-							{"type":"string", "enum":["CW","CCW","?"]},
-							{"type":"array", "items":{"type":"string", "enum":["CW","CCW","?"]}}
+							{"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]},
+							{"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]}}
 						]
 					}
 				},

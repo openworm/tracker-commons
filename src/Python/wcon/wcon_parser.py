@@ -17,6 +17,8 @@ from six import StringIO
 from os import path
 import json, jsonschema
 import pandas as pd
+idx = pd.IndexSlice
+        
 
 from .wcon_data import parse_data, convert_origin
 from .wcon_data import df_upsert, data_as_array, get_sorted_ordered_dict
@@ -311,8 +313,6 @@ class WCONWorms():
 
         w.data = self.data.copy()
 
-        idx = pd.IndexSlice
-        
         for data_key in self.units:
             mu = self.units[data_key]
             
@@ -324,6 +324,7 @@ class WCONWorms():
             try:
                 # Apply across all worm ids and all aspects
                 mu_slice = w.data.loc[:,idx[:,data_key,:]].copy()
+                
                 w.data.loc[:,idx[:,data_key,:]] = \
                     mu_slice.applymap(mu.to_canon)
             except KeyError:

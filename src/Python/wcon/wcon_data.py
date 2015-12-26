@@ -201,7 +201,7 @@ def parse_data(data):
 
     time_df = _obtain_time_series_data_frame(data)
     
-    time_df = head_and_ventral_to_int(time_df)
+    #time_df = head_and_ventral_to_int(time_df)
 
     return time_df
 
@@ -301,6 +301,11 @@ def _obtain_time_series_data_frame(time_series_data):
     # We want the index (time) to be in order.
     time_df.sort_index(axis=0, inplace=True)
 
+    # We have to do this because somehow with entire worms who have 'head' or 
+    # 'ventral' columns, all their columns (even the numeric ones) 
+    # have dtype = object !  We want dtype=float64 (or some float anyway)
+    time_df = time_df.convert_objects(convert_numeric=True)
+
     # If 'head' or 'ventral' is NaN, we must specify '?' since
     # otherwise, when saving this object, to specify "no value" we would 
     # have to create a new data segment with no 'head' column at all.  
@@ -308,10 +313,24 @@ def _obtain_time_series_data_frame(time_series_data):
     # segments with just 'head', just 'ventral', and both 'head' and 
     # 'ventral', and none.  That's too unwieldy for a rare use case.  
     #So instead we treat nan as '?'.
+
+    # We must replace NaN with None, otherwise the JSON encoder will 
+    # save 'NaN' as the string and this will get rejected by our schema
+    # on any subsequent loads
+    # Note we can't use .fillna(None) due to this issue:
+    # https://github.com/pydata/pandas/issues/1972
     df_keys = set(time_df.columns.get_level_values('key'))
     for k in ['head', 'ventral']:
         if k in df_keys:
-            time_df.loc[:,idx[:,k,:]] = time_df.loc[:,idx[:,k,:]].fillna('?')
+            #time_df.loc[:,idx[:,k,:]] = time_df.loc[:,idx[:,k,:]].fillna('?')
+            cur_slice = time_df.loc[:,idx[:,k,:]]
+            #time_df.loc[:,idx[:,k,:]] = cur_slice.where(pd.notnull(cur_slice), None)
+            time_df.loc[:,idx[:,k,:]] = cur_slice.fillna(value=np.nan)
+
+    # Make sure aspect_size is an int:    
+    if 'aspect_size' in df_keys:
+        time_df.loc[:,idx[:'aspect_size',:]] = \
+            time_df.loc[:,idx[:'aspect_size',:]].astype(int)
 
     return time_df
 
@@ -411,6 +430,12 @@ def _validate_time_series_data(time_series_data):
         data_segment['aspect_size'] = aspect_size_over_time
 
 
+"""
+===============================================================================
+SAVING DATA
+===============================================================================
+"""
+
 precision = 2 # TODO
 
 
@@ -442,6 +467,14 @@ def _data_segment_as_odict(worm_id, df_segment):
     #@for key in keys_used.intersection(elements_without_aspect):
     for key in [k for k in keys_used if k in elements_without_aspect]:
         cur_segment_slice = df_segment.loc[:,idx[key,0]]
+        # We must replace NaN with None, otherwise the JSON encoder will 
+        # save 'NaN' as the string and this will get rejected by our schema
+        # on any subsequent loads
+        # Note we can't use .fillna(None) due to this issue:
+        # https://github.com/pydata/pandas/issues/1972
+        if key in ['head', 'ventral']:
+            cur_segment_slice = \
+                cur_segment_slice.where(pd.notnull(cur_segment_slice), None)
         cur_list = list(np.array(cur_segment_slice))
         data_segment.append((key, cur_list))
         
@@ -489,7 +522,7 @@ def data_as_array(df):
     """
     arr = []
     
-    df = int_to_head_and_ventral(df)
+    #df = int_to_head_and_ventral(df)
 
     # USE self.data.to_dict()
     # but you'll first have to simplify the multiindex, by taking slices
@@ -509,7 +542,7 @@ def data_as_array(df):
         
         arr.append(_data_segment_as_odict(worm_id, df_segment))
 
-    df = head_and_ventral_to_int(df)
+    #df = head_and_ventral_to_int(df)
     
     return arr
 
