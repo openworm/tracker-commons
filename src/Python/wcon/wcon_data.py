@@ -327,11 +327,15 @@ def _obtain_time_series_data_frame(time_series_data):
             #time_df.loc[:,idx[:,k,:]] = cur_slice.where(pd.notnull(cur_slice), None)
             time_df.loc[:,idx[:,k,:]] = cur_slice.fillna(value=np.nan)
 
-    # Make sure aspect_size is an int:    
-    if 'aspect_size' in df_keys:
-        time_df.loc[:,idx[:'aspect_size',:]] = \
-            time_df.loc[:,idx[:'aspect_size',:]].astype(int)
+    #import pdb;  pdb.set_trace()
 
+    # Make sure aspect_size is a float, since only floats are nullable:    
+    if 'aspect_size' in df_keys:
+        time_df.loc[:,idx[:,'aspect_size',:]] = \
+            time_df.loc[:,idx[:,'aspect_size',:]].astype(float)
+
+    #import pdb;  pdb.set_trace()
+    
     return time_df
 
 
