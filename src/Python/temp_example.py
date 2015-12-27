@@ -19,7 +19,7 @@ pd.set_option('display.expand_frame_repr', False)
 
 # Suppress RuntimeWarning warnings in Spider because it's a known bug
 # http://stackoverflow.com/questions/30519487/
-warnings.simplefilter(action = "ignore", category = RuntimeWarning)
+#warnings.simplefilter(action = "ignore", category = RuntimeWarning)
 
 
 if __name__ == '__main__':

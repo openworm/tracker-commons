@@ -5,7 +5,7 @@ A module of methods to create the pandas DataFrame representing the "data"
 array.
 
 """
-
+import warnings
 import numpy as np
 import pandas as pd
 import itertools
@@ -109,7 +109,7 @@ def df_upsert(src, dest):
     dest.update(src)
 
     # Sort the time series indices
-    dest.sort(axis=0, inplace=True)
+    dest.sort_index(axis=0, inplace=True)
     
     return dest
 
@@ -304,7 +304,12 @@ def _obtain_time_series_data_frame(time_series_data):
     # We have to do this because somehow with entire worms who have 'head' or 
     # 'ventral' columns, all their columns (even the numeric ones) 
     # have dtype = object !  We want dtype=float64 (or some float anyway)
-    time_df = time_df.convert_objects(convert_numeric=True)
+    # (Ignore the FutureWarning here about convert_objects being deprecated,
+    # because to_numeric only acts on Series and I don't know which ones
+    # we need to convert.)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(action="ignore", category=FutureWarning)
+        time_df = time_df.convert_objects(convert_numeric=True)
 
     # If 'head' or 'ventral' is NaN, we must specify '?' since
     # otherwise, when saving this object, to specify "no value" we would 
