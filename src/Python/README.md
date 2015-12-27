@@ -6,6 +6,8 @@ This project contains source code in Python that implements the WCON data format
 
 ### Installation
 
+`wcon` is [registered with the Python Package Index](https://pypi.python.org/pypi/wcon/), so just enter this command from any shell:
+
 ```
 pip install wcon
 ```
