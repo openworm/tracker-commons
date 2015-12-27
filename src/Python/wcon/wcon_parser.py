@@ -19,9 +19,10 @@ import json, jsonschema
 import pandas as pd
 idx = pd.IndexSlice
         
-
 from .wcon_data import parse_data, convert_origin
-from .wcon_data import df_upsert, data_as_array, get_sorted_ordered_dict
+from .wcon_data import df_upsert, data_as_array
+from .wcon_data import get_sorted_ordered_dict
+from .wcon_data import reverse_backwards_worms
 from .measurement_unit import MeasurementUnit
 
 
@@ -564,6 +565,10 @@ class WCONWorms():
             
             # Shift the coordinates by the amount in the offsets 'ox' and 'oy'
             convert_origin(w.data)
+
+            # Any worms with head=='R' should have their
+            # coordinates reversed and head reset to 'L'
+            reverse_backwards_worms(w.data)
         else:
             # "data": {}
             w.data = None

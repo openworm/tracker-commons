@@ -114,7 +114,7 @@ def df_upsert(src, dest):
     return dest
 
 
-def convert_origin(data, offset_keys=['ox', 'oy'], coord_keys=['x', 'y']):
+def convert_origin(df, offset_keys=['ox', 'oy'], coord_keys=['x', 'y']):
     """
     Add the offset values 'ox' and 'oy' to the 'x' and 'y' 
     coordinates in the dataframe
@@ -125,7 +125,7 @@ def convert_origin(data, offset_keys=['ox', 'oy'], coord_keys=['x', 'y']):
 
     Parameters
     ------------
-    data: Pandas DataFrame
+    df: Pandas DataFrame
     offset_keys: list of strings
         The offsets
     coord_keys: list of strings
@@ -133,39 +133,83 @@ def convert_origin(data, offset_keys=['ox', 'oy'], coord_keys=['x', 'y']):
     
     Returns
     ------------
-    None.  Modifies `data` in place.
-    
+    None.  Modifies `df` in place.
     
     """
-    for worm_id in data.columns.get_level_values(0).unique():
-        cur_worms = data.loc[:,(worm_id)]
+    for worm_id in df.columns.get_level_values(0).unique():
+        cur_worm = df.loc[:,(worm_id)]
 
         for offset, coord in zip(offset_keys, coord_keys):
-            if offset in cur_worms.columns.get_level_values(0):
-                all_x_columns = cur_worms.loc[:,(coord)]
-                ox_column = cur_worms.loc[:,(offset)].fillna(0)
+            if offset in cur_worm.columns.get_level_values(0):
+                all_x_columns = cur_worm.loc[:,(coord)]
+                ox_column = cur_worm.loc[:,(offset)].fillna(0)
                 affine_change = (np.array(ox_column) * 
                                  np.ones(all_x_columns.shape))
                 # Shift our 'x' values by the amount in 'ox'
                 all_x_columns += affine_change
-                data.loc[:,(worm_id,coord)] = all_x_columns.values
+                df.loc[:,(worm_id,coord)] = all_x_columns.values
                 
                 # Now reset our 'ox' values to zero.
-                data.loc[:,(worm_id,offset)] = np.zeros(ox_column.shape)
+                df.loc[:,(worm_id,offset)] = np.zeros(ox_column.shape)
 
     # For simplicity let's actually just drop the offset columns entirely
     # from the dataframe.  This is so DataFrames with and without offsets
     # will show as comparing identically.
     for offset_key in offset_keys:
-        data.drop(offset_key, axis=1, level='key', inplace=True)
+        df.drop(offset_key, axis=1, level='key', inplace=True)
 
     # Because of a known issue in Pandas 
     # (https://github.com/pydata/pandas/issues/2770), the dropped columns 
     # remain in the "levels" attribute of MultiIndex, even if they don't 
     # appear in the "labels" and are thus not 'observed'.
     # The workaround is to reconstitute the MultiIndex from tuples:
-    data.columns = pd.MultiIndex.from_tuples(data.columns.values,
-                                             names=data.columns.names)
+    df.columns = pd.MultiIndex.from_tuples(df.columns.values,
+                                           names=df.columns.names)
+
+def reverse_backwards_worms(df, coord_keys=['x', 'y']):
+    """
+    Reverse all worms in all time frames with head == 'R':
+    
+    - Reverse the coordinates
+    - Change head to 'L'
+
+    Parameters
+    ------------
+    df: Pandas DataFrame
+    coord_keys: list of strings
+        The corresponding coordinates to be reversed
+    
+    Returns
+    ------------
+    None.  Modifies `df` in place.
+    
+    """
+    if not 'head' in df.columns.get_level_values(level='key'):
+        return
+
+    mask_of_times_to_reverse = df.loc[:,idx[:,'head',:]] == 'R'
+
+    for worm_id in df.columns.get_level_values(level='id').unique():
+        cur_worm = df.loc[:,idx[worm_id,:,:]]
+        cur_keys = cur_worm.columns.get_level_values(level='key')
+
+        if not 'head' in cur_keys:
+            # Nothing to do
+            continue
+
+        cur_mask = mask_of_times_to_reverse.loc[:,idx[1,'head',0]]
+        
+        for key in coord_keys:
+            if not key in cur_keys:
+                continue
+
+            thing_to_reverse = df.loc[cur_mask,idx[1,'x',:]]
+            
+            # TODO: I need to reverse "thing_to_reverse", accounting for
+            # aspect size.  [::-1] just reverses the row order.
+            pass
+            
+    pass
 
 
 def parse_data(data):
