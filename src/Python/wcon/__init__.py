@@ -9,5 +9,6 @@ https://github.com/openworm/tracker-commons
 
 from .wcon_parser import WCONWorms
 from .measurement_unit import MeasurementUnit
+from .version import __version__
 
-__all__ = ['WCONWorms', 'MeasurementUnit']
+__all__ = ['WCONWorms', 'MeasurementUnit', '__version__']
