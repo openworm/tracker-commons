@@ -11,7 +11,7 @@ from setuptools import setup
 from codecs import open
 from os import path
 import os
-from .wcon.version import __version__
+from wcon.version import __version__
 
 here = path.abspath(path.dirname(__file__))
 readme_path = path.join(here, 'README.md')
