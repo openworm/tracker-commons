@@ -1,7 +1,7 @@
 #!usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Two classes:
+Two classes:  (only the second of which is generally public-facing)
 
 - MeasurementUnitAtom, which handles just a single prefix and suffix
    e.g. mm, celsius, kilograms, etc.
@@ -18,6 +18,7 @@ Two classes:
   e.g. F, K.
 
 """
+import six
 import ast
 import operator as op
 from scipy.constants import F2C, K2C, C2F, C2K
@@ -158,9 +159,9 @@ class MeasurementUnitAtom():
         Pretty-print a nice summary of this unit.
 
         """
-        return ("MeasurementUnitAtom type:" + self.unit_type + " " +
-                "original form:'" + self.unit_string + "' canonical "
-                "form:'" + self.canonical_unit_string + "'")
+        return ("||MeasurementUnitAtom type " + self.unit_type + " " +
+                "original form '" + self.unit_string + "' canonical "
+                "form '" + self.canonical_unit_string + "'||")
 
     def _validate_no_mixed_abbreviations(self):
         """
@@ -383,14 +384,14 @@ class MeasurementUnit():
     
     Since there can be multiple prefixes and suffixes, the only attributes are:
 
-    Attributes
+    Attributes (public-facing)
     ------------
     unit_string: str
         The original string
     canonical_unit_string: str
         The canonical form for all units within the original string
 
-    Methods
+    Methods (public-facing)
     ------------
     create
         The only public-facing factory method for this class
@@ -428,8 +429,8 @@ class MeasurementUnit():
         Pretty-print a nice summary of this unit.
 
         """
-        return ("MeasurementUnit, original form: '" + self.unit_string + 
-                "' canonical form: '" + self.canonical_unit_string + "'")
+        return ("||MeasurementUnit. original form '" + self.unit_string + 
+                "' canonical form '" + self.canonical_unit_string + "'||")
 
     @property
     def unit_string(self):
@@ -440,6 +441,14 @@ class MeasurementUnit():
     @property
     def canonical_unit_string(self):
         return self._canonical_unit_string.replace('**', '^')
+
+    @property
+    def canonical_unit(self):
+        """
+        A new MeasurementUnit, just the canonical version of the unit.
+        
+        """
+        return self.create(self.canonical_unit_string)
 
     def __eq__(self, other):
         # TODO: figure out if the units are measuring the same type of thing
@@ -468,7 +477,12 @@ class MeasurementUnit():
             The unit expression, e.g. 'mm^2' or 'cm/s' or 'C'
 
         """
-        assert(isinstance(unit_string, str))
+        # In Python 2, ensure that unit_string is unicode
+        if six.PY2 and isinstance(unit_string, str):
+                unit_string = unit_string.decode('unicode-escape')
+        
+        # Ensure that unit_string is str in Python 3 or unicode in Python 2.
+        assert(isinstance(unit_string, six.text_type))
         
         # ast can't handle parsing '', so just create the end product 
         # ourselves 
