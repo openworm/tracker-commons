@@ -14,6 +14,82 @@ pip install wcon
 
 Any problems?  Visit the more detailed [installation guide](INSTALL.md).
 
+### Usage
+
+```
+import wcon
+
+# Open a worm file, convert it to canonical form, and save it
+# (actually it's automatically converted before saving, but 
+#  here we do it explicitly)
+w = wcon.WCONWorms.load_from_file('tests/minimax.wcon')
+canon_w = w.to_canon
+w.save_to_file('test.wcon', pretty_print=True)
+
+# From a string literal:
+from io import StringIO
+w2 = WCONWorms.load(StringIO('{"tracker-commons":true, '
+                            '"units":{"t":"s","x":"mm","y":"mm"}, '
+                            '"data":[]}'))
+
+# WCONWorms.load_from_file accepts any valid WCON, but .save_to_file 
+# output is always "canonical" WCON, which makes specific choices about 
+# how to arrange and format the WCON file.  This way the functional 
+# equality of any two WCON files can be tested by this:
+
+w1 = WCONWorms.load_from_file('file1.wcon')
+w2 = WCONWorms.load_from_file('file2.wcon')
+
+assert(w1 == w2)
+
+# or:
+
+w1.save_to_file('file1.wcon')
+w2.save_to_file('file2.wcon')
+
+import filecmp
+assert(filecmp.cmp('file1.wcon', file2.wcon'))
+
+w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
+```
+
+
+### Attributes
+
+units: dict
+    May be empty, but is never None since 'units' is required 
+    to be specified.
+metadata: dict
+    If 'metadata' was not specified, metadata is None.
+    The values in this dict might be nested into further dicts or other
+    data types.
+data: Pandas DataFrame or None
+    If 'data' was not specified, data is None.
+[Note: the "tracker-commons" key is not persisted]
+[Note: the "files" key is not persisted unless the .load
+       factory method is used.]
+
+### Public-Facing Methods
+
+- load_from_file   (JSON_path)                [class method]
+- save_to_file     (JSON_path, pretty_print)
+- to_canon                                    [property]
+- __add__                                     [use "+"]
+- __eq__                                      [use "=="]
+
+### Custom WCON features
+
+Any top-level key other than the basic:
+
+- tracker-commons
+- files
+- units
+- metadata
+- data
+
+... is ignored.  Handling them requires subclassing WCONWorms.
+
+
 ### WCON parser: proof of concept
 
 Thanks to the Python libraries `json` and `jsonschema`, it is relatively trivial to parse and validate a WCON file.  Here's an example of how one might accomplish this, without even using the `wcon` package:
@@ -43,9 +119,7 @@ Using this `wcon` Python package, something similar can be accomplished:
 
     import wcon
 
-    JSON_path = '../../tests/minimax.wcon'
-    with open(JSON_path, 'r') as infile:
-    	w = wcon.WCONWorms.load(infile)
+    w = wcon.WCONWorms.load_from_file('../../tests/minimax.wcon')
 
 Here, instead of being a nested dictionary, `w` is a `WCONWorms` object that is more powerful.  Here are some of the additional things that can be accomplished with the `WCONWorms` object:
 
