@@ -56,17 +56,17 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
 
 ### Attributes
 
-`units`: dict
-    May be empty, but is never None since 'units' is required 
+- `"units"`: dict
+    - May be empty, but is never None since 'units' is required 
     to be specified.
-`metadata`: dict
-    If 'metadata' was not specified, metadata is None.
-    The values in this dict might be nested into further dicts or other
+- `"metadata"`: dict
+    - If 'metadata' was not specified, metadata is None.
+    - The values in this dict might be nested into further dicts or other
     data types.
-`data`: Pandas DataFrame or None
-    If 'data' was not specified, data is None.
-[Note: the "tracker-commons" key is not persisted]
-[Note: the "files" key is not persisted unless the .load
+- `"data"`: Pandas DataFrame or None
+    - If 'data' was not specified, data is None.
+- [Note: the `"tracker-commons"` key is not persisted]
+- [Note: the `"files"` key is not persisted unless the .load
        factory method is used.]
 
 ### Public-Facing Methods
