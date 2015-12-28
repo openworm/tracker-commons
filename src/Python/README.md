@@ -56,14 +56,14 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
 
 ### Attributes
 
-units: dict
+`units`: dict
     May be empty, but is never None since 'units' is required 
     to be specified.
-metadata: dict
+`metadata`: dict
     If 'metadata' was not specified, metadata is None.
     The values in this dict might be nested into further dicts or other
     data types.
-data: Pandas DataFrame or None
+`data`: Pandas DataFrame or None
     If 'data' was not specified, data is None.
 [Note: the "tracker-commons" key is not persisted]
 [Note: the "files" key is not persisted unless the .load
@@ -71,11 +71,11 @@ data: Pandas DataFrame or None
 
 ### Public-Facing Methods
 
-- load_from_file   (JSON_path)                [class method]
-- save_to_file     (JSON_path, pretty_print)
-- to_canon                                    [property]
-- __add__                                     [use "+"]
-- __eq__                                      [use "=="]
+- `load_from_file`   (JSON_path)                [class method]
+- `save_to_file`     (JSON_path, pretty_print)
+- `to_canon`                                    [property]
+- `__add__`                                     [use `+`]
+- `__eq__`                                      [use `==`]
 
 ### Custom WCON features
 
