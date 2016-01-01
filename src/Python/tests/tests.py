@@ -190,7 +190,7 @@ class TestWCONParser(unittest.TestCase):
 
     def test_data1(self):
         # Single-valued 't' subelement should be fine
-        WCONWorms.load(StringIO('{""units":{"t":"s","x":"mm","y":"mm"},'
+        WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
                                  '"data":[{"id":3, "t":1.3, '
                                           '"x":[3,4], "y":[5.4,3]}]}'))
 
