@@ -53,7 +53,7 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
 ```
 
 
-### WCONWorms class: Attributes
+### `WCONWorms` class: Attributes
 
 - `units`: dict
     - May be empty, but is never None since 'units' is required 
@@ -67,7 +67,7 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
 - [Note: `files`, if present in the input, is not persisted unless the .load
        factory method is used.]
 
-### WCONWorms class: Public-Facing Methods
+### `WCONWorms` class: Public-Facing Methods
 
 - `load_from_file`   (JSON_path)                [class method]
 - `save_to_file`     (JSON_path, pretty_print)
