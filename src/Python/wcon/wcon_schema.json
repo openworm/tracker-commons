@@ -12,11 +12,6 @@
 		}
 	},
 	"properties": {
-		"tracker-commons": {
-			"description": "A term to aid easy identification that this is a WCON file.  A warning should be produced by the parser if this field is not present and set to true.",
-			"type": "boolean",
-			"enum": [true]
-		},
 		"files": {
 			"type": "object",
 			"description": "For very long tracking experiments, it may be convenient to split a single experiment across multiple WCON files. To make it easier to reconstruct tracks across files, we support a 'files' object.",

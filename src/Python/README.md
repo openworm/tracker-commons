@@ -28,9 +28,8 @@ w.save_to_file('test.wcon', pretty_print=True)
 
 # From a string literal:
 from io import StringIO
-w2 = WCONWorms.load(StringIO('{"tracker-commons":true, '
-                            '"units":{"t":"s","x":"mm","y":"mm"}, '
-                            '"data":[]}'))
+w2 = WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, '
+                              '"data":[]}'))
 
 # WCONWorms.load_from_file accepts any valid WCON, but .save_to_file 
 # output is always "canonical" WCON, which makes specific choices about 
@@ -65,7 +64,6 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
     data types.
 - `"data"`: Pandas DataFrame or None
     - If 'data' was not specified, data is None.
-- [Note: the `"tracker-commons"` key is not persisted]
 - [Note: the `"files"` key is not persisted unless the .load
        factory method is used.]
 
@@ -81,7 +79,6 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
 
 Any top-level key other than the basic:
 
-- tracker-commons
 - files
 - units
 - metadata

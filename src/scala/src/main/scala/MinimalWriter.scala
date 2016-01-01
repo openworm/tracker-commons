@@ -30,7 +30,6 @@ $sp}"""
 
   def apply(worms: Array[Worm]): String =
 s"""{
-  "tracker-commons": true,
   "units": {"t": "s", "x": "mm", "y": "mm"},
   "data": [
 ${worms.map(w => apply(w, 4)).mkString(",\n")}

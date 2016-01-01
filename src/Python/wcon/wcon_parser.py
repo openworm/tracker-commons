@@ -43,7 +43,6 @@ class WCONWorms():
     data: Pandas DataFrame or None
         If 'data' was not specified, data is None.
 
-    [Note: the "tracker-commons" key is not persisted]
     [Note: the "files" key is not persisted unless the .load
            factory method is used.]
 
@@ -59,9 +58,8 @@ class WCONWorms():
     -------------
     # From a string literal:
     from io import StringIO
-    w2 = WCONWorms.load(StringIO('{"tracker-commons":true, '
-                                '"units":{"t":"s","x":"mm","y":"mm"}, '
-                                '"data":[]}'))
+    w2 = WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, '
+                                  '"data":[]}'))
 
     # WCONWorms.load_from_file accepts any valid WCON, but .save_to_file 
     # output is always "canonical" WCON, which makes specific choices about 
@@ -86,7 +84,6 @@ class WCONWorms():
     
     Any top-level key other than the basic:
     
-    - tracker-commons
     - files
     - units
     - metadata
@@ -101,7 +98,7 @@ class WCONWorms():
     ================================================================
     """
 
-    basic_keys = ['tracker-commons', 'files', 'units', 'metadata', 'data']
+    basic_keys = ['files', 'units', 'metadata', 'data']
 
     @property
     def schema(self):
@@ -141,9 +138,8 @@ class WCONWorms():
         Returns the canonical version of the data, with units in 
         canonical form, and the data converted to canonical form.
         
-        The four keys are:
+        The three keys are:
         
-        - 'tracker-commons'
         - 'units'
         - 'metadata'
         - 'data'
@@ -151,7 +147,7 @@ class WCONWorms():
         """
         # Not strictly required by JSON but nice to order the four top-level
         # keys so we use OrderedDict here instead of dict.
-        ord_dict = OrderedDict({'tracker-commons':True})
+        ord_dict = OrderedDict()
 
         # A dictionary of the canonical unit strings for all quantities except
         # aspect_size, which is generated at runtime.
@@ -541,11 +537,6 @@ class WCONWorms():
 
         # Validate the raw file against the WCON schema
         jsonschema.validate(root, w.schema)
-    
-        if not ('tracker-commons' in root):
-            warnings.warn('{"tracker-commons":true} was not present. '
-                          'Nevertheless proceeding under the assumption '
-                          'this is a WCON file.')
 
         # ===================================================
         # HANDLE THE REQUIRED ELEMENTS: 'units', 'data'    

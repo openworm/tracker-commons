@@ -38,8 +38,7 @@ if __name__ == '__main__':
     #io.getvalue()
     
 if __name__ == '__main__2':
-    worm_file_text2 = (('{"tracker-commons":true,'
-                        '"units":{"t":"s","x":"m","y":"m"},'
+    worm_file_text2 = (('{"units":{"t":"s","x":"m","y":"m"},'
                         '"data":[{"id":3, "t":1.3, '
                                  '"x":[3,4], "y":[5.4,3]}]}'))
 
@@ -47,7 +46,7 @@ if __name__ == '__main__2':
 
 
 if __name__ == '__main__3':
-    w1 = WCONWorms.load(StringIO('{"tracker-commons":true, "units":{},'
+    w1 = WCONWorms.load(StringIO('{"units":{},'
                                 '"data":[{"id":3, "t":1.3, '
                                          '"x":[3,4,4,3.2], '
                                          '"y":[5.4,3,1,-3]}]}'))
