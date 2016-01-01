@@ -4,7 +4,6 @@ case class DataSet(meta: Metadata, unitmap: UnitMap, data: Array[Either[Datum, D
 extends json.Jsonable {
   def toObjJ = unitmap.unfix(json.ObjJ({
     var m = Map(
-      "tracker-commons" -> (json.TrueJ :: Nil),
       "units" -> (unitmap.toObjJ :: Nil),
       "data" -> (json.ArrJ(data.map{ case Left(dm) => dm.toObjJ; case Right(da) => da.toObjJ }) :: Nil)
     )

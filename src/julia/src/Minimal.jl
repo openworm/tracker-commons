@@ -79,11 +79,6 @@ end
 function read_wcon(filename::String)
     j = JSON.parsefile(filename)
     j = convert(Dict{String, Any}, j)
-    if (!haskey(j, "tracker-commons"))
-        println("Warning, file does not identify as tracker-commons")
-    elseif (j["tracker-commons"] != true)
-        println("Warning, file does not specify that tracker-commons is false")
-    end
     u = convert(Dict{String, Any}, j["units"])
     for x in ["t" "x" "y"]
         if (!haskey(u,x))
@@ -103,7 +98,7 @@ end
 
 function write_wcon(worms::WormDataSet, filename::String)
     h = open(filename, "w")
-    JSON.print(h, {"tracker-commons" => true, "units" => worms.units, "data" => worms.data})
+    JSON.print(h, {"units" => worms.units, "data" => worms.data})
     close(h)
 end
 

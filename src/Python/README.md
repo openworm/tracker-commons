@@ -28,9 +28,8 @@ w.save_to_file('test.wcon', pretty_print=True)
 
 # From a string literal:
 from io import StringIO
-w2 = WCONWorms.load(StringIO('{"tracker-commons":true, '
-                            '"units":{"t":"s","x":"mm","y":"mm"}, '
-                            '"data":[]}'))
+w2 = WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, '
+                              '"data":[]}'))
 
 # WCONWorms.load_from_file accepts any valid WCON, but .save_to_file 
 # output is always "canonical" WCON, which makes specific choices about 
@@ -54,22 +53,21 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
 ```
 
 
-### Attributes
+### `WCONWorms` class: Attributes
 
-- `"units"`: dict
+- `units`: dict
     - May be empty, but is never None since 'units' is required 
     to be specified.
-- `"metadata"`: dict
+- `metadata`: dict
     - If 'metadata' was not specified, metadata is None.
     - The values in this dict might be nested into further dicts or other
     data types.
-- `"data"`: Pandas DataFrame or None
+- `data`: Pandas DataFrame or None
     - If 'data' was not specified, data is None.
-- [Note: the `"tracker-commons"` key is not persisted]
-- [Note: the `"files"` key is not persisted unless the .load
+- [Note: `files`, if present in the input, is not persisted unless the .load
        factory method is used.]
 
-### Public-Facing Methods
+### `WCONWorms` class: Public-Facing Methods
 
 - `load_from_file`   (JSON_path)                [class method]
 - `save_to_file`     (JSON_path, pretty_print)
@@ -81,7 +79,6 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
 
 Any top-level key other than the basic:
 
-- tracker-commons
 - files
 - units
 - metadata
