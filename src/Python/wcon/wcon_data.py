@@ -184,7 +184,7 @@ def reverse_backwards_worms(df, coord_keys=['x', 'y']):
     None.  Modifies `df` in place.
 
     """
-    if not 'head' in df.columns.get_level_values(level='key'):
+    if 'head' not in df.columns.get_level_values(level='key'):
         return
 
     mask_of_times_to_reverse = df.loc[:, idx[:, 'head', :]] == 'R'
@@ -193,7 +193,7 @@ def reverse_backwards_worms(df, coord_keys=['x', 'y']):
         cur_worm = df.loc[:, idx[worm_id, :, :]]
         cur_keys = cur_worm.columns.get_level_values(level='key')
 
-        if not 'head' in cur_keys:
+        if 'head' not in cur_keys:
             # Nothing to do
             continue
 
@@ -245,8 +245,6 @@ def parse_data(data):
 
     time_df = _obtain_time_series_data_frame(data)
 
-    #time_df = head_and_ventral_to_int(time_df)
-
     return time_df
 
 
@@ -277,7 +275,7 @@ def _obtain_time_series_data_frame(time_series_data):
         # Add this data_segment to a Pandas dataframe
         segment_id = data_segment['id']
         segment_keys = np.array([k for k in data_segment.keys()
-                                 if not k in ['t', 'id']])
+                                 if k not in ['t', 'id']])
 
         cur_timeframes = np.array(data_segment['t'])
 
@@ -371,19 +369,13 @@ def _obtain_time_series_data_frame(time_series_data):
     df_keys = set(time_df.columns.get_level_values('key'))
     for k in ['head', 'ventral']:
         if k in df_keys:
-            #time_df.loc[:,idx[:,k,:]] = time_df.loc[:,idx[:,k,:]].fillna('?')
             cur_slice = time_df.loc[:, idx[:, k, :]]
-            #time_df.loc[:,idx[:,k,:]] = cur_slice.where(pd.notnull(cur_slice), None)
             time_df.loc[:, idx[:, k, :]] = cur_slice.fillna(value=np.nan)
-
-    #import pdb;  pdb.set_trace()
 
     # Make sure aspect_size is a float, since only floats are nullable:
     if 'aspect_size' in df_keys:
         time_df.loc[:, idx[:, 'aspect_size', :]] = \
             time_df.loc[:, idx[:, 'aspect_size', :]].astype(float)
-
-    #import pdb;  pdb.set_trace()
 
     return time_df
 
@@ -503,8 +495,6 @@ def _data_segment_as_odict(worm_id, df_segment):
 
     # We only care about time indices for which we have some "aspect" or
     # else which have some non-aspect
-    #data_segment['t'] = list(np.array(worm_aspect_size.dropna(axis=0).index))
-    #df_segment = df_segment[(~np.isnan(df_segment).all(axis=1))]
     df_segment = df_segment[(~df_segment.isnull()).any(axis=1)]
 
     # We must make the array "jagged" according to the "aspect size",
@@ -513,12 +503,10 @@ def _data_segment_as_odict(worm_id, df_segment):
 
     data_segment.append(('t', list(df_segment.index)))
 
-    #keys_used = set(df_segment.columns.get_level_values('key')) - set(['aspect_size'])
     keys_used = [k for k in df_segment.columns.get_level_values('key')
                  if k != 'aspect_size']
 
     # e.g. ox, oy, head, ventral
-    #@for key in keys_used.intersection(elements_without_aspect):
     for key in [k for k in keys_used if k in elements_without_aspect]:
         cur_segment_slice = df_segment.loc[:, idx[key, 0]]
         # We must replace NaN with None, otherwise the JSON encoder will
@@ -533,9 +521,7 @@ def _data_segment_as_odict(worm_id, df_segment):
         data_segment.append((key, cur_list))
 
     # e.g. x, y
-    # for key in keys_used.intersection(elements_with_aspect):
     for key in [k for k in keys_used if k in elements_with_aspect]:
-        #data_segment[key] = np.array(df.loc[:,(worm_id,key)])
         non_jagged_array = df_segment.loc[:, (key)]
 
         jagged_array = []
@@ -576,8 +562,6 @@ def data_as_array(df):
     """
     arr = []
 
-    #df = int_to_head_and_ventral(df)
-
     # USE self.data.to_dict()
     # but you'll first have to simplify the multiindex, by taking slices
     # (across time) and then interating over those slices
@@ -591,7 +575,6 @@ def data_as_array(df):
             # just ignore this error
             pass
 
-        #df_segment = df.loc[:,idx[worm_id,:,:]]
         df_segment = df.xs(worm_id, level='id', axis=1)
 
         arr.append(_data_segment_as_odict(worm_id, df_segment))
@@ -600,55 +583,7 @@ def data_as_array(df):
 
     return arr
 
-
-key_codes = {'head': ['L', 'R', '?'], 'ventral': ['CCW', 'CW', '?']}
-replacement_values = [-1, 1, 0]
-
-
-def head_and_ventral_to_int(df):
-    """
-    Helper method to map the head and ventral classifications to integers
-    since pandas does not do well with DataFrames having strings and numeric
-    values.
-
-    """
-    df_keys = set(df.columns.get_level_values('key'))
-
-    for key in key_codes:
-        if key in df_keys:
-            df.loc[
-                :, idx[
-                    :, key, :]] = df.loc[
-                :, idx[
-                    :, key, :]].replace(
-                key_codes[key], replacement_values)
-
-    # .replace changes dtypes in the entire searched area to `object`
-    # for some reason.  so let's force everything to go to float (float64)
-    df = df.astype(float)
-
-    return df
-
-
-def int_to_head_and_ventral(df):
-    """
-    Helper method to reverse head_and_ventral_to_int above
-
-    """
-    df_keys = set(df.columns.get_level_values('key'))
-
-    for key in key_codes:
-        if key in df_keys:
-            df.loc[
-                :, idx[
-                    :, key, :]] = df.loc[
-                :, idx[
-                    :, key, :]].replace(
-                replacement_values, key_codes[key])
-
-    return df
-
-
+	
 def get_sorted_ordered_dict(d):
     """
     Recursively sort all levels of a potentially nested dict.

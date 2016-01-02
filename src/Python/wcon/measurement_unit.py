@@ -232,28 +232,34 @@ class MeasurementUnitAtom():
         if self.suffix in list(self.temporal_units.keys()):
             self.canonical_prefix = ''
             self.canonical_suffix = 's'
-            to_canon_func = lambda x: x * self.temporal_units[self.suffix]
-            from_canon_func = lambda x: x / self.temporal_units[self.suffix]
+			def to_canon_func(x):
+				return x * self.temporal_units[self.suffix]
+			def from_canon_func(x):
+				return x / self.temporal_units[self.suffix]
 
         elif self.suffix in list(self.spatial_units.keys()):
             self.canonical_prefix = 'm'
             self.canonical_suffix = 'm'
-            to_canon_func = lambda x: x * self.spatial_units[self.suffix]
-            from_canon_func = lambda x: x / self.spatial_units[self.suffix]
+			def to_canon_func(x):
+				return x * self.spatial_units[self.suffix]
+			def from_canon_func(x):
+				return x / self.spatial_units[self.suffix]
 
         elif self.suffix in list(self.temperature_units.keys()):
             self.canonical_prefix = ''
             self.canonical_suffix = 'C'
-            to_canon_func = lambda x: self.temperature_units[self.suffix][0](x)
-            from_canon_func = lambda x: self.temperature_units[
-                self.suffix][1](x)
+			def to_canon_func(x):
+				return self.temperature_units[self.suffix][0](x)
+			def from_canon_func(x):
+				return self.temperature_units[self.suffix][1](x)
 
         else:
             self.canonical_prefix = ''
             self.canonical_suffix = ''
-            to_canon_func = lambda x: x * self.dimensionless_units[self.suffix]
-            from_canon_func = lambda x: x / \
-                self.dimensionless_units[self.suffix]
+            def to_canon_func(x):
+				return x * self.dimensionless_units[self.suffix]
+            def from_canon_func(x):
+				return x / self.dimensionless_units[self.suffix]
 
         # Obtain the conversion it will take to make the units standard
         prefix_conversion_constant = \
@@ -319,7 +325,7 @@ class MeasurementUnitAtom():
 
             # CASE 3: unit_string is invalid.
             # (It not a valid suffix, nor does it start with a valid prefix)
-            if longest_prefix_len == -1 or not suffix in self.all_suffixes:
+            if longest_prefix_len == -1 or suffix not in self.all_suffixes:
                 raise AssertionError("Error: '" + unit_string + "' is not a "
                                      "valid unit")
 
@@ -523,7 +529,7 @@ class MeasurementUnit():
         node = ast.parse(unit_string, mode='eval').body
         return cls._create_from_node(node)
 
-    #=====================================================================
+    # =====================================================================
     # "private" methods
 
     @classmethod
@@ -629,8 +635,6 @@ class MeasurementUnit():
         u.from_canon = lambda x: x / new_scalar
 
         # Combine the left and right nodes together
-        #u.to_canon = lambda x: oper(l.to_canon(x), r.to_canon(x))
-        #u.from_canon = lambda x: u.inverse_operators[oper](l.from_canon(x), r.from_canon(x))
         u._unit_string = l._unit_string + \
             u.operator_symbols[oper] + r._unit_string
         u._canonical_unit_string = l._canonical_unit_string + \

@@ -325,12 +325,16 @@ class TestWCONParser(unittest.TestCase):
             """
             {
                 "units":{"t":"s", "x":"mm", "y":"mm"},
-                "data":[
-                       { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12], "y":[23.3, 22.23, 21135.08] },
-            		{ "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] },
-            		{ "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] },
-            		{ "id":1, "t":[1.3,1.5], "x":[[1,1,1],[1215.11, 1216.14, 1217.12]], "y":[[2,2,2],[234.89, 265.23, 235.08]] }
-            	]
+                "data":[{ "id":2, "t":1.4, "x":[125.11, 126.14, 117.12], 
+                          "y":[23.3, 22.23, 21135.08] },
+                        { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12], 
+                          "y":[234.89, 265.23, 235.08] },
+                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12], 
+                          "y":[234.89, 265.23, 235.08] },
+                        { "id":1, "t":[1.3,1.5], 
+                          "x":[[1,1,1],[1215.11, 1216.14, 1217.12]], 
+                          "y":[[2,2,2],[234.89, 265.23, 235.08]] }
+                ]
             }
             """
         self._validate_from_schema(WCON_string)
@@ -341,12 +345,16 @@ class TestWCONParser(unittest.TestCase):
             """
             {
                 "units":{"t":"s", "x":"mm", "y":"mm"},
-                "data":[
-            		{ "id":1, "t":[1.3,1.5], "x":[[1,1,1],[1215.11, 1216.14, 1217.12]], "y":[[2,2,2],[234.89, 265.23, 235.08]] },
-                       { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12], "y":[23.3, 22.23, 21135.08] },
-            		{ "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] },
-            		{ "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] }
-            	]
+                "data":[{ "id":1, "t":[1.3,1.5], 
+                          "x":[[1,1,1],[1215.11, 1216.14, 1217.12]], 
+                          "y":[[2,2,2],[234.89, 265.23, 235.08]] },
+                        { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12], 
+                          "y":[23.3, 22.23, 21135.08] },
+                         { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12],
+                          "y":[234.89, 265.23, 235.08] },
+                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12], 
+                          "y":[234.89, 265.23, 235.08] }
+                ]
             }
             """
         self._validate_from_schema(WCON_string2)
@@ -357,11 +365,16 @@ class TestWCONParser(unittest.TestCase):
             """
             {
                 "units":{"t":"s", "x":"mm", "y":"mm", "ox":"mm"},
-                "data":[{ "id":1, "t":[1.3,1.5], "x":[[1,1,1],[1215.11, 1216.14, 1217.12]], "y":[[2,2,2],[234.89, 265.23, 235.08]], "ox":5000 },
-            		{ "id":2, "t":1.4, "x":[125.11, 126.14, 117.12], "y":[23.3, 22.23, 21135.08] },
-            		{ "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08]},
-            		{ "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] }
-            	]
+                "data":[{ "id":1, "t":[1.3,1.5], 
+                          "x":[[1,1,1],[1215.11, 1216.14, 1217.12]], 
+                          "y":[[2,2,2],[234.89, 265.23, 235.08]], "ox":5000 },
+                        { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12], 
+                          "y":[23.3, 22.23, 21135.08] },
+                        { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12], 
+                          "y":[234.89, 265.23, 235.08]},
+                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12], 
+                          "y":[234.89, 265.23, 235.08] }
+                ]
             }
             """
         self._validate_from_schema(WCON_string3)
@@ -372,10 +385,12 @@ class TestWCONParser(unittest.TestCase):
             """
             {
                 "metadata":{
-                       "lab":{"location":"CRB, room 5020", "name":"Behavioural Genomics" },
+                       "lab":{"location":"CRB, room 5020", 
+                              "name":"Behavioural Genomics" },
                        "who":"Firstname Lastname",
                        "timestamp":"2012-04-23T18:25:43.511Z",
-                       "temperature":{ "experiment":22, "cultivation":20, "units":"C" },
+                       "temperature":{ "experiment":22, 
+                                       "cultivation":20, "units":"C" },
                        "humidity":{ "value":40, "units":"%" },
                        "dish":{ "type":"petri", "size":35, "units":"mm" },
                        "food":"none",
@@ -387,10 +402,12 @@ class TestWCONParser(unittest.TestCase):
                        "image_orientation":"imaged onto agar",
                        "protocol":"text description of protocol",
                        "software":{
-                            "tracker":{"name":"Software Name", "version":"1.3.0"},
+                            "tracker":{"name":"Software Name", 
+                                       "version":"1.3.0"},
                             "featureID":"@OMG"
                        },
-                       "settings":"Any valid JSON entry with hardware and software configuration can go here"
+                       "settings":
+    "Any valid string with hardware and software configuration details"
                 },
                 "units":{"t":"s", "x":"mm", "y":"mm"},
                 "data":[
@@ -498,7 +515,7 @@ class TestWCONParser(unittest.TestCase):
         for chunk_filename in chunk_filenames:
             os.remove(chunk_filename)
 
-    #@unittest.skip("DEBUG: to see if tests pass if we skip these")
+    # @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_data3(self):
         pass
 

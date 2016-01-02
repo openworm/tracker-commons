@@ -468,9 +468,9 @@ class WCONWorms():
         # cur_ext = '_2', prefix = 'filename', suffix = '.wcon'
         cur_filename = JSON_path
         if cur_filename.find(cur_ext) == -1:
-            raise AssertionError('Cannot find the current extension "'
-                                 + cur_ext + '" within the current filename "'
-                                 + cur_filename + '".')
+            raise AssertionError('Cannot find the current extension "' +
+                                 cur_ext + '" within the current filename "' +
+                                 cur_filename + '".')
         prefix = cur_filename[:cur_filename.find(cur_ext)]
         suffix = cur_filename[cur_filename.find(cur_ext) + len(cur_ext):]
 
@@ -482,8 +482,8 @@ class WCONWorms():
             # load it and merge it with the current chunk
             # Same with the "next" chunks
             if (load_chunks[direction] and
-                    not current_files is None and
-                    not current_files[direction] is None):
+                    current_files is not None and
+                    current_files[direction] is not None):
                 cur_load_prev_chunks = (direction == 'prev')
                 cur_load_next_chunks = (direction == 'next')
 

@@ -11,15 +11,13 @@ import warnings
 from six import StringIO
 import json
 
-#from wcon.wcon_data import data_as_array
-
 from wcon import WCONWorms, MeasurementUnit
 
 pd.set_option('display.expand_frame_repr', False)
 
 # Suppress RuntimeWarning warnings in Spider because it's a known bug
 # http://stackoverflow.com/questions/30519487/
-#warnings.simplefilter(action = "ignore", category = RuntimeWarning)
+# warnings.simplefilter(action = "ignore", category = RuntimeWarning)
 
 
 if __name__ == '__main__':
@@ -34,7 +32,7 @@ if __name__ == '__main__':
     u = MeasurementUnit.create('cm')
 
     # io=StringIO()
-    #json.dump([None], io)
+    # json.dump([None], io)
     # io.getvalue()
 
 if __name__ == '__main__2':

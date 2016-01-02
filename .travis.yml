@@ -62,6 +62,7 @@ script:
     # find . -name \*.py -exec autopep8 --recursive --aggressive --aggressive --in-place {} +
     # # Push these changes to GitHub
     # git commit -a -m "autopep8"
+    # git push
 
     - cd src/Python/tests/
     - pwd
