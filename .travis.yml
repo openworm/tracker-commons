@@ -1,36 +1,68 @@
 language: python
+
 python:
-#  - "2.6"  # conda doesn't work with 2.6 so let's forget about testing wcon against it
-  - "2.7"
-  - "3.4"
-  - "3.5"
+    # conda doesn't seem to work with 2.6 so let's forget about testing it
+    #- 2.6  
+    - 2.7
+    # test_save_and_load fails on minimax.wcon with Python 3.3, and I haven't had 
+    # create a Python 3.3 debugging environment to find out why
+    #- 3.3  
+    - 3.4
+    - 3.5
+
 notifications:
   email: false
-env:
-  global:
-    - MINICONDA_DIR=/home/travis/miniconda3
-before_install:
-  - which python
-  - python --version
-  - cmake --version
 
-  # Anaconda installation
-  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-  - chmod +x miniconda.sh
-  - ./miniconda.sh -b
-  - export PATH=$MINICONDA_DIR/bin:$PATH
+before_install:
+    - sudo apt-get update
+    - sudo apt-get -y install python-pip
+    - pip install --upgrade pip
+    - pip install six
+    - pip install pep8
+
+    - which python
+    - python --version
+
+    # Anaconda installation
+    - |
+        if [[ ($TRAVIS_PYTHON_VERSION == 2.6) || ($TRAVIS_PYTHON_VERSION == 2.7) ]]; then
+            MINICONDA_DIR=/home/travis/miniconda2
+            wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+        else
+            MINICONDA_DIR=/home/travis/miniconda3
+            wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+        fi
+    - chmod +x miniconda.sh
+    - ./miniconda.sh -b
+    - export PATH=$MINICONDA_DIR/bin:$PATH
   
-  # Need to install the actual Python version, does this work?
-  # To get the correct version you have to do a conda install
-  # Old versions are at: http://repo.continuum.io/miniconda/ but don't 
-  # match Python versions and it seems like continuum doesn't want you 
-  # to try and match
-  - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy pandas jsonschema
+    # Need to install the actual Python version, does this work?
+    # To get the correct version you have to do a conda install
+    # Old versions are at: http://repo.continuum.io/miniconda/ but don't 
+    # match Python versions and it seems like continuum doesn't want you 
+    # to try and match
+    - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy pandas jsonschema
  
-#install:
-#  - pip install --upgrade pip
-#  - pip install numpy pandas jsonschema
+     # Diagnostic information
+    - which python
+    - python --version
+    - pydoc modules
+ 
 script:
-  - cd src/Python/tests/
-  - pwd
-  - python -m unittest discover
+    # Run pep8 on all .py files in all subfolders
+    # We must ignore E402 module level import not at top of file
+    # because of use case sys.path.append('..'); import <module>
+    - find . -name \*.py -exec pep8 --ignore=E402 {} +
+    # NOTE: To correct any errors in the above pep8 check, run the 
+    # following to clear out about 80% of the issues automatically:
+    # # Get the latest version of the repo
+    # git pull
+    # # Run autopep8 on all .py files in all subfolders
+    # find . -name \*.py -exec autopep8 --recursive --aggressive --aggressive --in-place {} +
+    # # Push these changes to GitHub
+    # git commit -a -m "autopep8"
+    # git push
+
+    - cd src/Python/tests/
+    - pwd
+    - python -m unittest discover
