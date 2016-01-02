@@ -11,10 +11,6 @@ python:
 notifications:
   email: false
 
-env:
-    global:
-        - MINICONDA_DIR=/home/travis/miniconda3
-
 before_install:
     - sudo apt-get update
     - sudo apt-get -y install python-pip
