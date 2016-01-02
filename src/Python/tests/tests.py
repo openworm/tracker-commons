@@ -22,35 +22,29 @@ from wcon.measurement_unit import MeasurementUnitAtom
 class TestMeasurementUnit(unittest.TestCase):
 
     def test_unit_equivalence(self):
-        self.assertTrue(MeasurementUnit.create('mm') ==
-                        MeasurementUnit.create('millimetre'))
-        self.assertTrue(MeasurementUnit.create('Mm') ==
-                        MeasurementUnit.create('megametre'))
-        self.assertTrue(MeasurementUnit.create('mm') !=
-                        MeasurementUnit.create('Mm'))
-        self.assertTrue(MeasurementUnit.create('d') ==
-                        MeasurementUnit.create('day'))
-        self.assertTrue(MeasurementUnit.create('min') ==
-                        MeasurementUnit.create('minutes'))
-        self.assertTrue(MeasurementUnit.create(
-            '%') != MeasurementUnit.create('K'))
+        MU = MeasurementUnit
+        self.assertTrue(MU.create('mm') == MU.create('millimetre'))
+        self.assertTrue(MU.create('Mm') == MU.create('megametre'))
+        self.assertTrue(MU.create('mm') != MU.create('Mm'))
+        self.assertTrue(MU.create('d') == MU.create('day'))
+        self.assertTrue(MU.create('min') == MU.create('minutes'))
+        self.assertTrue(MU.create('%') != MU.create('K'))
 
     def test_canon_conversion(self):
-        self.assertTrue(MeasurementUnit.create('cm').to_canon(1) == 10)
-        self.assertTrue(MeasurementUnit.create('m').to_canon(1) == 1000)
-        self.assertTrue(MeasurementUnit.create('F').from_canon(0) == 32)
-        self.assertTrue(MeasurementUnit.create(
-            'microns').to_canon(1800) == 1.8)
-        self.assertTrue(MeasurementUnit.create('F').to_canon(32) == 0)
+        MU = MeasurementUnit
+        self.assertTrue(MU.create('cm').to_canon(1) == 10)
+        self.assertTrue(MU.create('m').to_canon(1) == 1000)
+        self.assertTrue(MU.create('F').from_canon(0) == 32)
+        self.assertTrue(MU.create('microns').to_canon(1800) == 1.8)
+        self.assertTrue(MU.create('F').to_canon(32) == 0)
 
         for suf in MeasurementUnitAtom('').all_suffixes:
             # Taking the value 10 to the canonical value, then back again,
             # should come back to 10 for all units (up to floating point
             # epsilon)
-            self.assertTrue(abs(
-                MeasurementUnit.create(suf).from_canon(
-                            MeasurementUnit.create(suf).to_canon(10)) - 10
-            ) < 1e-8)
+            mu_there = MU.create(suf).to_canon(10)
+            mu_there_and_back = MU.create(suf).from_canon(mu_there)
+            self.assertTrue(abs(mu_there_and_back - 10) < 1e-8)
 
     def test_bad_units(self):
         # Verify that combining the full name with an abbreviation causes
@@ -66,19 +60,17 @@ class TestMeasurementUnit(unittest.TestCase):
         MeasurementUnit.create('milliseconds')
 
     def test_unit_combos(self):
-        MeasurementUnit.create('m^2') == MeasurementUnit.create('metres^2')
-        MeasurementUnit.create('C') == MeasurementUnit.create('celsius')
-        MeasurementUnit.create('m/s') == MeasurementUnit.create('metres/sec')
-        MeasurementUnit.create(
-            'mm/s^2') == MeasurementUnit.create('millimeter/sec^2')
-        MeasurementUnit.create('mm/s^2') == MeasurementUnit.create('mm/(s^2)')
-        MeasurementUnit.create(
-            'mm^2/s^2') == MeasurementUnit.create('(mm^2)/(s^2)')
-        MeasurementUnit.create(
-            'mm^2/s^2') == MeasurementUnit.create('mm^2/(s^2)')
+        MU = MeasurementUnit
+        MU.create('m^2') == MU.create('metres^2')
+        MU.create('C') == MU.create('celsius')
+        MU.create('m/s') == MU.create('metres/sec')
+        MU.create('mm/s^2') == MU.create('millimeter/sec^2')
+        MU.create('mm/s^2') == MU.create('mm/(s^2)')
+        MU.create('mm^2/s^2') == MU.create('(mm^2)/(s^2)')
+        MU.create('mm^2/s^2') == MU.create('mm^2/(s^2)')
 
-        self.assertTrue(MeasurementUnit.create('m/min').to_canon(3) == 50)
-        self.assertTrue(MeasurementUnit.create('1/min').to_canon(60) == 1)
+        self.assertTrue(MU.create('m/min').to_canon(3) == 50)
+        self.assertTrue(MU.create('1/min').to_canon(60) == 1)
 
 
 class TestWCONParser(unittest.TestCase):
