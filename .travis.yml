@@ -1,21 +1,31 @@
 language: python
 python:
-#  - "2.6"  # conda doesn't work with 2.6 so let's forget about testing wcon against it
-  - "2.7"
-  - "3.4"
-  - "3.5"
+  - 2.6  # conda doesn't work with 2.6 so let's forget about testing wcon against it
+  - 2.7
+  - 3.3
+  - 3.4
+  - 3.5
 notifications:
   email: false
-env:
+
+  env:
   global:
     - MINICONDA_DIR=/home/travis/miniconda3
+
 before_install:
   - which python
   - python --version
   - cmake --version
 
   # Anaconda installation
-  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - |
+      if [[ $TRAVIS_PYTHON_VERSION == 2.6 ] || [$TRAVIS_PYTHON_VERSION == 2.7 ]]; then 
+        MINICONDA_DIR=/home/travis/miniconda2
+        wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+      else
+        MINICONDA_DIR=/home/travis/miniconda3
+        wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+      fi
   - chmod +x miniconda.sh
   - ./miniconda.sh -b
   - export PATH=$MINICONDA_DIR/bin:$PATH
@@ -27,10 +37,25 @@ before_install:
   # to try and match
   - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy pandas jsonschema
  
-#install:
-#  - pip install --upgrade pip
-#  - pip install numpy pandas jsonschema
+   # Diagnostic information
+  - which python
+  - python --version
+  - pydoc modules
+ 
 script:
+  # Run pep8 on all .py files in all subfolders
+  # We must ignore E402 module level import not at top of file
+  # because of use case sys.path.append('..'); import <module>
+  - find . -name \*.py -exec pep8 --ignore=E402 {} +
+  # NOTE: To correct any errors in the above pep8 check, run the 
+  # following to clear out about 80% of the issues automatically:
+  # # Get the latest version of the repo
+  # git pull
+  # # Run autopep8 on all .py files in all subfolders
+  # find . -name \*.py -exec autopep8 --recursive --aggressive --aggressive --in-place {} +
+  # # Push these changes to GitHub
+  # git commit -a -m "autopep8"
+
   - cd src/Python/tests/
   - pwd
   - python -m unittest discover
