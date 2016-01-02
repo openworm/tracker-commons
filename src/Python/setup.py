@@ -24,7 +24,7 @@ if path.exists(readme_path):
     with open(readme_path, encoding='utf-8') as f:
         long_description += f.read()
 
-print(os.listdir('.')) # DEBUG
+print(os.listdir('.'))  # DEBUG
 
 setup(
     name='wcon',
