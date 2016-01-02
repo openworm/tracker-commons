@@ -19,7 +19,7 @@ before_install:
 
   # Anaconda installation
   - |
-      if [[ $TRAVIS_PYTHON_VERSION == 2.6 ] || [$TRAVIS_PYTHON_VERSION == 2.7 ]]; then 
+      if [[ ($TRAVIS_PYTHON_VERSION == 2.6) || ($TRAVIS_PYTHON_VERSION == 2.7) ]]; then
         MINICONDA_DIR=/home/travis/miniconda2
         wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
       else
