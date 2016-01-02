@@ -312,8 +312,9 @@ def _obtain_time_series_data_frame(time_series_data):
         # aspect or else the concatenation step below will fail.
         for k in cur_elements_with_aspect:
             for i in range(len(cur_timeframes)):
-                data_segment[k][i] = (data_segment[k][i] +
-                                      [np.NaN] * (max_aspect_size - len(data_segment[k][i])))
+                data_segment[k][i] = (
+                    data_segment[k][i] +
+                    [np.NaN] * (max_aspect_size - len(data_segment[k][i])))
 
         # Stage the data for addition to our DataFrame.
         # Shape KxI where K is the number of keys and
@@ -562,7 +563,7 @@ def data_as_array(df):
     """
     arr = []
 
-    # USE self.data.to_dict()
+    # We'd like to use df.to_dict(),
     # but you'll first have to simplify the multiindex, by taking slices
     # (across time) and then interating over those slices
     for worm_id in set(df.columns.get_level_values('id')):
@@ -579,11 +580,9 @@ def data_as_array(df):
 
         arr.append(_data_segment_as_odict(worm_id, df_segment))
 
-    #df = head_and_ventral_to_int(df)
-
     return arr
 
-	
+
 def get_sorted_ordered_dict(d):
     """
     Recursively sort all levels of a potentially nested dict.

@@ -232,34 +232,42 @@ class MeasurementUnitAtom():
         if self.suffix in list(self.temporal_units.keys()):
             self.canonical_prefix = ''
             self.canonical_suffix = 's'
-			def to_canon_func(x):
-				return x * self.temporal_units[self.suffix]
-			def from_canon_func(x):
-				return x / self.temporal_units[self.suffix]
+
+            def to_canon_func(x):
+                return x * self.temporal_units[self.suffix]
+
+            def from_canon_func(x):
+                return x / self.temporal_units[self.suffix]
 
         elif self.suffix in list(self.spatial_units.keys()):
             self.canonical_prefix = 'm'
             self.canonical_suffix = 'm'
-			def to_canon_func(x):
-				return x * self.spatial_units[self.suffix]
-			def from_canon_func(x):
-				return x / self.spatial_units[self.suffix]
+
+            def to_canon_func(x):
+                return x * self.spatial_units[self.suffix]
+
+            def from_canon_func(x):
+                return x / self.spatial_units[self.suffix]
 
         elif self.suffix in list(self.temperature_units.keys()):
             self.canonical_prefix = ''
             self.canonical_suffix = 'C'
-			def to_canon_func(x):
-				return self.temperature_units[self.suffix][0](x)
-			def from_canon_func(x):
-				return self.temperature_units[self.suffix][1](x)
+
+            def to_canon_func(x):
+                return self.temperature_units[self.suffix][0](x)
+
+            def from_canon_func(x):
+                return self.temperature_units[self.suffix][1](x)
 
         else:
             self.canonical_prefix = ''
             self.canonical_suffix = ''
+
             def to_canon_func(x):
-				return x * self.dimensionless_units[self.suffix]
+                return x * self.dimensionless_units[self.suffix]
+
             def from_canon_func(x):
-				return x / self.dimensionless_units[self.suffix]
+                return x / self.dimensionless_units[self.suffix]
 
         # Obtain the conversion it will take to make the units standard
         prefix_conversion_constant = \
