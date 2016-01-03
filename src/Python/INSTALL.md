@@ -31,4 +31,4 @@ sudo apt-get install python-numpy python-scipy python-matplotlib ipython ipython
 sudo pip install wcon
 ```
 
-These steps will differ slightly (e.g. use `pip3` instead of `pip` for installing on Python 3.)
+For Python 3, these steps will differ slightly (e.g. use `pip3` instead of `pip`.)
