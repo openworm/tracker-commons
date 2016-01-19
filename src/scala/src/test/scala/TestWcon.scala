@@ -284,8 +284,7 @@ class TestWcon {
 
   def same(a: FileSet, b: FileSet): String =
     same(a.me, b.me, "fileset.this") +
-    same(a.before, b.before, "fileset.before") +
-    same(a.after, b.after, "fileset.after") +
+    same(a.names, b.names, "fileset.names") +
     same(a.custom, b.custom, "fileset.custom")
 
   def same(a: DataSet, b: DataSet): String =
@@ -459,7 +458,10 @@ class TestWcon {
   def genFiles(r: R): FileSet = if (r.nextDouble < 0.5) FileSet.empty else {
     val m = r.nextInt(6)+2
     val n = r.nextInt(m)
-    FileSet("_"+n, ((n-1) to 0 by -1).map("_" + _).toList, ((n+1) to m).map("_" + _).toList, genCustom(r))
+    val before = ((n-1) to 0 by -1).map("_" + _)
+    val me = "_"+n
+    val after = ((n+1) to m).map("_" + _)
+    FileSet((before.reverse.toVector :+ me) ++ after, before.length, genCustom(r))
   }
 
   def genDataSet(r: R) = DataSet(genMetadata(r), genUnitMap(r), genDataA(r), genFiles(r), genCustom(r))
@@ -489,5 +491,10 @@ class TestWcon {
         case x => x
       })      
     }
+  }
+
+  @Test
+  def test_KnownFiles() {
+
   }
 }

@@ -2,6 +2,9 @@ package org.openworm.trackercommons
 
 case class DataSet(meta: Metadata, unitmap: UnitMap, data: Array[Either[Datum, Data]], files: FileSet, custom: json.ObjJ)
 extends json.Jsonable {
+  var sourceFile: Option[java.io.File] = None
+  def withSourceFile(f: java.io.File) = { sourceFile = Some(f); this }
+  def withNoSource: this.type = { sourceFile = None; this }
   def toObjJ = unitmap.unfix(json.ObjJ({
     var m = Map(
       "units" -> (unitmap.toObjJ :: Nil),
