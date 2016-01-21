@@ -7,12 +7,6 @@ type Laboratory
     custom :: Dict{AbstractString, Any}
 end
 
-type Temperature
-    cultivation :: Float64
-    experimental :: Float64
-    custom :: Dict{AbstractString, Any}
-end
-
 type Arena
     kind :: AbstractString
     diameter :: Float64
@@ -32,7 +26,7 @@ type MetaData
     lab :: Nullable{Laboratory}
     who :: Nullable{AbstractString}
     timestamp :: Union{AbstractString, ???}
-    temperature :: Nullable{Temperature}
+    temperature :: Nullable{Float64}
     humidity :: Nullable{Float64}
     arena :: Nullable{Arena}
     food :: AbstractString
