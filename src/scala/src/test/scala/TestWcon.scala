@@ -187,18 +187,6 @@ class TestWcon {
   def sameTS(a: Option[(java.time.LocalDateTime, String)], b: Option[(java.time.LocalDateTime, String)]): String =
     if (a == b) "" else " timestamp:(" + a + ", " + b + ")"
 
-  def same(a: Temperature, b: Temperature): String =
-    same(a.experimental, b.experimental, "temperature.experimental") +
-    same(a.cultivation, b.cultivation, "temperature.cultivation") +
-    same(a.custom, b.custom, "temperature.custom")
-
-  def sameT(a: Option[Temperature], b: Option[Temperature]): String = (a, b) match {
-    case (None, None) => ""
-    case (Some(_), None) => " temperature-mismatch(" + a + ", _) "
-    case (None, Some(_)) => " temperature-mismatch(_, " + b + ") "
-    case (Some(ta), Some(tb)) => same(ta, tb)
-  }
-
   def same(a: Either[(Double, Double), Double], b: Either[(Double, Double), Double], where: String): String = (a, b) match {
     case (Right(ar), Right(br)) => same(ar, br, where)
     case (Left(al), Left(bl)) => same(al._1, bl._1, where+".axis_1") + same(al._2, bl._2, where+".axis_2")
@@ -219,22 +207,20 @@ class TestWcon {
   def sameD(a: Option[java.time.Duration], b: Option[java.time.Duration]): String = 
     if (a == b) "" else " age-mismatch(" + a + ", " + b + ") "
 
-  def sameS(a: Option[Software], b: Option[Software]): String = (a, b) match {
-    case (None, None) => ""
-    case (Some(sa), None) => " software-mismatch(" + sa + ", _) "
-    case (None, Some(sb)) => " software-mismatch(_, " + sb + ") "
-    case (Some(sa), Some(sb)) =>
+  def sameS(a: Vector[Software], b: Vector[Software]): String = 
+    if (a.length != b.length) " software-length-mismatch(" + a.length + ", " + b.length + ") "
+    else (a zip b).map{ case (sa, sb) =>
       same(sa.name, sb.name, "software.name") +
       same(sa.version, sb.version, "software.version") +
       same(sa.featureID, sb.featureID, "software.featureID") +
       same(sa.custom, sb.custom, "software.custom")
-  }
+    }.filter(_.length > 0).mkString("; ")
 
   def same(a: Metadata, b: Metadata): String = 
     same(a.lab, b.lab) +
     same(a.who, b.who, "who") +
     sameTS(a.timestamp, b.timestamp) +
-    sameT(a.temperature, b.temperature) +
+    same(a.temperature.getOrElse(Double.NaN), b.temperature.getOrElse(Double.NaN), "temperature") +
     same(a.humidity.getOrElse(Double.NaN), b.humidity.getOrElse(Double.NaN), "humidity") +
     sameA(a.arena, b.arena) +
     same(a.food, b.food, "food") +
@@ -359,13 +345,7 @@ class TestWcon {
     r.nextInt(4) match { case 0 => "Z"; case 1 => "+08:00"; case _ => "" }
   )
 
-  def genTemp(r: R): Temperature = Iterator.continually{ 
-    Temperature(
-      r.nextInt(2) match { case 0 => Double.NaN; case _ => 273.15 + 33*r.nextDouble },
-      r.nextInt(2) match { case 0 => Double.NaN; case _ => 273.15 + 33*r.nextDouble },
-      genCustom(r)
-    )
-  }.dropWhile(x => x.experimental.isNaN && x.cultivation.isNaN && x.custom.keyvals.isEmpty).next
+  def genTemp(r: R): Double = 273.15 + 33*r.nextDouble
 
   def genArena(r: R): Arena = Iterator.continually{
     Arena(
@@ -374,6 +354,7 @@ class TestWcon {
         val a, b = (r.nextInt(100000)+100)/1000.0
         r.nextInt(4) match { case 0 => Right(a); case 1 => Left((a, a)); case 2 => Left((a, b)); case _ => Right(Double.NaN) }
       },
+      genFish(r),
       genCustom(r)
     )
   }.dropWhile(x => x.kind.isEmpty && x.diameter.fold(y => y._1.isNaN && y._2.isNaN, _.isNaN) && x.custom.keyvals.isEmpty).next
@@ -403,7 +384,7 @@ class TestWcon {
     opt(r)(genDur(r)),
     opt(r)(genFish(r)),
     Vector.fill(r.nextInt(3))(genFish(r)),
-    opt(r)(genSoft(r)),
+    Vector.fill(r.nextInt(3))(genSoft(r)),
     opt(r)(genJson(r)),
     genCustom(r)
   )
@@ -493,8 +474,37 @@ class TestWcon {
     }
   }
 
-  @Test
-  def test_KnownFiles() {
+  case class Ex(text: String, line: Int)
 
+  def pull_Examples_From_MD(lines: Vector[String], knownExamples: Vector[Ex] = Vector.empty, n: Int = 0): Vector[Ex] = {
+    val next = lines.dropWhile(x => !(x.trim.toUpperCase == "```JSON")).drop(1)
+    if (next.isEmpty) knownExamples
+    else {
+      val code = next.takeWhile(x => x.trim != "```")
+      pull_Examples_From_MD(
+        next.drop(code.length+1),
+        knownExamples :+ Ex(code.mkString("\n"), n + (lines.length - next.length)),
+        n + (lines.length - next.length) + code.length
+      )
+    }
+  }
+
+  @Test
+  def test_FormatSpecExamples() {
+    val path = "../../WCON_format.md"
+    val lines = { val s = scala.io.Source.fromFile(path); try { s.getLines.toVector } finally { s.close } }
+    val codes = pull_Examples_From_MD(lines)
+    codes.foreach{ c =>
+      if (c.text.trim.startsWith("{")) {
+        Parser(c.text) match {
+          case Left(x) => println(c); println(x); throw new IllegalArgumentException(x)
+          case _ =>
+        }        
+      }
+      else json.Struct.All.parse(c.text.trim) match {
+        case fastparse.core.Result.Failure(x) => println(c); println(x); throw new IllegalArgumentException(x.toString)
+        case _ =>
+      }
+    }
   }
 }

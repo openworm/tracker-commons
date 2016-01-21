@@ -23,16 +23,23 @@ trait HasId extends math.Ordered[HasId] {
 
 case class IdOnly(nid: Double, sid: String) extends HasId {}
 
+/** Class to specify a single timepoint on a single animal.
+  * Note that x and y are relative to cx and cy.
+  * If the file did not specify a cx and cy, they are calculated, but `derivedCx` and `derivedCy` are set to true.
+  */
 case class Datum(nid: Double, sid: String, t: Double, x: Array[Float], y: Array[Float], cx: Double, cy: Double, custom: json.ObjJ)
 extends HasId with json.Jsonable {
+  var derivedCx = false
+  var derivedCy = false
+  def setDerived(dcx: Boolean, dcy: Boolean): this.type = { derivedCx = dcx; derivedCy = dcy; this }
   def toObjJ = json.ObjJ(
     Map[String, List[json.JSON]](
       "id" -> (idJSON :: Nil),
       "t" -> (json.NumJ(t) :: Nil),
       "x" -> (json.ANumJ(Data.doubly(x)) :: Nil),
       "y" -> (json.ANumJ(Data.doubly(y)) :: Nil),
-      "cx" -> (json.NumJ(cx) :: Nil),
-      "cy" -> (json.NumJ(cy) :: Nil)
+      (if (derivedCx) "ox" else "cx") -> (json.NumJ(cx) :: Nil),
+      (if (derivedCy) "oy" else "cy") -> (json.NumJ(cy) :: Nil)
     ) ++ custom.keyvals
   )
 }
@@ -100,13 +107,16 @@ object Datum extends json.Jsonic[Datum] {
     if (!oy.isNaN) { cy += oy }
     var rx = if (!ox.isNaN) ox else if (!cx.isNaN) cx else 0.0
     var ry = if (!oy.isNaN) oy else if (!cy.isNaN) cy else 0.0
+    var dcx, dcy = false
     if (cx.isNaN) { 
+      dcx = true
       var xS = 0.0
       var xN, i = 0
       while (i < x.length) { val xi = x(i); if (!xi.isNaN) { xS += xi; xN +=1 }; i += 1 }
       if (xN > 0) cx = xS/xN
     }
     if (cy.isNaN) { 
+      dcy = true
       var yS = 0.0
       var yN, i = 0
       while (i < y.length) { val yi = y(i); if (!yi.isNaN) { yS += yi; yN +=1 }; i += 1 }
@@ -116,20 +126,27 @@ object Datum extends json.Jsonic[Datum] {
     ry -= cy
     if (rx.isNaN || math.abs(rx) < 1e-9) rx = 0
     if (ry.isNaN || math.abs(ry) < 1e-9) ry = 0
-    Right(new Datum(nid, sid, t, Data.singly(x, rx), Data.singly(y, ry), cx, cy, Metadata.getCustom(ob)))
+    Right((new Datum(nid, sid, t, Data.singly(x, rx), Data.singly(y, ry), cx, cy, Metadata.getCustom(ob))).setDerived(dcx, dcy))
   }
 }
 
+/** Class to specify multiple timepoints on a single animal.
+  * `x` and `y` values are relative to `cx` and `cy` values.
+  * If the original data did not contain `cx` and `cy`, `derivedCx` and `derivedCy` is set.
+  */
 case class Data(nid: Double, sid: String, ts: Array[Double], xs: Array[Array[Float]], ys: Array[Array[Float]], cxs: Array[Double], cys: Array[Double], custom: json.ObjJ)
 extends HasId with json.Jsonable {
+  var derivedCx = false
+  var derivedCy = false
+  def setDerived(dcx: Boolean, dcy: Boolean): this.type = { derivedCx = dcx; derivedCy = dcy; this }
   def toObjJ = json.ObjJ(
     Map[String, List[json.JSON]](
       "id" -> (idJSON :: Nil),
       "t" -> (json.ANumJ(ts.clone) :: Nil),
       "x" -> (json.AANumJ(Data.doubly(xs)) :: Nil),
       "y" -> (json.AANumJ(Data.doubly(ys)) :: Nil),
-      "cx" -> (json.ANumJ(cxs.clone) :: Nil),
-      "cy" -> (json.ANumJ(cys.clone) :: Nil)
+      (if (derivedCx) "ox" else "cx") -> (json.ANumJ(cxs.clone) :: Nil),
+      (if (derivedCy) "oy" else "cy") -> (json.ANumJ(cys.clone) :: Nil)
     ) ++ custom.keyvals
   )
 }
@@ -290,6 +307,8 @@ object Data extends json.Jsonic[Data] {
       else { var i = 0; while (i < cy.length) { cy(i) += oy(i); i +=1 } }
     }
     i = 0
+    val kx = if (cx.length == 0) new Array[Double](x.length) else emptyD
+    val ky = if (cy.length == 0) new Array[Double](y.length) else emptyD
     while (i < x.length) {
       val xi = x(i)
       val yi = y(i)
@@ -299,22 +318,26 @@ object Data extends json.Jsonic[Data] {
         var xS = 0.0
         var xN, j = 0
         while (j < xi.length) { val xij = xi(j); if (!xij.isNaN) { xS += xij; xN +=1 }; j += 1 }
-        if (xN > 0) xS/xN else Double.NaN
+        kx(i) = if (xN > 0) xS/xN else Double.NaN
+        kx(i)
       }
-      cx(i) = cxi
       val cyi = if (cy.length > 0) cy(i) else {
         var yS = 0.0
         var yN, j = 0
         while (j < yi.length) { val yij = yi(j); if (!yij.isNaN) { yS += yij; yN +=1 }; j += 1 }
-        if (yN > 0) yS/yN else Double.NaN
+        ky(i) = if (yN > 0) yS/yN else Double.NaN
+        ky(i)
       }
-      cy(i) = cyi
       rx -= cxi
       ry -= cyi
       if (!rx.isNaN && math.abs(rx) >= 1e-9) { var j = 0; while (j < xi.length) { xi(j) += rx; j += 1 } }
       if (!ry.isNaN && math.abs(ry) >= 1e-9) { var j = 0; while (j < yi.length) { yi(j) += ry; j += 1 } }
       i += 1
     }
-    Right(new Data(nid, sid, t, Data.singly(x), Data.singly(y), cx, cy, Metadata.getCustom(ob)))
+    Right(
+      (
+        new Data(nid, sid, t, Data.singly(x), Data.singly(y), if (kx.length > 0) kx else cx, if (ky.length > 0) ky else cy, Metadata.getCustom(ob))
+      ).setDerived(kx.length > 0, ky.length > 0)
+    )
   }
 }
