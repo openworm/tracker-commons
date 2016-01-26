@@ -1,3 +1,4 @@
+import Base.==
 
 type Laboratory
     pi :: AbstractString
@@ -40,6 +41,35 @@ type MetaData
     custom :: Dict{AbstractString, Any}
 end
 
+==(a :: Laboratory, b :: Laboratory) =
+    a.pi == b.pi && a.name == b.name && a.location == b.location && a.custom == b.custom
+
+==(a :: Arena, b :: Arena) =
+    a.kind == b.kind &&
+    isequal(a.diameterA, b.diameterA) &&
+    isequal(a.diameterB, b.diameterB) &&
+    a.orientation == b.orientation &&
+    isequal(a.custom, b.custom)
+
+==(a :: Software, b :: Software) =
+    a.name == b.name && a.version == b.version && a.featureID == b.featureID && isequal(a.custom, b.custom)
+
+==(a :: MetaData, b :: MetaData) =
+    a.lab.isnull == b.lab.isnull && (a.lab.isnull ? true : (a.lab.value == b.lab.value)) &&
+    a.who == b.who &&
+    a.timestamp.isnull == b.timestamp.isnull && (a.timestamp.isnull ? true : isequal(a.timestamp.value, b.timestamp.value)) &&
+    isequal(a.temperature, b.temperature) &&
+    isequal(a.humidity, b.humidity) &&
+    a.arena.isnull == b.arena.isnull && (a.arena.isnull ? true : isequal(a.arena.value, b.arena.value)) &&
+    a.food == b.food &&
+    a.media == b.media &&
+    a.sex == b.sex &&
+    isequal(a.age, b.age) &&
+    a.protocol == b.protocol &&
+    a.software == b.software &&
+    a.settings.isnull == b.settings.isnull && (a.settings.isnull ? true : isequal(a.settings.value, b.settings.value)) &&
+    a.custom == b.custom
+
 function no_custom()
     return Dict{AbstractString, Any}()
 end
@@ -57,7 +87,7 @@ function empty_software()
 end
 
 function empty_metadata()
-    return MetaData(Nullable{Laboratory}(), "", Nullable{DateTime}(), NaN, NaN, Nullable{Arena}(), "", "", "", "", Nullable{Dates.Millisecond}(), "", [], [], Nullable{Any}(), no_custom())
+    return MetaData(Nullable{Laboratory}(), [], Nullable{DateTime}(), NaN, NaN, Nullable{Arena}(), "", "", "", "", NaN, "", [], [], Nullable{Any}(), no_custom())
 end
 
 function convert_for_json(l :: Laboratory)
@@ -164,7 +194,7 @@ function parsed_json_to_arena(m :: Dict{AbstractString, Any})
     keys = ["type", "size", "orientation"]
     kind = get(m, keys[1], "")
     err = error_if_not_string(kind, err, string("Arena ", keys[1], " should be a string"))
-    diam = make_dbl_array(get(m, keys[2], Array{Float64}()))
+    diam = make_dbl_array(get(m, keys[2], Array{Float64,1}()))
     if length(diam) == 1
         if !(typeof(diam[1]) <: Number) err = error_accum(err, string("Arena ", keys[2], " should be numeric")) end
     elseif length(diam) == 2
@@ -245,7 +275,7 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
     ]
     onenumber = [
         false, false, false, true, true,
-        false, false, false, false, false
+        false, false, false, false, false,
         true, false, false, false, false
     ]
     strings = fill("", length(keys))
@@ -253,19 +283,32 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
         if onestring[i]
             s = get(d, keys[i], "")
             strings[i] = empty_if_not_string(s)
-            err = error_if_not_string(err, string("MetaData ", keys[i], " should be a string"))
+            if !(typeof(s) <: AbstractString)
+                err = error_accum(err, string("MetaData ", keys[i], " should be a string"))
+            end
         end
     end
-    vstrings = fill(Array{AbstractString}(), length(keys))
+    vstrings = fill(Array{AbstractString,1}(), length(keys))
     for i in 1:length(keys)
         if vecstring[i]
-            s = get(d, keys[i], Array{AbstractString}())
+            s = get(d, keys[i], Array{AbstractString,1}())
             if typeof(s) <: AbstractString
                 vstrings[i] = Array(convert(AbstractString, s))
-            elseif typeof(s) <: Array{AbstractString}
-                vstrings[i] = convert(Array{AbstractString}, s)
+            elseif typeof(s) <: Array{AbstractString,1}
+                vstrings[i] = convert(Array{AbstractString,1}, s)
             else
                 err = error_accum(err, string("MetaData ", keys[i], " should be a string or array of strings"))
+            end
+        end
+    end
+    numbers = fill(NaN, length(keys))
+    for i in 1:length(keys)
+        if onenumber[i]
+            n = get(d, keys[i], NaN)
+            if typeof(n) <: Number
+                numbers[i] = convert(Float64, n)
+            else
+                err = error_accum(err, string("MetaData", keys[i], " should be a numeric value"))
             end
         end
     end
@@ -291,8 +334,8 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
         if haskey(d, "arena")
             a = d["arena"]
             if typeof(a) <: Dict{AbstractString, Any}
-                la = convert(Dict{AbstractString, Any}, a)
-                arn = parsed_json_to_arena(la)
+                ad = convert(Dict{AbstractString, Any}, a)
+                arn = parsed_json_to_arena(ad)
                 if typeof(arn) <: AbstractString
                     err = error_accum(err, convert(AbstractString, arn))
                     Nullable{Arena}()
@@ -304,11 +347,60 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
             end
         else Nullable{Arena}()
         end
+    softwares =
+        if haskey(d, "software")
+            s = d["software"]
+            if typeof(s) <: Dict{AbstractString, Any}
+                s = Array(s)
+            end
+            if typeof(s) <: Array
+                sa = convert(Array, s)
+                softs = fill(empty_software(), length(sa))
+                for i in 1:length(sa)
+                    si = sa[i]
+                    if typeof(si) <: Dict{AbstractString, Any}
+                        sid = convert(Dict{AbstractString, Any}, si)
+                        soft = parsed_json_to_software(sid)
+                        if typeof(soft) <: AbstractString
+                            err = error_accum(err, convert(AbstractString, soft))
+                        else
+                            softs[i] = convert(Software, soft)
+                        end
+                    else
+                        err = error_accum(err, "MetaData software should be a JSON object or an array of JSON objects")
+                    end
+                end
+                softs
+            else
+                err = error_accum(err, "MetaData software should be a JSON object or an array of JSON objects")
+                Array{Software,1}()
+            end
+        else Array{Software,1}()
+        end
+    stamp =
+        if haskey(d, "timestamp")
+            try
+                ts = onestring[3]
+                i = findlast(x -> x == 'Z' || x == '+' || x == '-')
+                if i > 0 ts = ts[1:(i-1)] end
+                Nullable(DateTime(ts))
+            catch e
+                err = error_accum(err, string("MetaData time stamp parsing error: ", e))
+                Nullable{DateTime}()
+            end
+        else Nullable{DateTime}()
+        end
+    settings =
+        if haskey(d, "settings")
+            Nullable(d["settings"])
+        else
+            Nullable{Any}()
+        end
     if length(err) > 0 result = err
     else result = MetaData(
         laboratory, vstrings[2], stamp, numbers[4], numbers[5],
         arena, strings[7], strings[8], strings[9], strings[10],
-        age, strings[12], vstrings[13], softwares, settings,
+        numbers[11], strings[12], vstrings[13], softwares, settings,
         Dict(filter(kv -> !(first(kv) in keys), collect(d)))
     )
     end
