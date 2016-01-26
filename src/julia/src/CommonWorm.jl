@@ -1,5 +1,3 @@
-module TrackerCommons
-
 type CommonWorm
     id :: AbstractString
     t  :: Array{Float64, 1}

@@ -1,5 +1,3 @@
-module TrackerCommons
-
 ###########################################
 ### Get numeric data out of parsed JSON ###
 ###########################################
@@ -48,5 +46,3 @@ function make_dbl_array_array(q::Any, n::Int64)
         result
     end
 end
-
-[]
