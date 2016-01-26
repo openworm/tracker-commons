@@ -23,7 +23,7 @@ end
 
 type MetaData
     lab :: Nullable{Laboratory}
-    who :: AbstractString
+    who :: Array{AbstractString, 1}
     timestamp :: Nullable{DateTime}
     temperature :: Float64
     humidity :: Float64
@@ -32,7 +32,7 @@ type MetaData
     media :: AbstractString
     sex :: AbstractString
     stage :: AbstractString
-    age :: Nullable{Dates.Millisecond}
+    age :: Float64
     strain :: AbstractString
     protocol :: Array{AbstractString, 1}
     software :: Array{Software, 1}
@@ -225,21 +225,6 @@ function parsed_json_to_software(m :: Dict{AbstractString, Any})
     return result
 end
 
-function error_if_not_type{T}(a :: Union{T, AbstractString}, err :: AbstractString)
-    result :: AbstractString =
-        if typeof(a) <: T err
-        elseif length(err) > 0 string(err, "; ", convert(AbstractString, a))
-        else convert(AbstractString, a)
-        end
-    return result
-end
-
-function null_if_not_type{T}(tpe :: DataType{T}, a :: Union{T, AbstractString})
-    result :: Nullable{T} =
-        if typeof(a) <: tpe Nullable(convert(tpe, a)) else Nullable{T}() end
-    return result
-end
-
 function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
     result :: Union{MetaData, AbstractString} = ""
     err :: AbstractString = ""
@@ -249,9 +234,19 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
         "age", "strain", "protocol", "software", "settings"
     ]
     onestring = [
-        false, false, false, false, false,
+        false, false, true, false, false,
         false, true, true, true, true,
         false, true, false, false, false
+    ]
+    vecstring = [
+        false, true, false, false, false,
+        false, false, false, false, false,
+        false, false, true, false, false
+    ]
+    onenumber = [
+        false, false, false, true, true,
+        false, false, false, false, false
+        true, false, false, false, false
     ]
     strings = fill("", length(keys))
     for i in 1:length(keys)
@@ -260,6 +255,62 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
             strings[i] = empty_if_not_string(s)
             err = error_if_not_string(err, string("MetaData ", keys[i], " should be a string"))
         end
+    end
+    vstrings = fill(Array{AbstractString}(), length(keys))
+    for i in 1:length(keys)
+        if vecstring[i]
+            s = get(d, keys[i], Array{AbstractString}())
+            if typeof(s) <: AbstractString
+                vstrings[i] = Array(convert(AbstractString, s))
+            elseif typeof(s) <: Array{AbstractString}
+                vstrings[i] = convert(Array{AbstractString}, s)
+            else
+                err = error_accum(err, string("MetaData ", keys[i], " should be a string or array of strings"))
+            end
+        end
+    end
+    laboratory =
+        if haskey(d, "lab")
+            l = d["lab"]
+            if typeof(l) <: Dict{AbstractString, Any}
+                ld = convert(Dict{AbstractString, Any}, l)
+                lab = parsed_json_to_laboratory(ld)
+                if typeof(lab) <: AbstractString
+                    err = error_accum(err, convert(AbstractString, lab))
+                    Nullable{Laboratory}()
+                else
+                    Nullable(convert(Laboratory, lab))
+                end
+            else
+                err = error_accum(err, "lab metadata should be a JSON object")
+                Nullable{Laboratory}()
+            end
+        else Nullable{Laboratory}()
+        end
+    arena =
+        if haskey(d, "arena")
+            a = d["arena"]
+            if typeof(a) <: Dict{AbstractString, Any}
+                la = convert(Dict{AbstractString, Any}, a)
+                arn = parsed_json_to_arena(la)
+                if typeof(arn) <: AbstractString
+                    err = error_accum(err, convert(AbstractString, arn))
+                    Nullable{Arena}()
+                else
+                    Nullable(convert(Arena, arn))
+                end
+            else
+                err = error_accum(err, "arena metadata should be a JSON object")
+            end
+        else Nullable{Arena}()
+        end
+    if length(err) > 0 result = err
+    else result = MetaData(
+        laboratory, vstrings[2], stamp, numbers[4], numbers[5],
+        arena, strings[7], strings[8], strings[9], strings[10],
+        age, strings[12], vstrings[13], softwares, settings,
+        Dict(filter(kv -> !(first(kv) in keys), collect(d)))
+    )
     end
     return result
 end
