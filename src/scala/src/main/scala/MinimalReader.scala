@@ -51,16 +51,30 @@ object Reader {
         b 
       case _ => return Left(s"t is neither a number or array of numbers") 
     }
-    val List(xss, yss) = List("x", "y").map(q => entry(q) match {
+    val List(oxs, oys): List[Array[Float]] = List( List("ox", "cx"), List("oy", "cy") ).map{
+      case q :: qq :: Nil => entry.getOrElse(q, entry.getOrElse(qq, null)) match {
+        case null => Array.fill(ts.length)(0f)
+        case f: Float => Array.fill(ts.length)(f)
+        case a: Array[Any] =>
+          val b = a.collect{ case null => Float.NaN; case f: Float => f }
+          if (a.length != ts.length || b.length != ts.length) return Left("Origin/centroid size doesn't match timepoint length")
+          b
+      }
+      case _ => throw new Exception("Implementation error.  This pattern match should never fail.")
+    }
+    val List(xss, yss) = List(("x", oxs), ("y",oys)).map{ case (q,o) => entry(q) match {
       case null => Array(Array(Float.NaN))
-      case f: Float => Array(Array(f))
+      case f: Float => Array(Array(f + o(0)))
       case a: Array[Any] =>
         val b = a.collect{ case null => Float.NaN; case f: Float => f }
         if (b.length == a.length) {
-          if (ts.length == 1) Array(b)
+          if (ts.length == 1) {
+            for (i <- b.indices) b(i) += o(0)
+            Array(b)
+          }
           else {
             if (b.length != ts.length) return Left(s"mismatched sizes for t and $q")
-            b.map(f => Array(f))
+            b.zipWithIndex.map{ case (f,i) => Array(f + o(i)) }
           }
         }
         else {
@@ -74,9 +88,10 @@ object Reader {
           }
           if (c.length != a.length) return Left("found non-numeric value in $q")
           if (c.length != ts.length) return Left("mismatched sizes for t and $q")
+          for {i <- c.indices; j <- c(i).indices} c(i)(j) += o(i)
           c
         }
-    })
+    }}
     for (i <- xss.indices) if (xss(i).length != yss(i).length) return Left("x and y lengths fail to match at timepoint ${ts(i)}")
     Right(new Worm(id, ts, xss, yss, index))
   }
