@@ -1,4 +1,5 @@
 import Base.==
+import Base.isequal
 
 type Laboratory
     pi :: AbstractString
@@ -139,6 +140,7 @@ function convert_for_json(m :: MetaData)
     if length(m.media) > 0 d["media"] = m.media end
     if length(m.sex) > 0 d["sex"] = m.sex end
     if length(m.stage) > 0 d["stage"] = m.stage end
+    if !isnan(m.age) d["age"] = m.age end
     if length(m.protocol) > 0 d["protocol"] = m.protocol end
     nzsw = filter(x -> length(x) > 0, map(x -> convert_for_json(x), m.software))
     if length(nzsw) > 0
@@ -161,12 +163,12 @@ end
 
 function error_if_not_string(a :: Any, err :: AbstractString, msg :: AbstractString)
     result :: AbstractString = err
-    if !(typeof(a) <: AbstractString) result = error_accum(err, msg) end
+    if !isa(a, AbstractString) result = error_accum(err, msg) end
     return result
 end
 
 function empty_if_not_string(a :: Any)
-    if typeof(a) <: AbstractString convert(AbstractString, a) else "" end
+    if isa(a, AbstractString) convert(AbstractString, a) else "" end
 end
 
 function parsed_json_to_laboratory(m :: Dict{AbstractString, Any})
@@ -196,9 +198,9 @@ function parsed_json_to_arena(m :: Dict{AbstractString, Any})
     err = error_if_not_string(kind, err, string("Arena ", keys[1], " should be a string"))
     diam = make_dbl_array(get(m, keys[2], Array{Float64,1}()))
     if length(diam) == 1
-        if !(typeof(diam[1]) <: Number) err = error_accum(err, string("Arena ", keys[2], " should be numeric")) end
+        if !isa(diam[1],Number) err = error_accum(err, string("Arena ", keys[2], " should be numeric")) end
     elseif length(diam) == 2
-        if (!diam[1] <: Number && diam[2] <: Number) err = error_accum(err, string("Arena ", keys[2], " should have only numeric entries")) end
+        if !(isa(diam[1], Number) && isa(diam[2], Number)) err = error_accum(err, string("Arena ", keys[2], " should have only numeric entries")) end
     elseif length(diam) > 2
         err = error_accum(err, string("Arena ", keys[2], " size should have at most two dimensions"))
     end
@@ -227,14 +229,14 @@ function parsed_json_to_software(m :: Dict{AbstractString, Any})
     err = error_if_not_string(name, err, string("Software ", keys[2], " should be a string"))
     fid = get(m, "featureID", "")
     featureID :: Set{AbstractString} = Set{AbstractString}()
-    if (typeof(fid) <: AbstractString)
+    if isa(fid, AbstractString)
         str = convert(AbstractString, fid)
         if length(str) > 0 featureID = Set(str) end
-    elseif typeof(fid) <: Array
+    elseif isa(fid, Array)
         sid = convert(Array, fid)
         allstring = true
         for s in sid
-            if !(typeof(s) <: AbstractString) allstring = false end
+            if !isa(s, AbstractString) allstring = false end
         end
         if !allstring err = error_accum(err, "Software featureIDs should all be strings")
         else
@@ -283,7 +285,7 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
         if onestring[i]
             s = get(d, keys[i], "")
             strings[i] = empty_if_not_string(s)
-            if !(typeof(s) <: AbstractString)
+            if !isa(s, AbstractString)
                 err = error_accum(err, string("MetaData ", keys[i], " should be a string"))
             end
         end
@@ -292,9 +294,9 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
     for i in 1:length(keys)
         if vecstring[i]
             s = get(d, keys[i], Array{AbstractString,1}())
-            if typeof(s) <: AbstractString
+            if isa(s, AbstractString)
                 vstrings[i] = Array(convert(AbstractString, s))
-            elseif typeof(s) <: Array{AbstractString,1}
+            elseif isa(s, Array{AbstractString,1})
                 vstrings[i] = convert(Array{AbstractString,1}, s)
             else
                 err = error_accum(err, string("MetaData ", keys[i], " should be a string or array of strings"))
@@ -305,7 +307,7 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
     for i in 1:length(keys)
         if onenumber[i]
             n = get(d, keys[i], NaN)
-            if typeof(n) <: Number
+            if isa(n, Number)
                 numbers[i] = convert(Float64, n)
             else
                 err = error_accum(err, string("MetaData", keys[i], " should be a numeric value"))
@@ -315,10 +317,10 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
     laboratory =
         if haskey(d, "lab")
             l = d["lab"]
-            if typeof(l) <: Dict{AbstractString, Any}
+            if isa(l, Dict{AbstractString, Any})
                 ld = convert(Dict{AbstractString, Any}, l)
                 lab = parsed_json_to_laboratory(ld)
-                if typeof(lab) <: AbstractString
+                if isa(lab, AbstractString)
                     err = error_accum(err, convert(AbstractString, lab))
                     Nullable{Laboratory}()
                 else
@@ -333,10 +335,10 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
     arena =
         if haskey(d, "arena")
             a = d["arena"]
-            if typeof(a) <: Dict{AbstractString, Any}
+            if isa(a, Dict{AbstractString, Any})
                 ad = convert(Dict{AbstractString, Any}, a)
                 arn = parsed_json_to_arena(ad)
-                if typeof(arn) <: AbstractString
+                if isa(arn, AbstractString)
                     err = error_accum(err, convert(AbstractString, arn))
                     Nullable{Arena}()
                 else
@@ -350,18 +352,18 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
     softwares =
         if haskey(d, "software")
             s = d["software"]
-            if typeof(s) <: Dict{AbstractString, Any}
+            if isa(s, Dict{AbstractString, Any})
                 s = Array(s)
             end
-            if typeof(s) <: Array
+            if isa(s, Array)
                 sa = convert(Array, s)
                 softs = fill(empty_software(), length(sa))
                 for i in 1:length(sa)
                     si = sa[i]
-                    if typeof(si) <: Dict{AbstractString, Any}
+                    if isa(si, Dict{AbstractString, Any})
                         sid = convert(Dict{AbstractString, Any}, si)
                         soft = parsed_json_to_software(sid)
-                        if typeof(soft) <: AbstractString
+                        if isa(soft, AbstractString)
                             err = error_accum(err, convert(AbstractString, soft))
                         else
                             softs[i] = convert(Software, soft)
