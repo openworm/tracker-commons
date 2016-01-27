@@ -315,17 +315,25 @@ object Dbl {
   private val somePosInf = Some(Double.PositiveInfinity)
   private val someNegInf = Some(Double.NegativeInfinity)
 
+  private def dezero(s: String): String =
+    if (s.length > 0 && s.charAt(s.length-1) == '0') {
+      var i = s.length-1
+      while (i > 0 && s.charAt(i-1) == '0') i -= 1
+      s.substring(0, i)
+    }
+    else s
+
   def toJson(d: Double): String =
     if (d.isNaN || d.isInfinite) "null"
-    else if (d == 0) "0"
     else math.abs(d) match {
+      case x if x.toInt == x => x.toInt.toString
       case x if x > Long.MaxValue => "%e".format(d)
       case x if x > 1e7 => d.toLong.toString
-      case x if x > 10 => "%.3f".format(d)
-      case x if x > 1 => "%.4f".format(d)
-      case x if x > 0.1 => "%.5f".format(d)
-      case x if x > 1e-3  => "%.7f".format(d)
-      case x if x > 1e-5 => "%.9f".format(d)
+      case x if x > 10 => dezero("%.3f".format(d))
+      case x if x > 1 => dezero("%.4f".format(d))
+      case x if x > 0.1 => dezero("%.5f".format(d))
+      case x if x > 1e-3  => dezero("%.7f".format(d))
+      case x if x > 1e-5 => dezero("%.9f".format(d))
       case x => "%7.4e".format(d)
     }
 
