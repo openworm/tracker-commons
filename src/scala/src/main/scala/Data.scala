@@ -3,6 +3,7 @@ package org.openworm.trackercommons
 trait HasId extends math.Ordered[HasId] {
   def nid: Double
   def sid: String
+  def idEither: Either[Double, String] = if (nid.isNaN) Right(sid) else Left(nid)
   def idJSON: json.JSON = if (nid.isNaN) { if (sid == null) json.NullJ else json.StrJ(sid) } else json.NumJ(nid)
   def compare(them: HasId) =
     if (nid.isNaN)
@@ -42,6 +43,7 @@ extends HasId with json.Jsonable {
       (if (derivedCy) "oy" else "cy") -> (json.NumJ(cy) :: Nil)
     ) ++ custom.keyvals
   )
+  def toData: Data = (new Data(nid, sid, Array(t), Array(x), Array(y), Array(cx), Array(cy), custom)).setDerived(derivedCx, derivedCy)
 }
 object Datum extends json.Jsonic[Datum] {
   private def BAD(msg: String): Either[String, Nothing] = Left("Invalid data entry: " + msg)
@@ -134,7 +136,13 @@ object Datum extends json.Jsonic[Datum] {
   * `x` and `y` values are relative to `cx` and `cy` values.
   * If the original data did not contain `cx` and `cy`, `derivedCx` and `derivedCy` is set.
   */
-case class Data(nid: Double, sid: String, ts: Array[Double], xs: Array[Array[Float]], ys: Array[Array[Float]], cxs: Array[Double], cys: Array[Double], custom: json.ObjJ)
+case class Data(
+  nid: Double, sid: String,
+  ts: Array[Double],
+  xs: Array[Array[Float]], ys: Array[Array[Float]],
+  cxs: Array[Double], cys: Array[Double],
+  custom: json.ObjJ
+)
 extends HasId with json.Jsonable {
   var derivedCx = false
   var derivedCy = false
@@ -149,6 +157,7 @@ extends HasId with json.Jsonable {
       (if (derivedCy) "oy" else "cy") -> (json.ANumJ(cys.clone) :: Nil)
     ) ++ custom.keyvals
   )
+  override def toString = toObjJ.toJson
 }
 object Data extends json.Jsonic[Data] {
   def doubly(xs: Array[Float]): Array[Double] = {

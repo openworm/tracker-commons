@@ -3,9 +3,9 @@ package org.openworm.trackercommons
 import scala.util.control.NonFatal
 
 object ReadWrite {
-  def readOne(s: String): Either[String, DataSet] = readOne(new java.io.File(s))
+  def apply(s: String): Either[String, DataSet] = apply(new java.io.File(s))
 
-  def readOne(f: java.io.File): Either[String, DataSet] = {
+  def apply(f: java.io.File): Either[String, DataSet] = {
     try {
       val s = scala.io.Source.fromFile(f)
       try { Parser(s.mkString).left.map(err => s"Could not read ${f.getPath} because\n$err") }
@@ -14,9 +14,9 @@ object ReadWrite {
     catch { case NonFatal(_) => Left("Could not read " + f.getPath) }
   }
 
-  def readAll(s: String): Either[String, Vector[DataSet]] = readAll(new java.io.File(s))
+  def all(s: String): Either[String, Vector[DataSet]] = all(new java.io.File(s))
 
-  def readAll(f: java.io.File): Either[String, Vector[DataSet]] = readOne(f) match {
+  def all(f: java.io.File): Either[String, Vector[DataSet]] = apply(f) match {
     case Left(err) => Left(err)
     case Right(dset) =>
       if (dset.files.size <= 1) Right(Vector(dset))
@@ -32,7 +32,7 @@ object ReadWrite {
             case None => return Left("Extended data set was supposed to contain ${fs.you(i)} but can't find corresponding file")
             case Some(x) => x
           }
-          val di = readOne(fi) match {
+          val di = apply(fi) match {
             case Left(err) => return Left(err)
             case Right(x) => x
           }
