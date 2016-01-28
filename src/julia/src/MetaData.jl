@@ -104,9 +104,7 @@ function convert_for_json(a :: Arena)
     m = Dict{AbstractString, Any}()
     if length(a.kind) > 0 m["kind"] = a.kind end
     if (!isnan(a.diameterA))
-        if (!isnan(a.diameterB)) m["size"] = [a.diameterA; a.diameterB]
-        else m["size"] = a.diameterA
-        end
+        m["size"] = !isnan(a.diameterB) ? [a.diameterA; a.diameterB] : a.diameterA
     end
     if length(a.orientation) > 0 m["orientation"] = a.orientation end
     if length(a.custom) > 0 m["custom"] = l.custom end
@@ -144,9 +142,7 @@ function convert_for_json(m :: MetaData)
     if length(m.protocol) > 0 d["protocol"] = m.protocol end
     nzsw = filter(x -> length(x) > 0, map(x -> convert_for_json(x), m.software))
     if length(nzsw) > 0
-        if length(nzsw) == 1 d["software"] = nzsw[1]
-        else d["software"] = nzsw
-        end
+        d["software"] = length(nzsw) == 1 ? nzsw[1] : nzsw
     end
     if !m.settings.isnull d["settings"] = get(m.settings) end
     if length(m.custom) > 0 d["custom"] = m.custom end
@@ -154,10 +150,7 @@ function convert_for_json(m :: MetaData)
 end
 
 function error_accum(err :: AbstractString, msg :: AbstractString)
-    result :: AbstractString =
-        if length(err) > 0 string(err, "; ", msg)
-        else msg
-        end
+    result :: AbstractString = length(err) > 0 ? string(err, "; ", msg) : msg
     return result
 end
 
@@ -168,7 +161,7 @@ function error_if_not_string(a :: Any, err :: AbstractString, msg :: AbstractStr
 end
 
 function empty_if_not_string(a :: Any)
-    if isa(a, AbstractString) convert(AbstractString, a) else "" end
+    isa(a, AbstractString) ? convert(AbstractString, a) : ""
 end
 
 function parsed_json_to_laboratory(m :: Dict{AbstractString, Any})
@@ -210,8 +203,8 @@ function parsed_json_to_arena(m :: Dict{AbstractString, Any})
         if length(err) > 0 err
         else Arena(
             kind,
-            if length(diam) > 0 diam[1] else NaN end,
-            if length(diam) > 1 diam[2] else NaN end,
+            length(diam) > 0 ? diam[1] : NaN,
+            length(diam) > 1 ? diam[2] : NaN,
             orient,
             Dict(filter(kv -> !(first(kv) in keys), collect(m)))
         )
