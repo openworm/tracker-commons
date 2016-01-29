@@ -79,7 +79,7 @@ function make_simple_scale(input :: AbstractString)
         else
             pre = tidy[1:(length(tidy) - length(k))]
             if haskey(si_prefix_map, pre) && length(pre) > 1
-                result = v * si_prefix_map(pre)
+                result = v * si_prefix_map[pre]
             end
         end
     else
@@ -90,7 +90,7 @@ function make_simple_scale(input :: AbstractString)
             elseif k != "1" && k != "%"
                 pre = tidy[1:(length(tidy)-length(k))]
                 if haskey(si_prefix_map, pre) && length(pre) == 1
-                    result = v * si_prefix_map(pre)
+                    result = v * si_prefix_map[pre]
                 end
             end
         end
@@ -132,4 +132,184 @@ function make_any_converters(input :: AbstractString)
     nsc = make_nonscaled_converters(strip(input))
     result = nsc.isnull ? make_complex_converters(input) : Nullable(nsc.value)
     return result
+end
+
+type UnitConverter
+    description :: AbstractString
+    to_internal :: Function
+    to_external :: Function
+end
+
+type KnownUnits
+    mapper :: Dict{AbstractString, UnitConverter}
+    custom :: Dict{AbstractString, Any}
+end
+
+function convert_for_json(ku :: KnownUnits)
+    result = Dict{AbstractString, Any}()
+    for (k,v) in ku.mapper
+        if k == "cx"
+            if ku.mapper["x"].description != v.description result[k] = v.description end
+        elseif k == "cy"
+            if ku.mapper["y"].description != v.description result[k] = v.description end
+        elseif k == "ox"
+            if ku.mapper["x"].description != v.description result[k] = v.description end
+        elseif k == "oy"
+            if ku.mapper["y"].description != v.description result[k] = v.description end
+        else
+            result[k] = v.description
+        end
+    end
+    if length(ku.custom) > 0
+        for (k,v) in ku.custom 
+            result[k] = v
+        end
+    end
+    return result
+end
+
+function parsed_json_to_units(x :: Dict{AbstractString, Any})
+    result :: Union{AbstractString, KnownUnits} = "Units block parsing failed"
+    m = Dict{AbstractString, UnitConverter}()
+    c = Dict{AbstractString, Any}()
+    for (k,v) in x
+        if startswith(k, "@")
+            c[k] = v
+        else
+            if isa(v, AbstractString)
+                s = convert(AbstractString, v)
+                u = make_any_converters(s)
+                if u.isnull
+                    result = string("Units of ",k," cannot be parsed: ", s)
+                    return result
+                elseif haskey(m, k)
+                    result = string("Units of ",k," should not be given more than once")
+                    return result
+                else
+                    (fwd,bkw) = u.value
+                    m[k] = UnitConverter(s, fwd, bkw)
+                end
+            else
+                result = string("Units of ",k," should be given as a string")
+                return result
+            end
+        end
+    end
+    if !haskey(m,"t") || !haskey(m,"x") || !haskey(m, "y")
+        result = string("Units must be specified for all of t, x, and y")
+    else
+        if !haskey(m,"cx") m["cx"] = m["x"] end
+        if !haskey(m,"cy") m["cy"] = m["y"] end
+        if !haskey(m,"ox") m["ox"] = m["x"] end
+        if !haskey(m,"oy") m["oy"] = m["y"] end
+        result = KnownUnits(m,c)
+    end
+    return result
+end
+
+function floatize_any_array(a :: Array)
+    if isa(a, Array{Float64, 1})
+        return a
+    end
+    result = fill(NaN)(length(a))
+    for i in 1:length(a)
+        x = a[i]
+        if isa(x, Number)
+            result[i] = convert(Float64, x)
+        elseif isa(x, Void)
+            result[i] = NaN
+        else
+            return a
+        end
+    end
+    return result
+end
+
+function internalize_parsed_json!(j :: Any, ku :: KnownUnits, uc :: Nullable{UnitConverter})
+    if isa(j, Dict)
+        d = convert(Dict,j)
+        for (k,v) in d
+            if k != "settings"
+                uk = haskey(ku.mapper, k) ? Nullable(ku.mapper[k]) : uc
+                if isa(v, Number) && !uk.isnull
+                    d[k] = uk.value.to_internal(convert(Float64, v))
+                else
+                    x =
+                        if isa(j, Array)
+                            if isa(j, Array{Float64, 1}) convert(Array{Float64, 1}, j)
+                            else
+                                y = floatize_any_array(convert(Array, j))
+                                d[k] = y
+                                y
+                            end
+                        else
+                            v
+                        end
+                    internalize_parsed_json!(x, ku, uk)
+                end
+            end
+        end
+    elseif isa(j, Array)
+        ja = convert(j, Array)
+        for i in 1:length(ja)
+            ji = ja[i]
+            if isa(ji, Number) && !uc.isnull
+                ja[i] = uc.value.to_internal(convert(Float64, ji))
+            else
+                if isa(ji, Array)
+                    x = floatize_any_array(ji)
+                    if isa(x, Array{Float64, 1})
+                        ja[i] = x
+                        if !uc.isnull
+                            ys = convert(Array{Float64, 1}, x)
+                            fn = uc.value.to_internal
+                            for i in 1:length(ys)
+                                ys[i] = fn(ys[i])
+                            end
+                        end
+                    else
+                        internalize_parsed_json!(ji, ku, uc)
+                    end
+                else
+                    internalize_parsed_json!(ji, ku, uc)
+                end
+            end
+        end
+    end
+end
+
+function externalize_jsonable!(j :: Any, ku :: KnownUnits, uc :: Nullable{UnitConverter})
+    if isa(j, Dict)
+        d = convert(Dict, j)
+        for (k,v) in d
+            if k != "settings"
+                uk = haskey(ku.mapper, k) ? Nullable(ku.mapper[k]) : uc
+                if isa(v, Float64) && ! uk.isnull
+                    d[k] = uk.value.to_external(convert(Float64, v))
+                else
+                    externalize_jsonable!(v, ku, uk)
+                end
+            end
+        end
+    elseif isa(j, Array)
+        if isa(j, Array{Float64, 1}) && !uc.isnull
+            fn = uc.value.to_external
+            jf = convert(Array{Float64, 1}, j)
+            for i in 1:length(jf)
+                jf[i] = fn(jf[i])
+            end
+        else
+            ja = convert(Array, j)
+            if uc.isnull
+                for v in ja externalize_jsonable!(v, ku, uc) end
+            else
+                for i in 1:length(ja)
+                    if isa(ja[i], Float64) ja[i] = fn(convert(Float64,ja[i]))
+                    else
+                        externalized_jsonable!(v, ku, uc)
+                    end
+                end
+            end
+        end
+    end
 end

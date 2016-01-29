@@ -46,3 +46,13 @@ function make_dbl_array_array(q::Any, n::Int64)
         result
     end
 end
+
+function extract_custom(d :: Dict{AbstractString, Any})
+    dd = Dict{AbstractString, Any}()
+    for (k,v) in d
+        if startswith(k, "@")
+            dd[k] = v
+        end
+    end
+    dd
+end

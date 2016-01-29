@@ -175,10 +175,7 @@ function parsed_json_to_laboratory(m :: Dict{AbstractString, Any})
     end
     result =
         if length(err) > 0 err
-        else Laboratory(
-                values[1], values[2], values[3],
-                Dict(filter(kv -> !(first(kv) in keys), collect(m)))
-            )
+        else Laboratory(values[1], values[2], values[3], extract_custom(m))
         end
     return result
 end
@@ -206,7 +203,7 @@ function parsed_json_to_arena(m :: Dict{AbstractString, Any})
             length(diam) > 0 ? diam[1] : NaN,
             length(diam) > 1 ? diam[2] : NaN,
             orient,
-            Dict(filter(kv -> !(first(kv) in keys), collect(m)))
+            extract_custom(m)
         )
         end
     return result
@@ -242,10 +239,7 @@ function parsed_json_to_software(m :: Dict{AbstractString, Any})
     end
     result =
         if length(err) > 0 err
-        else Software(
-            name, version, featureID,
-            Dict(filter(kv -> !(first(kv) in keys), collect(m)))
-        )
+        else Software(name, version, featureID, extract_custom(m))
         end
     return result
 end
@@ -396,7 +390,7 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
         laboratory, vstrings[2], stamp, numbers[4], numbers[5],
         arena, strings[7], strings[8], strings[9], strings[10],
         numbers[11], strings[12], vstrings[13], softwares, settings,
-        Dict(filter(kv -> !(first(kv) in keys), collect(d)))
+        extract_custom(d)
     )
     end
     return result
