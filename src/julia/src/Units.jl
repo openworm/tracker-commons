@@ -1,3 +1,10 @@
+## This file is part of Open Worm's Tracker Commons project and is distributed under the MIT license.
+## Contents copyright (c) 2016 by Rex Kerr, Calico Life Sciences, and Open Worm.
+
+#################################################
+# Implementation of Tracker Commons recommended #
+# unit conversions for WCON format              #
+#################################################
 
 si_prefix_map = Dict(
     "c" => 1e-2,

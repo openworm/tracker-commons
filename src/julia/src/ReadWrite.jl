@@ -1,3 +1,11 @@
+## This file is part of Open Worm's Tracker Commons project and is distributed under the MIT license.
+## Contents copyright (c) 2016 by Rex Kerr, Calico Life Sciences, and Open Worm.
+
+##################################
+# WCON file I/O via JSON parser #
+#################################
+
+
 import JSON
 
 function read_file(fullname :: AbstractString)

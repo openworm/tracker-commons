@@ -1,3 +1,10 @@
+## This file is part of Open Worm's Tracker Commons project and is distributed under the MIT license.
+## Contents copyright (c) 2016 by Rex Kerr, Calico Life Sciences, and Open Worm.
+
+############################################
+# DataSet representing an entire WCON file #
+############################################
+
 type DataSet
     conversions :: KnownUnits
     meta :: MetaData
