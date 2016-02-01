@@ -145,6 +145,13 @@ type KnownUnits
     custom :: Dict{AbstractString, Any}
 end
 
+function minimal_known_units()
+    convert(
+      KnownUnits,
+      parsed_json_to_units(Dict{AbstractString, Any}("t" => "s", "x" => "mm", "y" => "mm"))
+    )
+end
+
 function convert_for_json(ku :: KnownUnits)
     result = Dict{AbstractString, Any}()
     for (k,v) in ku.mapper

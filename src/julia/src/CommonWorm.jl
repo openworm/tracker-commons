@@ -8,6 +8,10 @@ type CommonWorm
     custom :: Dict{AbstractString, Any}
 end
 
+function empty_worm()
+    CommonWorm("", [], [], [], [], [], Dict())
+end
+
 function convert_for_json(cw :: CommonWorm)
     d = Dict{AbstractString, Any}("id" => cw.id, "t" => cw.t, "x" => cw.x, "y" => cw.y)
     if (length(cx) > 0)
