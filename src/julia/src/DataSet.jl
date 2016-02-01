@@ -24,16 +24,6 @@ end
 
 function convert_for_json(ds :: DataSet)
     result :: Dict{AbstractString, Any} = Dict{AbstractString, Any}()
-    if !(ds.next_filename.isnull && ds.prev_filename.isnull && length(ds.files_custom) == 0)
-        fs = Dict{AbstractString, Any}
-        fs["this"] = ds.my_filename
-        if !ds.next_filename.isnull fs["next"] = ds.next_filename end
-        if !ds.prev_filename.isnull fs["prev"] = ds.prev_filename end
-        if length(ds.files_custom) > 0
-            for (k,v) in ds.files_custom fs[k] = v end
-        end
-        result["files"] = fs
-    end
     result["units"] = convert_for_json(ds.conversions)
     md = convert_for_json(ds.meta)
     if length(md) > 0 result["metadata"] = md end
@@ -41,11 +31,13 @@ function convert_for_json(ds :: DataSet)
     for (k,v) in ds.custom
         result[k] = v
     end
+    externalize_jsonable!(result, ds.conversions, Nullable{UnitConverter}())
     return result
 end
 
-function parsed_json_to_dataset(j :: Dict{AbstractString, Any}, fullname :: AbstractString)
+function parsed_json_to_dataset(j0 :: Dict{AbstractString, Any}, fullname :: AbstractString)
     result :: Union{AbstractString, DataSet} = ""
+    j = copy(j0)
     u = begin
             if !haskey(j, "units")
                 result = "Invalid WCON file: no units"
@@ -61,6 +53,7 @@ function parsed_json_to_dataset(j :: Dict{AbstractString, Any}, fullname :: Abst
             end
             convert(KnownUnits, ux)
         end
+    internalize_parsed_json!(j, u, Nullable{UnitConverter}())
     m = if !haskey(j, "metadata") empty_metadata()
         else
             if !isa(j["metadata"], Dict{AbstractString, Any})
@@ -78,11 +71,11 @@ function parsed_json_to_dataset(j :: Dict{AbstractString, Any}, fullname :: Abst
             if !haskey(j, "data")
                 result = "Invalid WCON file: no data"
                 return result
-            elseif !isa(j["data"], Array) && !isa(j["data"], Dict{AbstractString, Any})
+            elseif !isa(j["data"], Array{}) && !isa(j["data"], Dict{AbstractString, Any})
                 result = "Invalid WCON file: data must be an array of JSON objects"
                 return result
             end
-            ds :: Array = isa(j["data"], Array) ? j["data"] : [j["data"]]
+            ds :: Array = isa(j["data"], Array{}) ? j["data"] : [j["data"]]
             ans = fill(empty_worm(), length(ds))
             for i in 1:length(ds)
                 di = ds[i]
@@ -128,7 +121,7 @@ function parsed_json_to_dataset(j :: Dict{AbstractString, Any}, fullname :: Abst
         if length(fc) > 0 all.files_custom = fc end
         if haskey(f, "next")
             n = f["next"]
-            if !isa(n, AbstractString) && !(isa(n, Array) && isa(n[1], AbstractString))
+            if !isa(n, AbstractString) && !(isa(n, Array{}) && isa(n[1], AbstractString))
                 result = "Failed to parse WCON files entry: 'next' should be a string or array of strings"
                 return result
             end
@@ -137,7 +130,7 @@ function parsed_json_to_dataset(j :: Dict{AbstractString, Any}, fullname :: Abst
         end
         if haskey(f, "prev")
             p = f["prev"]
-            if !isa(p, AbstractString) && !(isa(p, Array) && isa(p[1], AbstractString))
+            if !isa(p, AbstractString) && !(isa(p, Array{}) && isa(p[1], AbstractString))
                 result = "Failed to parse WCON files entry: 'prev' should be a string or array of strings"
                 return result
             end

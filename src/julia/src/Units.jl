@@ -214,11 +214,11 @@ function parsed_json_to_units(x :: Dict{AbstractString, Any})
     return result
 end
 
-function floatize_any_array(a :: Array)
+function floatize_any_array(a :: Array{})
     if isa(a, Array{Float64, 1})
         return a
     end
-    result = fill(NaN)(length(a))
+    result = fill(NaN, length(a))
     for i in 1:length(a)
         x = a[i]
         if isa(x, Number)
@@ -242,10 +242,10 @@ function internalize_parsed_json!(j :: Any, ku :: KnownUnits, uc :: Nullable{Uni
                     d[k] = uk.value.to_internal(convert(Float64, v))
                 else
                     x =
-                        if isa(j, Array)
-                            if isa(j, Array{Float64, 1}) convert(Array{Float64, 1}, j)
+                        if isa(v, Array{})
+                            if isa(v, Array{Float64, 1}) convert(Array{Float64, 1}, j)
                             else
-                                y = floatize_any_array(convert(Array, j))
+                                y = floatize_any_array(convert(Array{}, v))
                                 d[k] = y
                                 y
                             end
@@ -256,14 +256,14 @@ function internalize_parsed_json!(j :: Any, ku :: KnownUnits, uc :: Nullable{Uni
                 end
             end
         end
-    elseif isa(j, Array)
-        ja = convert(j, Array)
+    elseif isa(j, Array{})
+        ja = convert(Array{}, j)
         for i in 1:length(ja)
             ji = ja[i]
             if isa(ji, Number) && !uc.isnull
                 ja[i] = uc.value.to_internal(convert(Float64, ji))
             else
-                if isa(ji, Array)
+                if isa(ji, Array{})
                     x = floatize_any_array(ji)
                     if isa(x, Array{Float64, 1})
                         ja[i] = x
@@ -298,7 +298,7 @@ function externalize_jsonable!(j :: Any, ku :: KnownUnits, uc :: Nullable{UnitCo
                 end
             end
         end
-    elseif isa(j, Array)
+    elseif isa(j, Array{})
         if isa(j, Array{Float64, 1}) && !uc.isnull
             fn = uc.value.to_external
             jf = convert(Array{Float64, 1}, j)
@@ -306,14 +306,14 @@ function externalize_jsonable!(j :: Any, ku :: KnownUnits, uc :: Nullable{UnitCo
                 jf[i] = fn(jf[i])
             end
         else
-            ja = convert(Array, j)
+            ja = convert(Array{}, j)
             if uc.isnull
                 for v in ja externalize_jsonable!(v, ku, uc) end
             else
                 for i in 1:length(ja)
                     if isa(ja[i], Float64) ja[i] = fn(convert(Float64,ja[i]))
                     else
-                        externalized_jsonable!(v, ku, uc)
+                        externalize_jsonable!(ja[i], ku, uc)
                     end
                 end
             end

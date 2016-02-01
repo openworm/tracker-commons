@@ -14,13 +14,13 @@ end
 
 function convert_for_json(cw :: CommonWorm)
     d = Dict{AbstractString, Any}("id" => cw.id, "t" => cw.t, "x" => cw.x, "y" => cw.y)
-    if (length(cx) > 0)
+    if (length(cw.cx) > 0)
         d["cx"] = cw.cx
     end
-    if (length(cy) > 0)
+    if (length(cw.cy) > 0)
         d["cy"] = cw.cy
     end
-    if (length(custom) > 0)
+    if (length(cw.custom) > 0)
         d = merge(custom,d)   # In case of duplicate keys, 2nd arg's keys win
     end
     d
@@ -87,7 +87,7 @@ function parsed_json_to_worm(d :: Dict{AbstractString, Any})
                 return result
             end
         elseif isa(q0, Array)
-            if length(q0) != length(x)
+            if length(q0) != length(t)
                 result = string("Failed to parse worm ", id, " at ", t[1], ": wrong size for ", qs)
                 return result
             end
