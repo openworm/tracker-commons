@@ -204,9 +204,6 @@ class TestWcon {
       same(aa.custom, ba.custom, "arena.custom")
   }
 
-  def sameD(a: Option[java.time.Duration], b: Option[java.time.Duration]): String = 
-    if (a == b) "" else " age-mismatch(" + a + ", " + b + ") "
-
   def sameS(a: Vector[Software], b: Vector[Software]): String = 
     if (a.length != b.length) " software-length-mismatch(" + a.length + ", " + b.length + ") "
     else (a zip b).map{ case (sa, sb) =>
@@ -227,7 +224,7 @@ class TestWcon {
     same(a.media, b.media, "media") +
     same(a.sex, b.sex, "sex") +
     same(a.stage, b.stage, "stage") +
-    sameD(a.age, b.age) +
+    same(a.age.getOrElse(Double.NaN), b.age.getOrElse(Double.NaN), "age") +
     same(a.strain, b.strain, "strain") +
     same(a.protocol, b.protocol, "protocol") +
     sameS(a.software, b.software) +
@@ -359,9 +356,9 @@ class TestWcon {
     )
   }.dropWhile(x => x.kind.isEmpty && x.diameter.fold(y => y._1.isNaN && y._2.isNaN, _.isNaN) && x.custom.keyvals.isEmpty).next
 
-  def genDur(r: R): java.time.Duration = r.nextBoolean match {
-    case false => java.time.Duration.ofMillis(r.nextInt(1000))
-    case true => java.time.Duration.ofSeconds(r.nextInt(100))
+  def genAge(r: R): Double = r.nextBoolean match {
+    case false => Double.NaN
+    case true => r.nextInt(1000000)/3600.0   // In hours
   }
 
   def genSoft(r: R): Software = Iterator.continually{
@@ -381,7 +378,7 @@ class TestWcon {
     opt(r)(genFish(r)),
     opt(r)(genFish(r)),
     opt(r)(genFish(r)),
-    opt(r)(genDur(r)),
+    opt(r)(genAge(r)),
     opt(r)(genFish(r)),
     Vector.fill(r.nextInt(3))(genFish(r)),
     Vector.fill(r.nextInt(3))(genSoft(r)),
@@ -389,7 +386,7 @@ class TestWcon {
     genCustom(r)
   )
 
-  def genUnitMap(r: R): UnitMap = {
+  def genUnitMap(r: R, md: Metadata): UnitMap = {
     val dur = r.nextInt(6) match { case 0 => "ms"; case 1 => "h"; case 2 => "min"; case _ => "s" }
     val dist = r.nextInt(6) match { case 0 => "cm"; case 1 => "um"; case 2 => "inch"; case _ => "mm" }
     val namedUnits = Array("mm", "cm", "meter", "metre", "K", "C", "F", "mm^2/s", "1/hr", "1 / ms cm").map(units.parseUnit).map(_.get)
@@ -406,6 +403,10 @@ class TestWcon {
       val qs = "q" * (r.nextInt(10) + 1)
       m += (qs -> namedUnits(r.nextInt(namedUnits.length)))
     }
+    if (md.temperature.nonEmpty) m += ("temperature" -> units.parseUnit("C").get)
+    if (md.humidity.nonEmpty) m += ("humidity" -> units.parseUnit("1").get)
+    if (md.age.nonEmpty) m += ("age" -> units.parseUnit("h").get)
+    if (md.arena.nonEmpty) m += ("size" -> units.parseUnit(dist).get)
     UnitMap(m, ObjJ.empty)
   }
 
@@ -445,7 +446,10 @@ class TestWcon {
     FileSet((before.reverse.toVector :+ me) ++ after, before.length, genCustom(r))
   }
 
-  def genDataSet(r: R) = DataSet(genMetadata(r), genUnitMap(r), genDataA(r), genFiles(r), genCustom(r))
+  def genDataSet(r: R) = {
+    val m = genMetadata(r)
+    DataSet(m, genUnitMap(r, m), genDataA(r), genFiles(r), genCustom(r))
+  }
 
   @Test
   def test_OutIn() {
@@ -462,12 +466,10 @@ class TestWcon {
       }
       assertEquals("", same(ds, des) match {
         case x if x.length > 0 =>
-         println(ser)
-         println("###############################")
-         println(des.toObjJ.toJsons.mkString("\n"))
-         println(x)
-         // println(ds.data(1).fold(_.custom, _.custom).keyvals.get("@halibut").get.map(_.toJson).mkString(" :: "))
-         // println(des.data(1).fold(_.custom, _.custom).keyvals.get("@halibut").get.map(_.toJson).mkString(" :: "))  
+          println(ser)
+          println("###############################")
+          println(des.toObjJ.toJsons.mkString("\n"))
+          println(x) 
           x
         case x => x
       })      

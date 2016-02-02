@@ -135,7 +135,7 @@ case class Metadata(
   media: Option[String],
   sex: Option[String],
   stage: Option[String],
-  age: Option[java.time.Duration],
+  age: Option[Double],
   strain: Option[String],
   protocol: Vector[String],
   software: Vector[Software],
@@ -154,7 +154,7 @@ case class Metadata(
     media match { case Some(s) if s.length > 0 => m += ("media", json.StrJ(s) :: Nil); case _ => }
     sex match { case Some(s) if s.length > 0 => m += ("sex", json.StrJ(s) :: Nil); case _ => }
     stage match { case Some(s) if s.length > 0 => m += ("stage", json.StrJ(s) :: Nil); case _ => }
-    age match { case Some(t) => m += ("age", json.StrJ(Parser.durationFormat(t)) :: Nil ); case _ => }
+    age match { case Some(t) if !t.isNaN => m += ("age", json.NumJ(t) :: Nil ); case _ => }
     strain match { case Some(s) if s.length > 0 => m += ("strain", json.StrJ(s) :: Nil); case _ => }
     if (protocol.nonEmpty) 
       m += (
@@ -225,14 +225,8 @@ object Metadata extends json.Jsonic[Metadata] {
     val media = optString("media") match { case Left(msg) => return BAD(msg); case Right(x) => x }
     val sex = optString("sex") match { case Left(msg) => return BAD(msg); case Right(x) => x }
     val stage = optString("stage") match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val age = optString("age") match {
-      case Left(msg) => return BAD(msg)
-      case Right(None) => None
-      case Right(Some(str)) => Parser.Age.parse(str) match {
-        case fastparse.core.Result.Success(dur, _) => Some(dur)
-        case _ => return BAD("improper format in age")
-      }      
-    }
+    val age =
+      optionOrBad("age", { case json.Dbl(d) => Right(d); case _ => Left("non-numeric age") }) match { case Left(msg) => return BAD(msg); case Right(x) => x }
     val strain = optString("strain") match { case Left(msg) => return BAD(msg); case Right(x) => x }
     val protocol = allString("protocol") match { case Left(msg) => return BAD(msg); case Right(x) => x }
     val software = allObjOrBad("software", Software from _) match { case Left(msg) => return BAD(msg); case Right(x) => x }

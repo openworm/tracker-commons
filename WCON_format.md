@@ -280,7 +280,7 @@ An example WCON file with a complete metadata section is given below.
            "media":"NGM",
            "sex":"hermaphrodite",
            "stage":"dauer",
-           "age":"38:25:43.511",
+           "age":38.4,
            "strain":"CB4856",
            "protocol":[
                "dauer induction by method in J. Doe, 'Get Dauers', J. of Stuff, v1 p234",
@@ -293,7 +293,7 @@ An example WCON file with a complete metadata section is given below.
            },
            "settings":"Note to self: hardware/software config goes here (any valid JSON)"
      },
-    "units":{"t":"s", "x":"mm", "y":"mm", "temperature":"C", "humidity":"%", "size":"mm"},
+    "units":{"t":"s", "x":"mm", "y":"mm", "temperature":"C", "humidity":"%", "size":"mm", "age":"h"},
     "data":[
         { "id":1, "t":1.3, "x":-5.3, "y":6.4, "@suzq":[true, true, false, true] }
     ]
@@ -316,7 +316,7 @@ All entries in the metadata object are optional.  Custom tags may be included in
 | **media** | The media on which the animal is placed, as a JSON string.  The field is single-valued. |
 | **sex** | The sex of the animals, as a JSON string.  If there is a mixed population, it cannot be conveniently indicated here; instead, a custom tag should be used to specify on an animal-by-animal basis.  The field is single-valued. |
 | **stage** | The stage of the animals.  If left blank, `"adult"` is normally assumed. |
-| **age** |  The age of the animals as a string in the format "HH:mm:ss".  Fractional seconds can be included if desired.  As many digits as needed can be used for the hours.  If used in aging studies, the value should be the total age of the animals, not "days of adulthood".  If the animals underwent an extended period of larval or dauer arrest, but are now a different stage, it is preferable to explain the details as text in the `protocol` section and leave this field blank.  The field is single-valued. |
+| **age** |  The age of the animals, with time units as specified in `units`.  If used in aging studies, the value should be the total age of the animals, not "days of adulthood".  If the animals underwent an extended period of larval or dauer arrest, but are now a different stage, it is preferable to explain the details as text in the `protocol` section and leave this field blank.  The field is single-valued. |
 | **strain** | The name of the strain as a string.  It is recommended to just have the strain designation using standard nomenclature, not extended information about the genotype.  The field is single-valued. |
 | **protocol** | A text description of the protocol for the experiment.  This may be arrayed. |
 | **software** |  A JSON object that specifies relevant features of the software used to capture and/or analyze the data.  Valid subfields are _name_ (the name of the software package), _version_ (a string containing the version number), and _featureID_ (an array of strings that state which custom tags the software produces, as a convenience for those wishing to know what to expect).  This field may be arrayed; the first value is presumed to be the software that captured the data, while later entries represent subsequent post-processing steps. |

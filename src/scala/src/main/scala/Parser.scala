@@ -20,15 +20,6 @@ object Parser {
     (java.time.LocalDateTime.of(y.toInt, mo.toInt, d.toInt, h.toInt, mi.toInt, ssi, ssns), loc.getOrElse(""))
   }
 
-  def durationFormat(jtd: java.time.Duration) = "%d:%02d:%07.4f".format(jtd.getSeconds/3600, (jtd.getSeconds % 3600)/60, (jtd.getSeconds % 60) + 1e-9*jtd.getNano)
-
-  val Age = P((D rep 1).! ~ ":" ~ (D ~ D).! ~ ":" ~ (D ~ D ~ ("." ~ D.rep(1)).?).!).map{ case (h,m,s) => 
-    val ss = s.toDouble
-    val ssi = math.floor(ss).toInt
-    val ssns = math.rint((ss - ssi)*1e9).toInt
-    java.time.Duration.ZERO.withSeconds(h.toLong*3600L + m.toInt*60 + ssi).withNanos(ssns)
-  }
-
   val Units = P("\"units\"" ~ W(":") ~! Struct.Obj)
 
   val Meta = P("\"metadata\"" ~ W(":") ~! Struct.Obj)
