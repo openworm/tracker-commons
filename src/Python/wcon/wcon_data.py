@@ -277,7 +277,7 @@ def _obtain_time_series_data_frame(time_series_data):
         segment_keys = np.array([k for k in data_segment.keys()
                                  if k not in ['t', 'id']])
 
-        cur_timeframes = np.array(data_segment['t'])
+        cur_timeframes = np.array(data_segment['t']).astype(float)
 
         # Create our column names as the cartesian product of
         # the segment's keys and the id of the segment
