@@ -19,6 +19,15 @@ from wcon import WCONWorms, MeasurementUnit
 from wcon.measurement_unit import MeasurementUnitAtom
 
 
+class TestDocumentationExamples(unittest.TestCase):
+    """
+    Pull out WCON examples from all .MD files and validate them.
+    
+    """
+    def pull_doc_examples(self):
+        pass
+
+
 class TestMeasurementUnit(unittest.TestCase):
 
     def test_unit_equivalence(self):

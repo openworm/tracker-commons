@@ -26,8 +26,8 @@ if __name__ == '__main__':
 
     w2 = WCONWorms.load_from_file(JSON_path)
 
-    w2.save_to_file('fwefwef.WCON', pretty_print=True)
-    w3 = WCONWorms.load_from_file('fwefwef.WCON')
+    w2.save_to_file('example_saved_file.WCON', pretty_print=True)
+    w3 = WCONWorms.load_from_file('example_saved_file.WCON')
 
     u = MeasurementUnit.create('cm')
 
