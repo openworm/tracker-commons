@@ -290,7 +290,7 @@ def _obtain_time_series_data_frame(time_series_data):
 
         # We want to be able to fit the largest aspect size in our
         # DataFrame
-        max_aspect_size = max([k[0] for k in data_segment['aspect_size']])
+        max_aspect_size = int(max([k[0] for k in data_segment['aspect_size']]))
 
         key_combos = list(itertools.product([segment_id],
                                             cur_elements_with_aspect,
@@ -473,6 +473,20 @@ def _validate_time_series_data(time_series_data):
                     " and time index " + str(data_segment['t'][t]))
             else:
                 aspect_size_over_time.append([cur_aspect_sizes[0]])
+
+        # We need aspect_size to be float rather than int since it will
+        # be in a DataFrame that may be compared with others and so we 
+        # want to force all numeric dtypes to be float so the comparison
+        # won't fail simply because e.g. int 1 isn't equal to float 1
+        # More information about this:
+        # Pandas DataFrames are stored internally as a series of "blocks".
+        # You can see these blocks by looking at time_df._data, for instance.
+        # We want to avoid any of the columns being stored within an IntBlock,
+        # because it will then fail to be .equals() another DataFrame with the
+        # same data but stored within a FloatBlock.
+        # See http://stackoverflow.com/questions/17141828/ and
+        # http://stackoverflow.com/questions/19912611/
+        aspect_size_over_time = np.array(aspect_size_over_time, dtype=float)
 
         data_segment['aspect_size'] = aspect_size_over_time
 
