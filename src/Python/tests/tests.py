@@ -4,7 +4,6 @@
 Unit tests for the Python WCON parser
 
 """
-import six
 import os
 import sys
 from six import StringIO  # StringIO.StringIO in 2.x, io.StringIO in 3.x
@@ -13,10 +12,28 @@ import jsonschema
 import unittest
 import filecmp
 import glob
+import collections
 
 sys.path.append('..')
 from wcon import WCONWorms, MeasurementUnit
 from wcon.measurement_unit import MeasurementUnitAtom
+
+
+def flatten(list_of_lists):
+    """
+    Recursively travel through a list of lists, flattening them.
+
+    """
+    # From http://stackoverflow.com/questions/2158395
+    for element in list_of_lists:
+        # If it's iterable but not a string or bytes, then recurse, otherwise
+        # we are at a "leaf" node of our traversal
+        if(isinstance(element, collections.Iterable) and
+           not isinstance(element, (str, bytes))):
+            for sub_element in flatten(element):
+                yield sub_element
+        else:
+            yield element
 
 
 class TestDocumentationExamples(unittest.TestCase):
@@ -25,7 +42,25 @@ class TestDocumentationExamples(unittest.TestCase):
     
     """
     def pull_doc_examples(self):
-        pass
+        self.assertTrue(True)
+        cur_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                '..', '..', '..'))
+        md_paths = [glob.glob(os.path.join(x[0], '*.md'))
+                    for x in os.walk(cur_path)]
+        md_paths = [x for x in md_paths if x != []]
+        
+        # Flatten, since the lists might be nested
+        md_paths = list(flatten(md_paths))
+
+        for md_path in md_paths:
+            print("Checking for JSON code in %s " % md_path)
+            with open(md_path, 'r') as f:
+                md_string = f.read()
+                JSON_snippets = md_string.split('```JSON')[1::2]
+                
+                for i, JSON_snippet in enumerate(JSON_snippets):
+                    print("Testing JSON code snippet %i from %s" % i, md_path)
+                    WCONWorms.load(StringIO(JSON_snippet))
 
 
 class TestMeasurementUnit(unittest.TestCase):
