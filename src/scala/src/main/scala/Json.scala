@@ -319,6 +319,7 @@ object Dbl {
     if (s.length > 0 && s.charAt(s.length-1) == '0') {
       var i = s.length-1
       while (i > 0 && s.charAt(i-1) == '0') i -= 1
+      if (i > 0 && s.charAt(i-1) == '.') i -= 1
       s.substring(0, i)
     }
     else s

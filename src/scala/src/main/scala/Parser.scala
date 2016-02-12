@@ -94,6 +94,6 @@ object Parser {
       case (Some(Left(l)), _) => Left(l)
       case (_, Some(Left(l))) => Left(l)
     }
-    case _ => Left("Parsing failed--probably not a valid JSON object?")
+    case Result.Failure(t) => Left("Parsing failed--probably not a valid JSON object?\n"+t.toString)
   }
 }
