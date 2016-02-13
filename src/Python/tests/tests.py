@@ -39,7 +39,7 @@ def flatten(list_of_lists):
 class TestDocumentationExamples(unittest.TestCase):
     """
     Pull out WCON examples from all .MD files and validate them.
-    
+
     """
     def test_pull_doc_examples(self):
         cur_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
@@ -47,7 +47,7 @@ class TestDocumentationExamples(unittest.TestCase):
         md_paths = [glob.glob(os.path.join(x[0], '*.md'))
                     for x in os.walk(cur_path)]
         md_paths = [x for x in md_paths if x != []]
-        
+
         # Flatten, since the lists might be nested
         md_paths = list(flatten(md_paths))
 
@@ -57,14 +57,14 @@ class TestDocumentationExamples(unittest.TestCase):
                 md_string = f.read()
                 # Find all code examples
                 code_snippets = md_string.split('```')[1::2]
-                
+
                 # Consider only JSON code examples
                 JSON_snippets = [s[4:] for s in code_snippets
                                  if s[:4] == 'JSON']
-                
+
                 for i, JSON_snippet in enumerate(JSON_snippets):
-                    print("Testing JSON code snippet %i from %s" % 
-                          (i+1, md_path))
+                    print("Testing JSON code snippet %i from %s" %
+                          (i + 1, md_path))
 
                     JSON_snippet = JSON_snippet.replace('\n', '')
                     JSON_snippet = JSON_snippet.replace('\r', '')

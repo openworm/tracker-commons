@@ -475,7 +475,7 @@ def _validate_time_series_data(time_series_data):
                 aspect_size_over_time.append([cur_aspect_sizes[0]])
 
         # We need aspect_size to be float rather than int since it will
-        # be in a DataFrame that may be compared with others and so we 
+        # be in a DataFrame that may be compared with others and so we
         # want to force all numeric dtypes to be float so the comparison
         # won't fail simply because e.g. int 1 isn't equal to float 1
         # More information about this:
