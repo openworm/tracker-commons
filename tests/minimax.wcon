@@ -3,8 +3,8 @@
            "lab":{"location":"CRB, room 5020", "name":"Behavioural Genomics" },
            "who":"Firstname Lastname",
            "timestamp":"2012-04-23T18:25:43.511Z",
-           "temperature":{ "experiment":22, "cultivation":20, "units":"C" },
-           "humidity":{ "value":40, "units":"%" },
+           "temperature":22,
+           "humidity":40.2,
            "dish":{ "type":"petri", "size":35, "units":"mm" },
            "food":"none",
            "media":"agarose",
@@ -27,7 +27,9 @@
 		"ox":"mm",
 		"speed":"mm/s",
 		"curvature":"1/mm",
-		"width":"mm"
+		"width":"mm",
+		"humidity":"%",
+		"temperature":"C"
 	},
     "data":[
         { "id":4, "t":1.4, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] },

@@ -67,10 +67,13 @@ A WCON file with single-valued `t` and arrayed `x` and `y`:
 Any numeric quantity followed on a per-animal or per-timepoint basis must have its units defined in an object:
 
 ```JSON
+{
 "units": {
     "t": "s",
     "x": "mm",
     "y": "mm"
+},
+"data":[]
 }
 ```
 
@@ -255,7 +258,7 @@ As an example, inside
       "@XJ":{ "foo": { "e": 2 }, "yes": "I think so"},
       "settings":{"q": 4, "r": 5}
     },
-    "data": { "id":1, "t":0, "x":1, "y":2, "e":3, "@XJ": {"e": 3}, "f":{"q": 4} }
+    "data": [{ "id":1, "t":0, "x":[1], "y":[2], "@XJ": {"e": 3, "f":{"q": 4}}}]
 }
 ```
 
@@ -280,12 +283,10 @@ An example WCON file with a complete metadata section is given below.
            "media":"NGM",
            "sex":"hermaphrodite",
            "stage":"dauer",
-           "age":38.4,
+           "age":"18:25:43.511",
            "strain":"CB4856",
-           "protocol":[
-               "dauer induction by method in J. Doe, 'Get Dauers', J. of Stuff, v1 p234",
-               "worm transferred to arena 1-2 minutes before recording started"
-           ],
+           "protocol":
+               "dauer induction by method in J. Doe, 'Get Dauers', J. of Stuff, v1 p234\nworm transferred to arena 1-2 minutes before recording started",
            "software":{
                 "name":"Suzie's Worm Knower",
                 "version":"1.1.3",
@@ -295,7 +296,7 @@ An example WCON file with a complete metadata section is given below.
      },
     "units":{"t":"s", "x":"mm", "y":"mm", "temperature":"C", "humidity":"%", "size":"mm", "age":"h"},
     "data":[
-        { "id":1, "t":1.3, "x":-5.3, "y":6.4, "@suzq":[true, true, false, true] }
+        { "id":1, "t":1.3, "x":[-5.3], "y":[6.4], "@suzq":[true, true, false, true] }
     ]
 }
 ```
@@ -355,8 +356,7 @@ Here is an example WCON file using origin and centroid points:
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[
  	      { "id":1, "t":1.3, "x":[7.2, 8.1], "y":[0.5, 0.3],
-          "ox":32.4, "oy":9.2, "cx":7.676, "cy": 0.384
-        }
+          "ox":32.4, "oy":9.2, "@SmithLab": {"cx":7.676, "cy": 0.384}}
     ]
 }
 ```
@@ -379,7 +379,7 @@ In this example, we imagine a directory containing files labelled `filename_0.wc
     "files":{
          "this":"_2",
          "prev":["_1", "_0"],
-         "next":"_3"
+         "next":["_3"]
      },
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[

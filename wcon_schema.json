@@ -41,23 +41,13 @@
 			"description": "Information about experimental conditions and software versions; critical for reproducibility across labs.",
 			"properties": {
 				"lab": {"type": "object"},
-				"who": {"type": "string"},
+				"who": {"oneOf": [
+					{"type": "string"}, 
+					{"type": "array", "items": {"type":"string"}}
+				]},
 				"timestamp": {"type": "string", "format":"date-time"},
-				"temperature": {
-					"type": "object",
-					"properties":{
-						"experiment": {"type": "number"},
-						"cultivation": {"type": "number"},
-						"units": {"type": "string"}
-					}
-				},
-				"humidity": {
-					"type": "object",
-					"properties":{
-						"value": {"type": "number"},
-						"units": {"type": "string"}
-					}
-				},
+				"temperature": {"type": "number"},
+				"humidity": {"type": "number"},
 				"dish": {
 					"type": "object",
 					"properties":{
@@ -93,7 +83,7 @@
 						}
 					}
 				},
-				"settings": {"type": "string"}
+				"settings": {}
 			},
 			"additionalProperties": true
 		},

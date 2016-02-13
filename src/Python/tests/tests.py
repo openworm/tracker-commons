@@ -42,7 +42,6 @@ class TestDocumentationExamples(unittest.TestCase):
     
     """
     def test_pull_doc_examples(self):
-        self.assertTrue(True)
         cur_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', '..'))
         md_paths = [glob.glob(os.path.join(x[0], '*.md'))
@@ -56,15 +55,24 @@ class TestDocumentationExamples(unittest.TestCase):
             print("Checking for JSON code in %s " % md_path)
             with open(md_path, 'r') as f:
                 md_string = f.read()
-                JSON_snippets = md_string.split('```JSON')[1::2]
+                # Find all code examples
+                code_snippets = md_string.split('```')[1::2]
+                
+                # Consider only JSON code examples
+                JSON_snippets = [s[4:] for s in code_snippets
+                                 if s[:4] == 'JSON']
                 
                 for i, JSON_snippet in enumerate(JSON_snippets):
                     print("Testing JSON code snippet %i from %s" % 
-                          (i, md_path))
+                          (i+1, md_path))
+
+                    JSON_snippet = JSON_snippet.replace('\n', '')
+                    JSON_snippet = JSON_snippet.replace('\r', '')
+
                     WCONWorms.load(StringIO(JSON_snippet))
 
 
-class TestMeasurementUnit(): #unittest.TestCase):
+class TestMeasurementUnit(unittest.TestCase):
 
     def test_unit_equivalence(self):
         MU = MeasurementUnit
@@ -118,7 +126,7 @@ class TestMeasurementUnit(): #unittest.TestCase):
         self.assertTrue(MU.create('1/min').to_canon(60) == 1)
 
 
-class TestWCONParser(): #unittest.TestCase):
+class TestWCONParser(unittest.TestCase):
 
     def _validate_from_schema(self, wcon_string):
         try:
@@ -426,9 +434,8 @@ class TestWCONParser(): #unittest.TestCase):
                               "name":"Behavioural Genomics" },
                        "who":"Firstname Lastname",
                        "timestamp":"2012-04-23T18:25:43.511Z",
-                       "temperature":{ "experiment":22,
-                                       "cultivation":20, "units":"C" },
-                       "humidity":{ "value":40, "units":"%" },
+                       "temperature":23.8,
+                       "humidity":40.3,
                        "dish":{ "type":"petri", "size":35, "units":"mm" },
                        "food":"none",
                        "media":"agarose",
@@ -446,7 +453,8 @@ class TestWCONParser(): #unittest.TestCase):
                        "settings":
     "Any valid string with hardware and software configuration details"
                 },
-                "units":{"t":"s", "x":"mm", "y":"mm"},
+                "units":{"t":"s", "x":"mm", "y":"mm", "humidity":"%",
+                         "temperature":"C"},
                 "data":[
                     { "id":1, "t":1.3, "x":[7.2, 5], "y":[0.5, 0.86] }
                 ]
