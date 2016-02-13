@@ -60,7 +60,7 @@
 				"media": {"type": "string"},
 				"sex": {"type": "string", "enum": ["hermaphrodite", "male"]},
 				"stage": {"type": "string", "enum": ["L1", "L2", "L3", "L4", "adult", "dauer"]},
-				"age": {"type": "string"},
+				"age": {"type": "number"},
 				"strain": {"type": "string"},
 				"image_orientation": {"type": "string", "enum": ["imaged onto agar", "imaged through agar"]},
 				"protocol": {"type": "string"},

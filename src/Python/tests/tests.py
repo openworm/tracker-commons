@@ -441,7 +441,7 @@ class TestWCONParser(unittest.TestCase):
                        "media":"agarose",
                        "sex":"hermaphrodite",
                        "stage":"adult",
-                       "age":"18:25:43.511",
+                       "age":18.511,
                        "strain":"CB4856",
                        "image_orientation":"imaged onto agar",
                        "protocol":"text description of protocol",
@@ -454,7 +454,7 @@ class TestWCONParser(unittest.TestCase):
     "Any valid string with hardware and software configuration details"
                 },
                 "units":{"t":"s", "x":"mm", "y":"mm", "humidity":"%",
-                         "temperature":"C"},
+                         "temperature":"C", "age":"h"},
                 "data":[
                     { "id":1, "t":1.3, "x":[7.2, 5], "y":[0.5, 0.86] }
                 ]

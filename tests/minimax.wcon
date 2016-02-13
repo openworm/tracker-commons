@@ -10,7 +10,7 @@
            "media":"agarose",
            "sex":"hermaphrodite",
            "stage":"adult",
-           "age":"18:25:43.511",
+           "age":18.511,
            "strain":"CB4856",
            "image_orientation":"imaged onto agar",
            "protocol":"text description of protocol",
@@ -29,7 +29,8 @@
 		"curvature":"1/mm",
 		"width":"mm",
 		"humidity":"%",
-		"temperature":"C"
+		"temperature":"C",
+        "age":"h"
 	},
     "data":[
         { "id":4, "t":1.4, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] },

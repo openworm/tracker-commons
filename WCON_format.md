@@ -283,7 +283,7 @@ An example WCON file with a complete metadata section is given below.
            "media":"NGM",
            "sex":"hermaphrodite",
            "stage":"dauer",
-           "age":"18:25:43.511",
+           "age":18.511,
            "strain":"CB4856",
            "protocol":
                "dauer induction by method in J. Doe, 'Get Dauers', J. of Stuff, v1 p234\nworm transferred to arena 1-2 minutes before recording started",
