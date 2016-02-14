@@ -49,7 +49,7 @@ w2.save_to_file('file2.wcon')
 import filecmp
 assert(filecmp.cmp('file1.wcon', file2.wcon'))
 
-w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
+w3 = w1 + w2  # Merge the two.  An exception is raised if the data clashes
 ```
 
 
@@ -64,7 +64,7 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
     data types.
 - `data`: Pandas DataFrame or None
     - If 'data' was not specified, data is None.
-- [Note: `files`, if present in the input, is not persisted unless the .load
+- [Note: `files`, if present in the input, is not persisted unless the `.load`
        factory method is used.]
 
 ### `WCONWorms` class: Public-Facing Methods
@@ -75,7 +75,7 @@ w3 = w1 + w2  # merge the two.  An exception is raised if the data clashes
 - `__add__`                                     [use `+`]
 - `__eq__`                                      [use `==`]
 
-### Custom WCON features
+### Custom WCON objects
 
 Any top-level key other than the basic:
 
@@ -84,7 +84,7 @@ Any top-level key other than the basic:
 - metadata
 - data
 
-... is ignored.  Handling them requires subclassing WCONWorms.
+... is rejected unless it begins with `"@"`; if it does, it is ignored.  Handling these `"@"`-prefaced custom objects requires subclassing `WCONWorms`.
 
 
 ### WCON parser: proof of concept
