@@ -125,8 +125,8 @@ Here, instead of being a nested dictionary, `w` is a `WCONWorms` object that is 
 - WCONWorms objects can have their data be converted into canonical units, and then saved again.
 - WCONWorms objects can be loaded from multiple files and combined together, via the `"files"` object.
 - Worm data recorded in multiple "tracks", or elements, in the `"data"` object, can have such tracks merged.
-- Worm data can be extracted in a Pandas DataFrame format for easier downstream processing, since the dimensions of the data have been placed into one two-dimensional array, rather than in a nested arrays.
-- WCONWorms can be subclassed by labs implementing "special features", i.e. top-level objects starting with "@" or objects within individual data array objects starting with "@".
+- Worm data can be extracted in a Pandas DataFrame format for easier downstream processing, since the dimensions of the data have been placed into one two-dimensional array, rather than in a nested array.
+- WCONWorms can be subclassed by labs implementing "special features", in two places: ("type 1") top-level objects starting with `"@"` or ("type 2") objects within individual `"data"` array items starting with `"@"`.
 
 
 ### MeasurementUnit
