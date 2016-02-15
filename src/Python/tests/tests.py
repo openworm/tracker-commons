@@ -37,11 +37,11 @@ def flatten(list_of_lists):
 
 
 class TestDocumentationExamples(unittest.TestCase):
-    """
-    Pull out WCON examples from all .MD files and validate them.
-
-    """
     def test_pull_doc_examples(self):
+        """
+        Pull out WCON examples from all .MD files and validate them.
+    
+        """
         cur_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', '..'))
         md_paths = [glob.glob(os.path.join(x[0], '*.md'))
