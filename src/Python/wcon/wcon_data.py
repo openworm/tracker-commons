@@ -17,7 +17,7 @@ idx = pd.IndexSlice
 # 49 aspects per frame, but ox is only recorded once per frame, or
 # even once across the whole video.
 elements_with_aspect = ['x', 'y']
-elements_without_aspect = ['ox', 'oy', 'head', 'ventral']
+elements_without_aspect = ['ox', 'oy', 'cx', 'cy', 'head', 'ventral']
 basic_data_keys = elements_with_aspect + elements_without_aspect
 supported_data_keys = basic_data_keys + ['id', 't']
 
@@ -113,40 +113,61 @@ def df_upsert(src, dest):
     return dest
 
 
-def convert_origin(df, offset_keys=['ox', 'oy'], coord_keys=['x', 'y']):
+def convert_origin(df):
     """
-    Add the offset values 'ox' and 'oy' to the 'x' and 'y'
-    coordinates in the dataframe
+    Offset the coordinates and centroid by the offsets if available.
+    Otherwise offset the coordinates by the centroid if available.
+    
+    In pseudocode:
+        
+    For each worm and time frame:
+        If 'ox' is not NaN:
+            Add 'ox' to 'x' and 'cx'
+        Else:
+            If 'cx' is not NaN:
+                Add 'cx' to 'x'
+                Set 'cx' to 0
+    
+        (Also do the same for y)
 
-    Offset values that are NaN are considered to be zero.
-
-    After this is done, set all offset values to zero.
+    After this is done, drop the offset columns 'ox', and 'oy'
+    entirely from the dataframe.
 
     Parameters
     ------------
     df: Pandas DataFrame
-    offset_keys: list of strings
-        The offsets
-    coord_keys: list of strings
-        The corresponding coordinates to be offset
 
     Returns
     ------------
     None.  Modifies `df` in place.
 
     """
+    offset_keys=['ox', 'oy']
+    coord_keys=['x', 'y']
+    centroid_keys=['cx', 'cy']
+    
     for worm_id in df.columns.get_level_values(0).unique():
         cur_worm = df.loc[:, (worm_id)]
 
-        for offset, coord in zip(offset_keys, coord_keys):
+        for offset, coord, centroid in zip(offset_keys, coord_keys, centroid_keys):
             if offset in cur_worm.columns.get_level_values(0):
                 all_x_columns = cur_worm.loc[:, (coord)]
                 ox_column = cur_worm.loc[:, (offset)].fillna(0)
-                affine_change = (np.array(ox_column) *
+                cx_column = cur_worm.loc[:, (centroid)].fillna(0)
+                
+                offset_column = ox_column ## DEBUG: change to a masked version 
+                # that uses ox_column if available but otherwise uses the 
+                # cx_column
+                
+                
+                affine_change = (np.array(offset_column) *
                                  np.ones(all_x_columns.shape))
                 # Shift our 'x' values by the amount in 'ox'
                 all_x_columns += affine_change
                 df.loc[:, (worm_id, coord)] = all_x_columns.values
+
+                # DEBUG: also offset the centroid for time frames where ox is 
+                # not null
 
                 # Now reset our 'ox' values to zero.
                 df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape)

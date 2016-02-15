@@ -93,6 +93,8 @@
                     "t": { "$ref": "#/definitions/element_without_aspect" },
                     "ox": { "$ref": "#/definitions/element_without_aspect" },
                     "oy": { "$ref": "#/definitions/element_without_aspect" },
+                    "cx": { "$ref": "#/definitions/element_without_aspect" },
+                    "cy": { "$ref": "#/definitions/element_without_aspect" },
                     "x": { "$ref": "#/definitions/element_with_aspect" },
                     "y": { "$ref": "#/definitions/element_with_aspect" },
                     "head": {

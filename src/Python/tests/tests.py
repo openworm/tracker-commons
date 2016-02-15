@@ -40,7 +40,7 @@ class TestDocumentationExamples(unittest.TestCase):
     def test_pull_doc_examples(self):
         """
         Pull out WCON examples from all .MD files and validate them.
-    
+
         """
         cur_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                 '..', '..', '..'))
@@ -343,6 +343,35 @@ class TestWCONParser(unittest.TestCase):
                 '{"units":{"t":"s","x":"mm","y":"mm"},'
                 '"data":[{"id":1, "t":[1.3,1.4], '
                 '"x":[[5003],[5004]], "y":[[5.4],[3]]}]}'))
+        self.assertEqual(w1, w2)
+
+    def test_centroid(self):
+        # units missing for centroid
+        with self.assertRaises(AssertionError):
+            WCONWorms.load(
+                StringIO(
+                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
+                    '"data":[{"id":1, "t":[1.3,1.4], "ox":5000,'
+                    '         "cx":10, "cy":10, "x":[[3],[4]], '
+                    '         "y":[[5.4],[3]]}]}'))
+
+
+        # ox, with two time points, with centroid
+        w1 = WCONWorms.load(
+            StringIO(
+                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
+                          '"cx":"mm","cy":"mm"},'
+                '"data":[{"id":1, "t":[1.3,1.4], "oy":5000, "cx":10, '
+                         '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
+        w2 = WCONWorms.load(
+            StringIO(
+                '{"units":{"t":"s","x":"mm","y":"mm",'
+                          '"cx":"mm","cy":"mm"},'
+                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
+                         '"x":[[5003],[5004]], "y":[[5.4],[3]]}]}'))
+        import pdb
+        pdb.set_trace()
+
         self.assertEqual(w1, w2)
 
     def test_merge(self):
