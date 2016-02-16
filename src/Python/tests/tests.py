@@ -38,16 +38,6 @@ def flatten(list_of_lists):
 
 class TestDocumentationExamples(unittest.TestCase):
     def test_centroid(self):
-        # units missing for centroid
-        with self.assertRaises(AssertionError):
-            WCONWorms.load(
-                StringIO(
-                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
-                    '"data":[{"id":1, "t":[1.3,1.4], "ox":5000,'
-                    '         "cx":10, "cy":10, "x":[[3],[4]], '
-                    '         "y":[[5.4],[3]]}]}'))
-
-
         # ox, with two time frames, with centroid
         w1 = WCONWorms.load(
             StringIO(
@@ -111,6 +101,15 @@ class TestDocumentationExamples(unittest.TestCase):
                          '"x":[[3],[4]], "y":[[5005.4],[1003]]}]}'))
 
         self.assertEqual(w1, w2)
+
+        # units missing for centroid
+        with self.assertRaises(AssertionError):
+            WCONWorms.load(
+                StringIO(
+                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
+                    '"data":[{"id":1, "t":[1.3,1.4], "ox":5000,'
+                    '         "cx":10, "cy":10, "x":[[3],[4]], '
+                    '         "y":[[5.4],[3]]}]}'))
 
     def test_pull_doc_examples(self):
         """
@@ -421,15 +420,6 @@ class TestWCONParser(unittest.TestCase):
         self.assertEqual(w1, w2)
 
     def test_centroid(self):
-        # units missing for centroid
-        with self.assertRaises(AssertionError):
-            WCONWorms.load(
-                StringIO(
-                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
-                    '"data":[{"id":1, "t":[1.3,1.4], "ox":5000,'
-                    '         "cx":10, "cy":10, "x":[[3],[4]], '
-                    '         "y":[[5.4],[3]]}]}'))
-
         # ox, with two time frames, with centroid
         w1 = WCONWorms.load(
             StringIO(
@@ -443,8 +433,6 @@ class TestWCONParser(unittest.TestCase):
                           '"cx":"mm","cy":"mm"},'
                 '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
                          '"x":[[3],[4]], "y":[[5005.4],[5003]]}]}'))
-        #import pdb
-        #pdb.set_trace()
 
         self.assertEqual(w1, w2)
 
@@ -479,6 +467,16 @@ class TestWCONParser(unittest.TestCase):
                          '"x":[[3],[4]], "y":[[5005.4],[1003]]}]}'))
 
         self.assertEqual(w1, w2)
+
+        # units missing for centroid
+        with self.assertRaises(AssertionError):
+            WCONWorms.load(
+                StringIO(
+                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
+                    '"data":[{"id":1, "t":[1.3,1.4], "ox":5000,'
+                    '         "cx":10, "cy":10, "x":[[3],[4]], '
+                    '         "y":[[5.4],[3]]}]}'))
+
 
     def test_merge(self):
         JSON_path = '../../../tests/minimax.wcon'

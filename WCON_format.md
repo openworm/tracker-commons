@@ -258,7 +258,7 @@ As an example, inside
         "@XJ":{ "foo": { "e": 2 }, "yes": "I think so"},
         "settings":{"q": 4, "r": 5}
     },
-    "data": [{ "id":1, "t":0, "x":[1], "y":[2], "@XJ": {"e": 3, "f":{"q": 4}}}]
+    "data": [{ "id":1, "t":0, "x":1, "y":2, "@XJ": {"e": 3, "f":{"q": 4}}}]
 }
 ```
 
@@ -298,7 +298,7 @@ An example WCON file with a complete metadata section is given below.
     },
     "units":{"t":"s", "x":"mm", "y":"mm", "temperature":"C", "humidity":"%", "size":"mm", "age":"h"},
     "data":[
-        { "id":1, "t":1.3, "x":[-5.3], "y":[6.4], "@suzq":[true, true, false, true] }
+        { "id":1, "t":1.3, "x":-5.3, "y":6.4, "@suzq":[true, true, false, true] }
     ]
 }
 ```

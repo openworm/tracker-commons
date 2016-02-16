@@ -409,7 +409,7 @@ def _obtain_time_series_data_frame(time_series_data):
 
 def _validate_time_series_data(time_series_data):
     """
-    Clean up and validate all time-series data segments in the
+    Validate and standardise all time-series data segments in the
     data dictionary provided
 
     Parameters
@@ -434,53 +434,104 @@ def _validate_time_series_data(time_series_data):
 
         segment_keys = [k for k in data_segment.keys() if k != 'id']
 
-        # If the 't' element is single-valued, wrap it and all other
-        # elements into an array so single-valued elements
-        # don't need special treatment in our later processing steps
-        if not isinstance(data_segment['t'], list):
-            for subkey in segment_keys:
-                data_segment[subkey] = [data_segment[subkey]]
+        """
+        We require elements to be wrapped in arrays.  They may come in
+        various singleton formats, so we must convert.  The final state
+        must be:
 
-        # Further, we have to wrap the elements without an aspect
-        # in a further list so that when we convert to a dataframe,
-        # our staging data list comprehension will be able to see
-        # everything as a list and not as single-valued
-        for subkey in elements_without_aspect:
-            if subkey in data_segment:
+        "t": [1.5], "x": [[6, 7, 8]], "ox": [[8.2]]
+        
+        or for multiple timeframes:
+
+        "t": [1.5, 1.6], "x": [[6, 7, 8], [6.2, 7.2, 8.2]],
+        "ox": [[8.2], [8.2]]
+
+        The data might arrive in the following formats:
+        
+                                   elements with aspect
+                            singleton      array               array of arrays
+
+        TIME singleton  "t":1.5, "x":6  "x":1.5, "x": [6,7,8]    NOT ALLOWED
+        
+        TIME array        NOT ALLOWED   "t":[1.5, 1.8]         "t":[1.5, 1.8]
+                                        "x":[6.3, 6.2]         "x":[[6,7,8],
+                                                                    [8,9,10]]
+
+                                   elements without aspect
+                            singleton      array               array of arrays
+        TIME singleton  "t":1.5, "ox":6  "x":1.5, "ox": [8]    NOT ALLOWED
+
+        TIME array      "t":[1.5,1.8]    "t":[1.5, 1.8]        NOT ALLOWED
+                        "ox":8           "ox":[8, 8.2]         
+
+        So in all but one of these cases, we must wrap the data in more
+        brackets.
+
+        """
+        # HANDLE TIME ('t')
+        time_is_singleton = not isinstance(data_segment['t'], list)
+        if time_is_singleton:
+            data_segment['t'] = [data_segment['t']]
+        num_timeframes = len(data_segment['t'])
+
+        # HANDLE ALL OTHER KEYS (besides 'id' and 't')
+        for subkey in elements_with_aspect + elements_without_aspect:
+            if subkey in segment_keys:
                 if not isinstance(data_segment[subkey], list):
-                    data_segment[subkey] = [[data_segment[subkey]]]
+                    # SINGLETON CASE
+                    if time_is_singleton:
+                        data_segment[subkey] = [[data_segment[subkey]]]
+                    else:
+                        if subkey in elements_without_aspect:
+                            # Broadcast aspectless elements to be
+                            # length n = subelement_length if it's
+                            # just being shown once right now  
+                            # (e.g. for 'ox', 'oy', etc.)
+                            data_segment[subkey] = [[x] for x in
+                                [data_segment[subkey]] * num_timeframes]
+                        else:
+                            raise Exception("Error with element '%s' in data "
+                                            "segment %s: time is array but "
+                                            "element is singleton." % (subkey, 
+                                            str(data_segment)))
+                elif not isinstance(data_segment[subkey][0], list):
+                    # ARRAY CASE
+                    if time_is_singleton:
+                        data_segment[subkey] = [data_segment[subkey]]
+                    else:
+                        data_segment[subkey] = [[x] for x in
+                                                data_segment[subkey]]
                 else:
-                    if not isinstance(data_segment[subkey][0], list):
-                        data_segment[subkey] = [[x]
-                                                for x in data_segment[subkey]]
+                    # ARRAY OF ARRAYS CASE
+                    if time_is_singleton:
+                        raise Exception("Error with element '%s' in data "
+                                        "segment %s: time is singleton but "
+                                        "element is an array of arrays." % 
+                                        (subkey, str(data_segment)))
+                    else:
+                        if subkey in elements_without_aspect:
+                            # We could allow this case but it makes no sense
+                            # for the file to have aspectless data 
+                            # double-wrapped so let's reject it.
+                            raise Exception("Error with element '%s' in data "
+                                            "segment %s: element is "
+                                            "aspectless but "
+                                            "element is an array of arrays." % 
+                                            (subkey, str(data_segment)))
+                        else:
+                            # This is the one case where all is good.
+                            pass
 
-        subelement_length = len(data_segment['t'])
 
-        # Broadcast aspectless elements to be
-        # length n = subelement_length if it's
-        # just being shown once right now  (e.g. for 'ox', 'oy', etc.)
-        for k in elements_without_aspect:
-            if k in segment_keys:
-                k_length = len(data_segment[k])
-                if k_length not in [1, subelement_length]:
-                    raise AssertionError(k + " for each segment "
-                                         "must either have length 1 or "
-                                         "length equal to the number of "
-                                         "time elements.")
-                elif k_length == 1:
-                    # Broadcast the origin across all time points
-                    # in this segment
-                    data_segment[k] = data_segment[k] * subelement_length
+        # Validate that all elements have the same number of timeframes
+        element_timeframes = [len(data_segment[subkey])
+                              for subkey in segment_keys]
 
-        # Validate that all sub-elements have the same length
-        subelement_lengths = [len(data_segment[key])
-                              for key in segment_keys]
-
-        # Now we can assure ourselves that subelement_length is
+        # Now we can assure ourselves that num_timeframes is
         # well-defined; if not, raise an error.
-        if len(set(subelement_lengths)) > 1:
-            raise AssertionError("Error: Subelements must all have "
-                                 "the same length.")
+        if len(set(element_timeframes)) > 1:
+            raise AssertionError("Error: Elements must have all have "
+                                 "the same number of timeframes.")
 
         # In each time, the aspect size could change, so we need to keep
         # track of it since the dataframe will ultimately have columns
@@ -490,7 +541,7 @@ def _validate_time_series_data(time_series_data):
         # First let's validate that the aspect size is identical
         # across data elements in each time frame:
         aspect_size_over_time = []
-        for t in range(subelement_length):
+        for t in range(num_timeframes):
             # The x and y arrays for element i of the data segment
             # must have the same length
             try:
