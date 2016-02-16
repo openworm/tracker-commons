@@ -142,6 +142,9 @@ def convert_origin(df):
     offset_keys=['ox', 'oy']
     centroid_keys=['cx', 'cy']
     coord_keys=['x', 'y']
+
+    #import pdb
+    #pdb.set_trace()
     
     for worm_id in df.columns.get_level_values(0).unique():
         cur_worm = df.loc[:, (worm_id)]
@@ -149,44 +152,35 @@ def convert_origin(df):
         for offset, centroid, coord in zip(offset_keys, 
                                            centroid_keys, coord_keys):
 
-            if not offset in cur_worm.columns.get_level_values(0):
-                # Add offset column full of NaNs if none exists,
-                # to simplify the later logic.
-                df[worm_id, offset, 0] = np.full(len(df.index), np.nan)
-                cur_worm = df.loc[:, (worm_id)]
-
-            if not centroid in cur_worm.columns.get_level_values(0):
-                # Add centroid column full of NaNs if none exists,
-                # to simplify the later logic.
-                df[worm_id, centroid, 0] = np.full(len(df.index), np.nan)
-                cur_worm = df.loc[:, (worm_id)]
-
             # Note: This code block uses `x` as the stylized example for 
             # variable naming purposes, but be assured that the enclosing 
             # `for` loop loops through both `x` and `y`.
-            all_x_columns = cur_worm.loc[:, (coord)]
-            cx_column = cur_worm.loc[:, (centroid)]
 
-            ox_column = cur_worm.loc[:, (offset)].fillna(0)
-
-            ox_affine_change = (np.array(ox_column) *
-                               np.ones(all_x_columns.shape))
-
-            # Shift our 'x' values by offset
-            all_x_columns += ox_affine_change
-            # Shift the centroid by the offset
-            cx_column += ox_column
-
-            # Now assign these values back to the passed dataframe df
-            df.loc[:, (worm_id, coord)] = all_x_columns.values
-            df.loc[:, (worm_id, centroid)] = cx_column.values
-
-            # Now reset our 'ox' values to zero.
             if offset in cur_worm.columns.get_level_values(0):
-                df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape)
+                # Consider offset is 0 if not available in a certain frame
+                ox_column = cur_worm.loc[:, (offset)].fillna(0)
+    
+                # Shift our 'x' values by offset
+                all_x_columns = cur_worm.loc[:, (coord)]
+                ox_affine_change = (np.array(ox_column) *
+                                   np.ones(all_x_columns.shape))
+                all_x_columns += ox_affine_change
+                # Now assign these values back to the passed dataframe df
+                df.loc[:, (worm_id, coord)] = all_x_columns.values
 
-    # For simplicity let's actually just drop the offset columns entirely
-    # from the dataframe.  This is so DataFrames with and without offsets
+                if centroid in cur_worm.columns.get_level_values(0):
+                    cx_column = cur_worm.loc[:, (centroid)]
+                    # Shift the centroid by the offset
+                    cx_column += ox_column
+                    # Now assign these values back to the passed dataframe df
+                    df.loc[:, (worm_id, centroid)] = cx_column.values
+    
+                # Now reset our 'ox' values to zero.
+                if offset in cur_worm.columns.get_level_values(0):
+                    df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape)
+
+    # Drop the offset columns entirely from the dataframe.
+    # This is so DataFrames with and without offsets
     # will show as comparing identically.
     for offset_key in offset_keys:
         df.drop(offset_key, axis=1, level='key', inplace=True)
