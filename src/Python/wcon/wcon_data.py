@@ -5,6 +5,7 @@ A module of methods to create the pandas DataFrame representing the "data"
 array.
 
 """
+import six
 import warnings
 import numpy as np
 import pandas as pd
@@ -420,7 +421,17 @@ def _validate_time_series_data(time_series_data):
         must have 't' entries
 
     """
+    canonical_elements = ['id', 't', 'x', 'y', 'cx', 'cy', 'ox', 'oy',
+                          'head', 'ventral', 'aspect_size']
     for (data_segment_index, data_segment) in enumerate(time_series_data):
+        # Filter the data_segment to ignore non-canonical elements
+        if six.PY3:
+            data_segment = {k:v for (k,v) in data_segment.items()
+                            if k in canonical_elements}
+        else:
+            data_segment = {k:v for (k,v) in data_segment.iteritems()
+                            if k in canonical_elements}
+
         segment_keys = [k for k in data_segment.keys() if k != 'id']
 
         # If the 't' element is single-valued, wrap it and all other
@@ -514,6 +525,9 @@ def _validate_time_series_data(time_series_data):
         aspect_size_over_time = np.array(aspect_size_over_time, dtype=float)
 
         data_segment['aspect_size'] = aspect_size_over_time
+        
+        # Update the data segment
+        time_series_data[data_segment_index] = data_segment
 
 
 """

@@ -575,6 +575,15 @@ class WCONWorms():
 
         if 'files' in root:
             w.files = root['files']
+
+            # Handle the case of a single 'next' or 'prev' entry, by
+            # wrapping it in an array, so we can reliably assume that
+            # entries are always wrapped in arrays.
+            for direction in ['next', 'prev']:
+                if hasattr(w.files, direction):
+                    if type(getattr(w.files, direction)) == str:
+                        setattr(w.files, direction, 
+                                [getattr(w.files, direction)])
         else:
             w.files = None
 

@@ -430,7 +430,6 @@ class TestWCONParser(unittest.TestCase):
                     '         "cx":10, "cy":10, "x":[[3],[4]], '
                     '         "y":[[5.4],[3]]}]}'))
 
-
         # ox, with two time frames, with centroid
         w1 = WCONWorms.load(
             StringIO(
@@ -520,6 +519,27 @@ class TestWCONParser(unittest.TestCase):
             """
         self._validate_from_schema(WCON_string)
         WCONWorms.load(StringIO(WCON_string))
+
+        # Test that extra features are ignored
+        WCON_string1 = \
+            """
+            {
+                "units":{"t":"s", "x":"mm", "y":"mm"},
+                "data":[{ "id":2, "t":1.4, "x":[125.11, 126.14, 117.12],
+                          "y":[23.3, 22.23, 21135.08] },
+                        { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12],
+                          "y":[234.89, 265.23, 235.08] },
+                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12],
+                          "y":[234.89, 265.23, 235.08], "ignorethat":"yes" },
+                        { "id":1, "t":[1.3,1.5], "ignorethis": 12,
+                          "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
+                          "y":[[2,2,2],[234.89, 265.23, 235.08]] }
+                ]
+            }
+            """
+        self._validate_from_schema(WCON_string1)
+        w = WCONWorms.load(StringIO(WCON_string1))
+        # TODO: test that "ignorethis" and "ignorethat" are not present in w
 
         # order permuted from previous example
         WCON_string2 = \

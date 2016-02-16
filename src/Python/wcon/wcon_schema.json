@@ -4,7 +4,7 @@
     "description": "A text-based data interchange format for *C. elegans* trackers. It is a constrained subset of JSON. It is designed to be both human and machine readable and to facilitate data exchange and inter-operability for worm tracking data that is independent of platform and the language used for implementation.",
     "type": "object",
     "required": ["units", "data"],
-    "additionalProperties": false,
+    "additionalProperties": true,
     "patternProperties" : {
         "^@.*": {
         "title": "Custom Feature Type 1",
@@ -17,8 +17,16 @@
             "description": "For very long tracking experiments, it may be convenient to split a single experiment across multiple WCON files. To make it easier to reconstruct tracks across files, we support a 'files' object.",
             "properties": {
                 "this": {"type":"string", "minLength":1},
-                "prev": {"oneOf": [{"type": "null"}, {"type": "array", "minItems":1, "items": {"type":"string", "minLength":1}}]},
-                "next": {"oneOf": [{"type": "null"}, {"type": "array", "minItems":1, "items": {"type":"string", "minLength":1}}]}
+                "prev": {"oneOf": [
+                    {"type": "null"},
+                    {"type":"string"},
+                    {"type": "array", "minItems":1, "items": {"type":"string", "minLength":1}}
+                ]},
+                "next": {"oneOf": [
+                    {"type": "null"},
+                    {"type":"string"},
+                    {"type": "array", "minItems":1, "items": {"type":"string", "minLength":1}}
+                ]}
             },
             "additionalProperties": false,
             "required": ["this", "prev", "next"]
@@ -84,42 +92,44 @@
             },
             "additionalProperties": true
         },
-        "data": {
-            "type": "array",
-            "items": {
-                "type":"object",
-                "properties": {
-                    "id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
-                    "t": { "$ref": "#/definitions/element_without_aspect" },
-                    "ox": { "$ref": "#/definitions/element_without_aspect" },
-                    "oy": { "$ref": "#/definitions/element_without_aspect" },
-                    "cx": { "$ref": "#/definitions/element_without_aspect" },
-                    "cy": { "$ref": "#/definitions/element_without_aspect" },
-                    "x": { "$ref": "#/definitions/element_with_aspect" },
-                    "y": { "$ref": "#/definitions/element_with_aspect" },
-                    "head": {
-                        "oneOf": [
-                            {"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]},
-                            {"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]}}
-                        ]
+        "data": {"oneOf":[
+            {
+                "type": "array",
+                "items": {
+                    "type":"object",
+                    "properties": {
+                        "id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
+                        "t": { "$ref": "#/definitions/element_without_aspect" },
+                        "ox": { "$ref": "#/definitions/element_without_aspect" },
+                        "oy": { "$ref": "#/definitions/element_without_aspect" },
+                        "cx": { "$ref": "#/definitions/element_without_aspect" },
+                        "cy": { "$ref": "#/definitions/element_without_aspect" },
+                        "x": { "$ref": "#/definitions/element_with_aspect" },
+                        "y": { "$ref": "#/definitions/element_with_aspect" },
+                        "head": {
+                            "oneOf": [
+                                {"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]},
+                                {"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]}}
+                            ]
+                        },
+                        "ventral": {
+                            "oneOf": [
+                                {"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]},
+                                {"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]}}
+                            ]
+                        }
                     },
-                    "ventral": {
-                        "oneOf": [
-                            {"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]},
-                            {"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]}}
-                        ]
-                    }
-                },
-                "patternProperties" : {
-                    "^@.*": {
-                        "title": "Custom Feature Type 2",
-                        "description": "Data Array Time Series Custom Feature"
-                    }
-                },
-                "additionalProperties": false,
-                "required": ["id", "t", "x", "y"]
+                    "patternProperties" : {
+                        "^@.*": {
+                            "title": "Custom Feature Type 2",
+                            "description": "Data Array Time Series Custom Feature"
+                        }
+                    },
+                    "additionalProperties": true,
+                    "required": ["id", "t", "x", "y"]
+                }
             }
-        }
+        ]}
     },
     "definitions": {
         "nullable_number": {"oneOf":[{"type":"number"}, {"type":"null"}]},
