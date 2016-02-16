@@ -53,10 +53,10 @@ JSON is a fairly minimal format that lets you deliver sets of labeled data.  The
 ```JSON
 {
   "metadata": {
-    "lab":{"location":"Janelia Research Campus", "name":"Kerr Lab" },
-    "who":"Kerr",
+    "lab":{"location":"USS Enterprise", "name":"Biochemistry Lab" },
+    "who":"Janet Wallace",
     "strain":"N2",
-    "timestamp":"2015-04-27T15:15:32"
+    "timestamp":"2267-04-27T15:15:32"
   },
   "units": {
   		"t":"s",

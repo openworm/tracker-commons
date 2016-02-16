@@ -577,7 +577,7 @@ class TestWCONParser(unittest.TestCase):
                        "media":"agarose",
                        "sex":"hermaphrodite",
                        "stage":"adult",
-                       "age":33.4,
+                       "age":66.8,
                        "strain":"CB4856",
                        "image_orientation":"imaged onto agar",
                        "protocol":"text description of protocol",

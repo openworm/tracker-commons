@@ -116,15 +116,15 @@ def df_upsert(src, dest):
 def convert_origin(df):
     """
     Offset the coordinates and centroid by the offsets if available.
-    
+
     In pseudocode:
-        
+    
     For each worm and time frame:
         If 'ox' is not NaN:
             Add 'ox' to 'x'
             If 'cx' is not NaN:
                 Add 'ox' to 'cx'
-    
+
         (Also do the same for y)
 
     After this is done, drop the offset columns 'ox', and 'oy'
@@ -139,17 +139,14 @@ def convert_origin(df):
     None.  Modifies `df` in place.
 
     """
-    offset_keys=['ox', 'oy']
-    centroid_keys=['cx', 'cy']
-    coord_keys=['x', 'y']
+    offset_keys = ['ox', 'oy']
+    centroid_keys = ['cx', 'cy']
+    coord_keys = ['x', 'y']
 
-    #import pdb
-    #pdb.set_trace()
-    
     for worm_id in df.columns.get_level_values(0).unique():
         cur_worm = df.loc[:, (worm_id)]
 
-        for offset, centroid, coord in zip(offset_keys, 
+        for offset, centroid, coord in zip(offset_keys,
                                            centroid_keys, coord_keys):
 
             # Note: This code block uses `x` as the stylized example for 
