@@ -61,10 +61,24 @@ class TestDocumentationExamples(unittest.TestCase):
                           '"cx":"mm","cy":"mm"},'
                 '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
                          '"x":[[3],[4]], "y":[[5005.4],[5003]]}]}'))
-        #import pdb
-        #pdb.set_trace()
+        self.assertEqual(w1, w2)
+
+        # ox, with two time frames, three articulation points, with centroid
+        w1 = WCONWorms.load(
+            StringIO(
+                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
+                          '"cx":"mm","cy":"mm"},'
+                '"data":[{"id":1, "t":[1.3,1.4], "oy":5000, "cx":10, '
+                         '"cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], "y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
+        w2 = WCONWorms.load(
+            StringIO(
+                '{"units":{"t":"s","x":"mm","y":"mm",'
+                          '"cx":"mm","cy":"mm"},'
+                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
+                         '"x":[[3, 3, 3],[4, 4, 4.2]], "y":[[5005.4, 5005.4, 5005.5],[5003, 5003, 5007]]}]}'))
 
         self.assertEqual(w1, w2)
+
 
         # ox and centroid, different in different time frames
         w1 = WCONWorms.load(
@@ -98,7 +112,6 @@ class TestDocumentationExamples(unittest.TestCase):
 
         self.assertEqual(w1, w2)
 
-    @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_pull_doc_examples(self):
         """
         Pull out WCON examples from all .MD files and validate them.

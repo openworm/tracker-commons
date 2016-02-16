@@ -124,9 +124,6 @@ def convert_origin(df):
             Add 'ox' to 'x'
             If 'cx' is not NaN:
                 Add 'ox' to 'cx'
-        Otherwise:
-            If 'cx' is not NaN:
-                Add 'cx' to 'x'
     
         (Also do the same for y)
 
@@ -149,40 +146,34 @@ def convert_origin(df):
     for worm_id in df.columns.get_level_values(0).unique():
         cur_worm = df.loc[:, (worm_id)]
 
-        import pdb
-        pdb.set_trace()
-
         for offset, centroid, coord in zip(offset_keys, 
                                            centroid_keys, coord_keys):
+
             if not offset in cur_worm.columns.get_level_values(0):
-                # DEBUG: add offset column full of NaNs if none exists,
+                # Add offset column full of NaNs if none exists,
                 # to simplify the later logic.
-                df[worm_id, offset] = np.full(len(df.index), np.nan)
+                df[worm_id, offset, 0] = np.full(len(df.index), np.nan)
+                cur_worm = df.loc[:, (worm_id)]
 
             if not centroid in cur_worm.columns.get_level_values(0):
-                # DEBUG: add offset column full of NaNs if none exists,
+                # Add centroid column full of NaNs if none exists,
                 # to simplify the later logic.
-                df[worm_id, centroid] = np.full(len(df.index), np.nan)
+                df[worm_id, centroid, 0] = np.full(len(df.index), np.nan)
+                cur_worm = df.loc[:, (worm_id)]
 
             # Note: This code block uses `x` as the stylized example for 
             # variable naming purposes, but be assured that the enclosing 
             # `for` loop loops through both `x` and `y`.
             all_x_columns = cur_worm.loc[:, (coord)]
+            cx_column = cur_worm.loc[:, (centroid)]
+
             ox_column = cur_worm.loc[:, (offset)].fillna(0)
 
-            # Only treat the centroid as an offset when the offset
-            # 'ox' is not defined.  Otherwise, set it to zero.
-            cx_column = cur_worm.loc[:, (centroid)].mask(
-                cond=(~np.isnan(cur_worm.loc[:, (offset)]))).fillna(0)
-            
             ox_affine_change = (np.array(ox_column) *
                                np.ones(all_x_columns.shape))
-            cx_affine_change = (np.array(cx_column) *
-                               np.ones(all_x_columns.shape))
 
-            # Shift our 'x' values by offset + the centroid (the centroid
-            # offset is set to zero if the offset was defined)
-            all_x_columns += ox_affine_change + cx_affine_change
+            # Shift our 'x' values by offset
+            all_x_columns += ox_affine_change
             # Shift the centroid by the offset
             cx_column += ox_column
 
@@ -191,7 +182,8 @@ def convert_origin(df):
             df.loc[:, (worm_id, centroid)] = cx_column.values
 
             # Now reset our 'ox' values to zero.
-            df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape)
+            if offset in cur_worm.columns.get_level_values(0):
+                df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape)
 
     # For simplicity let's actually just drop the offset columns entirely
     # from the dataframe.  This is so DataFrames with and without offsets
