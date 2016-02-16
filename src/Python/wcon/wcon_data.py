@@ -118,6 +118,10 @@ def convert_origin(df):
     """
     Offset the coordinates and centroid by the offsets if available.
 
+    This code will ensure that there is no offset besides a centroid,
+    if the centroid exists.  If the centroid exists, all x and y coordinates
+    are relative to this centroid.
+
     In pseudocode:
 
     For each worm and time frame:
@@ -125,6 +129,7 @@ def convert_origin(df):
             Add 'ox' to 'x'
             If 'cx' is not NaN:
                 Add 'ox' to 'cx'
+                Subtract 'cx' from 'x'
 
         (Also do the same for y)
 
@@ -163,15 +168,22 @@ def convert_origin(df):
                 ox_affine_change = (np.array(ox_column) *
                                     np.ones(all_x_columns.shape))
                 all_x_columns += ox_affine_change
-                # Now assign these values back to the passed dataframe df
-                df.loc[:, (worm_id, coord)] = all_x_columns.values
 
                 if centroid in cur_worm.columns.get_level_values(0):
                     cx_column = cur_worm.loc[:, (centroid)]
                     # Shift the centroid by the offset
                     cx_column += ox_column
-                    # Now assign these values back to the passed dataframe df
-                    df.loc[:, (worm_id, centroid)] = cx_column.values
+
+                    # Now make the centroid our new offset, since the rule
+                    # is that if the offset exists, the centroid is not
+                    # the offset, but we want it to be.
+                    cx_affine_change = (np.array(cx_column) *
+                                        np.ones(all_x_columns.shape))
+                    all_x_columns -= cx_affine_change
+
+                # Now assign these values back to the passed dataframe df
+                df.loc[:, (worm_id, centroid)] = cx_column.values
+                df.loc[:, (worm_id, coord)] = all_x_columns.values
 
                 # Now reset our 'ox' values to zero.
                 if offset in cur_worm.columns.get_level_values(0):
@@ -423,6 +435,7 @@ def _validate_time_series_data(time_series_data):
     """
     canonical_elements = ['id', 't', 'x', 'y', 'cx', 'cy', 'ox', 'oy',
                           'head', 'ventral', 'aspect_size']
+    
     for (data_segment_index, data_segment) in enumerate(time_series_data):
         # Filter the data_segment to ignore non-canonical elements
         if six.PY3:
@@ -433,6 +446,10 @@ def _validate_time_series_data(time_series_data):
                             if k in canonical_elements}
 
         segment_keys = [k for k in data_segment.keys() if k != 'id']
+
+        # If one axis is present, the other must be as well
+        assert(not(('cx' in segment_keys) ^ ('cy' in segment_keys)))
+        assert(not(('ox' in segment_keys) ^ ('oy' in segment_keys)))
 
         """
         We require elements to be wrapped in arrays.  They may come in

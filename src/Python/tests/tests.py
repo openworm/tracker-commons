@@ -54,12 +54,23 @@ class TestDocumentationExamples(unittest.TestCase):
                 '"x":[[3],[4]], "y":[[5005.4],[5003]]}]}'))
         self.assertEqual(w1, w2)
 
+        # ox with no oy: assertionerror
+        with self.assertRaises(AssertionError):
+            w1 = WCONWorms.load(
+                StringIO(
+                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
+                    '"cx":"mm","cy":"mm"},'
+                    '"data":[{"id":1, "t":[1.3,1.4], "oy":5000, "cx":10, '
+                    '"cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], '
+                    '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
+
+
         # ox, with two time frames, three articulation points, with centroid
         w1 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
                 '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "oy":5000, "cx":10, '
+                '"data":[{"id":1, "t":[1.3,1.4], "ox":0, "oy":5000, "cx":10, '
                 '"cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], '
                 '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
         w2 = WCONWorms.load(
@@ -77,7 +88,8 @@ class TestDocumentationExamples(unittest.TestCase):
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
                 '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "oy":[5000, 1000], "cx":10, '
+                '"data":[{"id":1, "t":[1.3,1.4], "ox": 0, '
+                '"oy":[5000, 1000], "cx":10, '
                 '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
