@@ -581,8 +581,8 @@ class WCONWorms():
             # entries are always wrapped in arrays.
             for direction in ['next', 'prev']:
                 if hasattr(w.files, direction):
-                    if type(getattr(w.files, direction)) == str:
-                        setattr(w.files, direction, 
+                    if isinstance(getattr(w.files, direction), str):
+                        setattr(w.files, direction,
                                 [getattr(w.files, direction)])
         else:
             w.files = None
