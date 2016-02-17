@@ -1,12 +1,10 @@
-Python: [![Build Status](https://travis-ci.org/openworm/tracker-commons.svg?branch=master)](https://travis-ci.org/openworm/tracker-commons) [![PyPI package](https://badge.fury.io/py/wcon.svg)](http://badge.fury.io/py/wcon)
-
-# tracker-commons
+# Tracker Commons
 
 The Tracker Commons is a repository of documentation, software, and discussions that enable labs to share their worm tracking data and analysis routines.
 
 ## The WCON format
 
-The WCON file format provides a simple way to share _C. elegans_ tracking data between labs and analysis packages.
+The Worm tracker Commons Object Notation (WCON) file format provides a simple way to share _C. elegans_ tracking data between labs and analysis packages.
 
 WCON uses the widely-supported [JSON](http://json.org) file format, so almost any language can easily import the data.
 WCON specifies a few entries that you should include in a JSON "Object" (a.k.a. a map or dictionary) that will let
@@ -32,6 +30,16 @@ Here's an example!
 This file contains data for a single worm over two timepoints.  The worm's body is represented as
 five points along the worm's spine.
 
-## TrackerCommons software for reading and writing WCON files
+## Tracker Commons software for reading and writing WCON files
 
 The Tracker Commons repository contains implementations for reading and writing WCON data for a variety of languages.  Browse the `src` directory to learn more!
+
+| Language  | Principal Author  |  Status |
+| ------------- | ------------- | ------------- |
+| [Scala](src/scala)  | Rex Kerr  | Available |
+| [Julia](src/julia)  | Rex Kerr  | Available |
+| [Python](src/Python)  | Michael Currie | Available [![Build Status](https://travis-ci.org/openworm/tracker-commons.svg?branch=master)](https://travis-ci.org/openworm/tracker-commons) [![PyPI package](https://badge.fury.io/py/wcon.svg)](http://badge.fury.io/py/wcon)  |
+| [R](src/R)  | n/a  | Preliminary notes only |
+| [Rust](src/Rust)  | n/a  | Preliminary notes only |
+| Matlab  | n/a  | [Currently seeking contributors](https://github.com/openworm/tracker-commons/issues/45) |
+| Octave  | n/a  | [Currently seeking contributors](https://github.com/openworm/tracker-commons/issues/45) |
