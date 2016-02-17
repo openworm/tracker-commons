@@ -20,11 +20,11 @@ Any problems?  Visit the more detailed [installation guide](INSTALL.md).
 import wcon
 
 # Open a worm file, convert it to canonical form, and save it
-# (actually it's automatically converted before saving, but 
-#  here we do it explicitly)
+# (actually it's automatically converted to canon before 
+#  saving, but here we do so explicitly)
 w = wcon.WCONWorms.load_from_file('tests/minimax.wcon')
 canon_w = w.to_canon
-w.save_to_file('test.wcon', pretty_print=True)
+canon_w.save_to_file('test.wcon', pretty_print=True)
 
 # From a string literal:
 from io import StringIO
