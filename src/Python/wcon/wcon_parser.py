@@ -26,9 +26,6 @@ from .wcon_data import get_sorted_ordered_dict
 from .wcon_data import reverse_backwards_worms
 from .measurement_unit import MeasurementUnit
 
-warnings.filterwarnings('ignore', 
-    'numpy equal will not check object identity in the future')
-
 
 class WCONWorms():
     """
