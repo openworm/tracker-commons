@@ -26,6 +26,9 @@ from .wcon_data import get_sorted_ordered_dict
 from .wcon_data import reverse_backwards_worms
 from .measurement_unit import MeasurementUnit
 
+warnings.filterwarnings('ignore', 
+    'numpy equal will not check object identity in the future')
+
 
 class WCONWorms():
     """
@@ -247,7 +250,17 @@ class WCONWorms():
             # If both None, they are equal
             return True
 
-        return (d1.equals(d2) and
+        # I don't use DataFrame.equals because it returned False for no
+        # apparent reason with one of the centroid unit tests
+        def pd_equals(d1, d2):
+            try:
+                pd.util.testing.assert_frame_equal(d1, d2)
+            except AssertionError:
+                return False
+
+            return True
+
+        return (pd_equals(d1, d2) and
                 d1.columns.identical(d2.columns) and
                 d1.index.identical(d2.index))
 

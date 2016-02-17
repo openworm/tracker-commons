@@ -38,93 +38,6 @@ def flatten(list_of_lists):
 
 class TestDocumentationExamples(unittest.TestCase):
 
-    def test_centroid(self):
-        # ox, with two time frames, with centroid
-        w1 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "oy":5000, "cx":10, '
-                '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
-        w2 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
-                '"x":[[3],[4]], "y":[[5005.4],[5003]]}]}'))
-        self.assertEqual(w1, w2)
-
-        # ox with no oy: assertionerror
-        with self.assertRaises(AssertionError):
-            w1 = WCONWorms.load(
-                StringIO(
-                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
-                    '"cx":"mm","cy":"mm"},'
-                    '"data":[{"id":1, "t":[1.3,1.4], "oy":5000, "cx":10, '
-                    '"cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], '
-                    '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
-
-
-        # ox, with two time frames, three articulation points, with centroid
-        w1 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "ox":0, "oy":5000, "cx":10, '
-                '"cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], '
-                '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
-        w2 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
-                '"x":[[3, 3, 3],[4, 4, 4.2]], '
-                '"y":[[5005.4, 5005.4, 5005.5],[5003, 5003, 5007]]}]}'))
-
-        self.assertEqual(w1, w2)
-
-        # ox and centroid, different in different time frames
-        w1 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "ox": 0, '
-                '"oy":[5000, 1000], "cx":10, '
-                '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
-        w2 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":[5010, 1010], '
-                '"x":[[3],[4]], "y":[[5005.4],[1003]]}]}'))
-
-        self.assertEqual(w1, w2)
-
-        # ox and centroid, different in different time frames
-        w1 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "oy":[5000, 1000], "cx":10, '
-                '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
-        w2 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":[5010, 1010], '
-                '"x":[[3],[4]], "y":[[5005.4],[1003]]}]}'))
-
-        self.assertEqual(w1, w2)
-
-        # units missing for centroid
-        with self.assertRaises(AssertionError):
-            WCONWorms.load(
-                StringIO(
-                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
-                    '"data":[{"id":1, "t":[1.3,1.4], "ox":5000,'
-                    '         "cx":10, "cy":10, "x":[[3],[4]], '
-                    '         "y":[[5.4],[3]]}]}'))
-
     def test_pull_doc_examples(self):
         """
         Pull out WCON examples from all .MD files and validate them.
@@ -390,8 +303,8 @@ class TestWCONParser(unittest.TestCase):
         # ox, without optional bracket
         w1 = WCONWorms.load(
             StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
-                '"data":[{"id":1, "t":1.3, "ox":5000, '
+                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
+                '"data":[{"id":1, "t":1.3, "ox":5000, "oy":0,'
                 '"x":[3,4], "y":[5.4,3]}]}'))
         w2 = WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
                                      '"data":[{"id":1, "t":1.3, '
@@ -401,8 +314,8 @@ class TestWCONParser(unittest.TestCase):
         # oy, with optional bracket
         w1 = WCONWorms.load(
             StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","oy":"mm"},'
-                '"data":[{"id":1, "t":1.3, "oy":[4000], '
+                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
+                '"data":[{"id":1, "t":1.3, "ox":0, "oy":[4000], '
                 '"x":[3,4], "y":[5.4,3]}]}'))
         w2 = WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
                                      '"data":[{"id":1, "t":1.3, '
@@ -423,8 +336,8 @@ class TestWCONParser(unittest.TestCase):
         # ox, with two time points
         w1 = WCONWorms.load(
             StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, '
+                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
+                '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, "oy":0,'
                 '"x":[[3],[4]], "y":[[5.4],[3]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
@@ -437,59 +350,88 @@ class TestWCONParser(unittest.TestCase):
         # ox, with two time frames, with centroid
         w1 = WCONWorms.load(
             StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
+                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
                 '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "oy":5000, "cx":10, '
+                '"data":[{"id":1, "t":[1.3,1.4], "ox":0, "oy":5000, "cx":10, '
                 '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm",'
                 '"cx":"mm","cy":"mm"},'
                 '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
-                '"x":[[3],[4]], "y":[[5005.4],[5003]]}]}'))
+                '"x":[[-7],[-6]], "y":[[-4.6],[-7]]}]}'))                
+        self.assertEqual(w1, w2)
+
+        # oy with no oxy: assertionerror
+        with self.assertRaises(AssertionError):
+            w1 = WCONWorms.load(
+                StringIO(
+                    '{"units":{"t":"s","x":"mm","y":"mm","oy":"mm",'
+                    '"cx":"mm","cy":"mm"},'
+                    '"data":[{"id":1, "t":[1.3,1.4], "oy":5000,'
+                    '"cx":10, "cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], '
+                    '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
+
+
+        # ox, with two time frames, three articulation points, with centroid
+        w1 = WCONWorms.load(
+            StringIO(
+                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
+                '"cx":"mm","cy":"mm"},'
+                '"data":[{"id":1, "t":[1.3,1.4], "ox":0, "oy":5000, "cx":10, '
+                '"cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], '
+                '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
+        w2 = WCONWorms.load(
+            StringIO(
+                '{"units":{"t":"s","x":"mm","y":"mm",'
+                '"cx":"mm","cy":"mm"},'
+                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
+                '"x":[[-7,-7,-7],[-6,-6,-5.8]], '
+                '"y":[[-4.6,-4.6,-4.5],[-7,-7,-3]]}]}'))
 
         self.assertEqual(w1, w2)
 
         # ox and centroid, different in different time frames
         w1 = WCONWorms.load(
             StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
+                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
                 '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "oy":[5000, 1000], "cx":10, '
+                '"data":[{"id":1, "t":[1.3,1.4], "ox": 0, '
+                '"oy":[5000, 1000], "cx":10, '
                 '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm",'
                 '"cx":"mm","cy":"mm"},'
                 '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":[5010, 1010], '
-                '"x":[[3],[4]], "y":[[5005.4],[1003]]}]}'))
-
+                '"x":[[-7],[-6]], "y":[[-4.6],[-7.0]]}]}'))
         self.assertEqual(w1, w2)
 
         # ox and centroid, different in different time frames
         w1 = WCONWorms.load(
             StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm",'
+                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
                 '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "oy":[5000, 1000], "cx":10, '
-                '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
+                '"data":[{"id":1, "t":[1.3,1.4], "ox":0, "oy":[5000, 1000],'
+                '"cx":10, "cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm",'
                 '"cx":"mm","cy":"mm"},'
                 '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":[5010, 1010], '
-                '"x":[[3],[4]], "y":[[5005.4],[1003]]}]}'))
-
+                '"x":[[-7],[-6]], "y":[[-4.6],[-7]]}]}'))
         self.assertEqual(w1, w2)
 
         # units missing for centroid
         with self.assertRaises(AssertionError):
             WCONWorms.load(
                 StringIO(
-                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm"},'
-                    '"data":[{"id":1, "t":[1.3,1.4], "ox":5000,'
+                    '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
+                    '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, "oy":0,'
                     '         "cx":10, "cy":10, "x":[[3],[4]], '
                     '         "y":[[5.4],[3]]}]}'))
+
+
 
     def test_merge(self):
         JSON_path = '../../../tests/minimax.wcon'
@@ -576,10 +518,11 @@ class TestWCONParser(unittest.TestCase):
         WCON_string3 = \
             """
             {
-                "units":{"t":"s", "x":"mm", "y":"mm", "ox":"mm"},
+                "units":{"t":"s", "x":"mm", "y":"mm", "ox":"mm", "oy":"mm"},
                 "data":[{ "id":1, "t":[1.3,1.5],
                           "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
-                          "y":[[2,2,2],[234.89, 265.23, 235.08]], "ox":5000 },
+                          "y":[[2,2,2],[234.89, 265.23, 235.08]], 
+                          "ox":5000, "oy":0 },
                         { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12],
                           "y":[23.3, 22.23, 21135.08] },
                         { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12],

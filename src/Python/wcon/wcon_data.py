@@ -181,8 +181,10 @@ def convert_origin(df):
                                         np.ones(all_x_columns.shape))
                     all_x_columns -= cx_affine_change
 
+                    # Now assign these values back to the passed dataframe df
+                    df.loc[:, (worm_id, centroid)] = cx_column.values
+
                 # Now assign these values back to the passed dataframe df
-                df.loc[:, (worm_id, centroid)] = cx_column.values
                 df.loc[:, (worm_id, coord)] = all_x_columns.values
 
                 # Now reset our 'ox' values to zero.
