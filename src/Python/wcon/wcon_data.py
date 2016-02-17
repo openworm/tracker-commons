@@ -437,7 +437,7 @@ def _validate_time_series_data(time_series_data):
     """
     canonical_elements = ['id', 't', 'x', 'y', 'cx', 'cy', 'ox', 'oy',
                           'head', 'ventral', 'aspect_size']
-    
+
     for (data_segment_index, data_segment) in enumerate(time_series_data):
         # Filter the data_segment to ignore non-canonical elements
         if six.PY3:

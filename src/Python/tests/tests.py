@@ -359,7 +359,7 @@ class TestWCONParser(unittest.TestCase):
                 '{"units":{"t":"s","x":"mm","y":"mm",'
                 '"cx":"mm","cy":"mm"},'
                 '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
-                '"x":[[-7],[-6]], "y":[[-4.6],[-7]]}]}'))                
+                '"x":[[-7],[-6]], "y":[[-4.6],[-7]]}]}'))
         self.assertEqual(w1, w2)
 
         # oy with no oxy: assertionerror
@@ -371,7 +371,6 @@ class TestWCONParser(unittest.TestCase):
                     '"data":[{"id":1, "t":[1.3,1.4], "oy":5000,'
                     '"cx":10, "cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], '
                     '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
-
 
         # ox, with two time frames, three articulation points, with centroid
         w1 = WCONWorms.load(
@@ -430,8 +429,6 @@ class TestWCONParser(unittest.TestCase):
                     '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, "oy":0,'
                     '         "cx":10, "cy":10, "x":[[3],[4]], '
                     '         "y":[[5.4],[3]]}]}'))
-
-
 
     def test_merge(self):
         JSON_path = '../../../tests/minimax.wcon'
@@ -521,7 +518,7 @@ class TestWCONParser(unittest.TestCase):
                 "units":{"t":"s", "x":"mm", "y":"mm", "ox":"mm", "oy":"mm"},
                 "data":[{ "id":1, "t":[1.3,1.5],
                           "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
-                          "y":[[2,2,2],[234.89, 265.23, 235.08]], 
+                          "y":[[2,2,2],[234.89, 265.23, 235.08]],
                           "ox":5000, "oy":0 },
                         { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12],
                           "y":[23.3, 22.23, 21135.08] },
