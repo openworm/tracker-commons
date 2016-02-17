@@ -247,7 +247,17 @@ class WCONWorms():
             # If both None, they are equal
             return True
 
-        return (d1.equals(d2) and
+        # I don't use DataFrame.equals because it returned False for no
+        # apparent reason with one of the centroid unit tests
+        def pd_equals(d1, d2):
+            try:
+                pd.util.testing.assert_frame_equal(d1, d2)
+            except AssertionError:
+                return False
+
+            return True
+
+        return (pd_equals(d1, d2) and
                 d1.columns.identical(d2.columns) and
                 d1.index.identical(d2.index))
 
@@ -575,6 +585,15 @@ class WCONWorms():
 
         if 'files' in root:
             w.files = root['files']
+
+            # Handle the case of a single 'next' or 'prev' entry, by
+            # wrapping it in an array, so we can reliably assume that
+            # entries are always wrapped in arrays.
+            for direction in ['next', 'prev']:
+                if hasattr(w.files, direction):
+                    if isinstance(getattr(w.files, direction), str):
+                        setattr(w.files, direction,
+                                [getattr(w.files, direction)])
         else:
             w.files = None
 

@@ -5,6 +5,7 @@ A module of methods to create the pandas DataFrame representing the "data"
 array.
 
 """
+import six
 import warnings
 import numpy as np
 import pandas as pd
@@ -17,7 +18,7 @@ idx = pd.IndexSlice
 # 49 aspects per frame, but ox is only recorded once per frame, or
 # even once across the whole video.
 elements_with_aspect = ['x', 'y']
-elements_without_aspect = ['ox', 'oy', 'head', 'ventral']
+elements_without_aspect = ['ox', 'oy', 'cx', 'cy', 'head', 'ventral']
 basic_data_keys = elements_with_aspect + elements_without_aspect
 supported_data_keys = basic_data_keys + ['id', 't']
 
@@ -113,46 +114,85 @@ def df_upsert(src, dest):
     return dest
 
 
-def convert_origin(df, offset_keys=['ox', 'oy'], coord_keys=['x', 'y']):
+def convert_origin(df):
     """
-    Add the offset values 'ox' and 'oy' to the 'x' and 'y'
-    coordinates in the dataframe
+    Offset the coordinates and centroid by the offsets if available.
 
-    Offset values that are NaN are considered to be zero.
+    This code will ensure that there is no offset besides a centroid,
+    if the centroid exists.  If the centroid exists, all x and y coordinates
+    are relative to this centroid.
 
-    After this is done, set all offset values to zero.
+    In pseudocode:
+
+    For each worm and time frame:
+        If 'ox' is not NaN:
+            Add 'ox' to 'x'
+            If 'cx' is not NaN:
+                Add 'ox' to 'cx'
+                Subtract 'cx' from 'x'
+
+        (Also do the same for y)
+
+    After this is done, drop the offset columns 'ox', and 'oy'
+    entirely from the dataframe.
 
     Parameters
     ------------
     df: Pandas DataFrame
-    offset_keys: list of strings
-        The offsets
-    coord_keys: list of strings
-        The corresponding coordinates to be offset
 
     Returns
     ------------
     None.  Modifies `df` in place.
 
     """
+    offset_keys = ['ox', 'oy']
+    centroid_keys = ['cx', 'cy']
+    coord_keys = ['x', 'y']
+
     for worm_id in df.columns.get_level_values(0).unique():
         cur_worm = df.loc[:, (worm_id)]
 
-        for offset, coord in zip(offset_keys, coord_keys):
+        for offset, centroid, coord in zip(offset_keys,
+                                           centroid_keys, coord_keys):
+
+            # Note: This code block uses `x` as the stylized example for
+            # variable naming purposes, but be assured that the enclosing
+            # `for` loop loops through both `x` and `y`.
+
             if offset in cur_worm.columns.get_level_values(0):
-                all_x_columns = cur_worm.loc[:, (coord)]
+                # Consider offset is 0 if not available in a certain frame
                 ox_column = cur_worm.loc[:, (offset)].fillna(0)
-                affine_change = (np.array(ox_column) *
-                                 np.ones(all_x_columns.shape))
-                # Shift our 'x' values by the amount in 'ox'
-                all_x_columns += affine_change
+
+                # Shift our 'x' values by offset
+                all_x_columns = cur_worm.loc[:, (coord)]
+                ox_affine_change = (np.array(ox_column) *
+                                    np.ones(all_x_columns.shape))
+                all_x_columns += ox_affine_change
+
+                if centroid in cur_worm.columns.get_level_values(0):
+                    cx_column = cur_worm.loc[:, (centroid)]
+                    # Shift the centroid by the offset
+                    cx_column += ox_column
+
+                    # Now make the centroid our new offset, since the rule
+                    # is that if the offset exists, the centroid is not
+                    # the offset, but we want it to be.
+                    cx_affine_change = (np.array(cx_column) *
+                                        np.ones(all_x_columns.shape))
+                    all_x_columns -= cx_affine_change
+
+                    # Now assign these values back to the passed dataframe df
+                    df.loc[:, (worm_id, centroid)] = cx_column.values
+
+                # Now assign these values back to the passed dataframe df
                 df.loc[:, (worm_id, coord)] = all_x_columns.values
 
                 # Now reset our 'ox' values to zero.
-                df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape)
+                if offset in cur_worm.columns.get_level_values(0):
+                    df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape)
 
-    # For simplicity let's actually just drop the offset columns entirely
-    # from the dataframe.  This is so DataFrames with and without offsets
+    # Drop the offset columns entirely from the dataframe.
+    # This is so DataFrames with and without offsets
     # will show as comparing identically.
     for offset_key in offset_keys:
         df.drop(offset_key, axis=1, level='key', inplace=True)
@@ -290,7 +330,7 @@ def _obtain_time_series_data_frame(time_series_data):
 
         # We want to be able to fit the largest aspect size in our
         # DataFrame
-        max_aspect_size = max([k[0] for k in data_segment['aspect_size']])
+        max_aspect_size = int(max([k[0] for k in data_segment['aspect_size']]))
 
         key_combos = list(itertools.product([segment_id],
                                             cur_elements_with_aspect,
@@ -383,7 +423,7 @@ def _obtain_time_series_data_frame(time_series_data):
 
 def _validate_time_series_data(time_series_data):
     """
-    Clean up and validate all time-series data segments in the
+    Validate and standardise all time-series data segments in the
     data dictionary provided
 
     Parameters
@@ -395,56 +435,122 @@ def _validate_time_series_data(time_series_data):
         must have 't' entries
 
     """
+    canonical_elements = ['id', 't', 'x', 'y', 'cx', 'cy', 'ox', 'oy',
+                          'head', 'ventral', 'aspect_size']
+
     for (data_segment_index, data_segment) in enumerate(time_series_data):
+        # Filter the data_segment to ignore non-canonical elements
+        if six.PY3:
+            data_segment = {k: v for (k, v) in data_segment.items()
+                            if k in canonical_elements}
+        else:
+            data_segment = {k: v for (k, v) in data_segment.iteritems()
+                            if k in canonical_elements}
+
         segment_keys = [k for k in data_segment.keys() if k != 'id']
 
-        # If the 't' element is single-valued, wrap it and all other
-        # elements into an array so single-valued elements
-        # don't need special treatment in our later processing steps
-        if not isinstance(data_segment['t'], list):
-            for subkey in segment_keys:
-                data_segment[subkey] = [data_segment[subkey]]
+        # If one axis is present, the other must be as well
+        assert(not(('cx' in segment_keys) ^ ('cy' in segment_keys)))
+        assert(not(('ox' in segment_keys) ^ ('oy' in segment_keys)))
 
-        # Further, we have to wrap the elements without an aspect
-        # in a further list so that when we convert to a dataframe,
-        # our staging data list comprehension will be able to see
-        # everything as a list and not as single-valued
-        for subkey in elements_without_aspect:
-            if subkey in data_segment:
+        """
+        We require elements to be wrapped in arrays.  They may come in
+        various singleton formats, so we must convert.  The final state
+        must be:
+
+        "t": [1.5], "x": [[6, 7, 8]], "ox": [[8.2]]
+
+        or for multiple timeframes:
+
+        "t": [1.5, 1.6], "x": [[6, 7, 8], [6.2, 7.2, 8.2]],
+        "ox": [[8.2], [8.2]]
+
+        The data might arrive in the following formats:
+
+                                   elements with aspect
+                            singleton      array               array of arrays
+
+        TIME singleton  "t":1.5, "x":6  "x":1.5, "x": [6,7,8]    NOT ALLOWED
+
+        TIME array        NOT ALLOWED   "t":[1.5, 1.8]         "t":[1.5, 1.8]
+                                        "x":[6.3, 6.2]         "x":[[6,7,8],
+                                                                    [8,9,10]]
+
+                                   elements without aspect
+                            singleton      array               array of arrays
+        TIME singleton  "t":1.5, "ox":6  "x":1.5, "ox": [8]    NOT ALLOWED
+
+        TIME array      "t":[1.5,1.8]    "t":[1.5, 1.8]        NOT ALLOWED
+                        "ox":8           "ox":[8, 8.2]
+
+        So in all but one of these cases, we must wrap the data in more
+        brackets.
+
+        """
+        # HANDLE TIME ('t')
+        time_is_singleton = not isinstance(data_segment['t'], list)
+        if time_is_singleton:
+            data_segment['t'] = [data_segment['t']]
+        num_timeframes = len(data_segment['t'])
+
+        # HANDLE ALL OTHER KEYS (besides 'id' and 't')
+        for subkey in elements_with_aspect + elements_without_aspect:
+            if subkey in segment_keys:
                 if not isinstance(data_segment[subkey], list):
-                    data_segment[subkey] = [[data_segment[subkey]]]
+                    # SINGLETON CASE
+                    if time_is_singleton:
+                        data_segment[subkey] = [[data_segment[subkey]]]
+                    else:
+                        if subkey in elements_without_aspect:
+                            # Broadcast aspectless elements to be
+                            # length n = subelement_length if it's
+                            # just being shown once right now
+                            # (e.g. for 'ox', 'oy', etc.)
+                            data_segment[subkey] = [[x] for x in [
+                                data_segment[subkey]] * num_timeframes]
+                        else:
+                            raise Exception(
+                                "Error with element '%s' in data "
+                                "segment %s: time is array but "
+                                "element is singleton." %
+                                (subkey, str(data_segment)))
+                elif not isinstance(data_segment[subkey][0], list):
+                    # ARRAY CASE
+                    if time_is_singleton:
+                        data_segment[subkey] = [data_segment[subkey]]
+                    else:
+                        data_segment[subkey] = [[x] for x in
+                                                data_segment[subkey]]
                 else:
-                    if not isinstance(data_segment[subkey][0], list):
-                        data_segment[subkey] = [[x]
-                                                for x in data_segment[subkey]]
+                    # ARRAY OF ARRAYS CASE
+                    if time_is_singleton:
+                        raise Exception("Error with element '%s' in data "
+                                        "segment %s: time is singleton but "
+                                        "element is an array of arrays." %
+                                        (subkey, str(data_segment)))
+                    else:
+                        if subkey in elements_without_aspect:
+                            # We could allow this case but it makes no sense
+                            # for the file to have aspectless data
+                            # double-wrapped so let's reject it.
+                            raise Exception("Error with element '%s' in data "
+                                            "segment %s: element is "
+                                            "aspectless but "
+                                            "element is an array of arrays." %
+                                            (subkey, str(data_segment)))
+                        else:
+                            # This is the one case where all is good.
+                            pass
 
-        subelement_length = len(data_segment['t'])
+        # Validate that all elements have the same number of timeframes
+        element_timeframes = [len(data_segment[subkey])
+                              for subkey in segment_keys]
 
-        # Broadcast aspectless elements to be
-        # length n = subelement_length if it's
-        # just being shown once right now  (e.g. for 'ox', 'oy', etc.)
-        for k in elements_without_aspect:
-            if k in segment_keys:
-                k_length = len(data_segment[k])
-                if k_length not in [1, subelement_length]:
-                    raise AssertionError(k + " for each segment "
-                                         "must either have length 1 or "
-                                         "length equal to the number of "
-                                         "time elements.")
-                elif k_length == 1:
-                    # Broadcast the origin across all time points
-                    # in this segment
-                    data_segment[k] = data_segment[k] * subelement_length
-
-        # Validate that all sub-elements have the same length
-        subelement_lengths = [len(data_segment[key])
-                              for key in segment_keys]
-
-        # Now we can assure ourselves that subelement_length is
+        # Now we can assure ourselves that num_timeframes is
         # well-defined; if not, raise an error.
-        if len(set(subelement_lengths)) > 1:
-            raise AssertionError("Error: Subelements must all have "
-                                 "the same length.")
+        if len(set(element_timeframes)) > 1:
+            raise AssertionError("Error: Elements must have all have "
+                                 "the same number of timeframes.")
 
         # In each time, the aspect size could change, so we need to keep
         # track of it since the dataframe will ultimately have columns
@@ -454,7 +560,7 @@ def _validate_time_series_data(time_series_data):
         # First let's validate that the aspect size is identical
         # across data elements in each time frame:
         aspect_size_over_time = []
-        for t in range(subelement_length):
+        for t in range(num_timeframes):
             # The x and y arrays for element i of the data segment
             # must have the same length
             try:
@@ -474,7 +580,24 @@ def _validate_time_series_data(time_series_data):
             else:
                 aspect_size_over_time.append([cur_aspect_sizes[0]])
 
+        # We need aspect_size to be float rather than int since it will
+        # be in a DataFrame that may be compared with others and so we
+        # want to force all numeric dtypes to be float so the comparison
+        # won't fail simply because e.g. int 1 isn't equal to float 1
+        # More information about this:
+        # Pandas DataFrames are stored internally as a series of "blocks".
+        # You can see these blocks by looking at time_df._data, for instance.
+        # We want to avoid any of the columns being stored within an IntBlock,
+        # because it will then fail to be .equals() another DataFrame with the
+        # same data but stored within a FloatBlock.
+        # See http://stackoverflow.com/questions/17141828/ and
+        # http://stackoverflow.com/questions/19912611/
+        aspect_size_over_time = np.array(aspect_size_over_time, dtype=float)
+
         data_segment['aspect_size'] = aspect_size_over_time
+
+        # Update the data segment
+        time_series_data[data_segment_index] = data_segment
 
 
 """
