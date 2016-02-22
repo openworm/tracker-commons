@@ -228,7 +228,7 @@ function parsed_json_to_software(m :: Dict{AbstractString, Any})
     featureID :: Set{AbstractString} = Set{AbstractString}()
     if isa(fid, AbstractString)
         str = convert(AbstractString, fid)
-        if length(str) > 0 featureID = Set(str) end
+        if length(str) > 0 featureID = Set{AbstractString}([str]) end
     elseif isa(fid, Array)
         sid = convert(Array, fid)
         allstring = true
@@ -289,7 +289,7 @@ function parsed_json_to_metadata(d :: Dict{AbstractString, Any})
         if vecstring[i]
             s = get(d, keys[i], Array{AbstractString,1}())
             if isa(s, AbstractString)
-                vstrings[i] = Array(convert(AbstractString, s))
+                vstrings[i] = [convert(AbstractString, s)]
             elseif isa(s, Array{AbstractString,1})
                 vstrings[i] = convert(Array{AbstractString,1}, s)
             else

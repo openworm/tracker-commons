@@ -69,7 +69,7 @@ function parsed_json_to_dataset(j0 :: Dict{AbstractString, Any}, fullname :: Abs
             end
             mx = parsed_json_to_metadata(j["metadata"])
             if isa(mx, AbstractString)
-                result = string("Failed to parse WCON metadata.  ", convert(AbstractString, m))
+                result = string("Failed to parse WCON metadata.  ", convert(AbstractString, mx))
                 return result
             end
             convert(MetaData, mx)
