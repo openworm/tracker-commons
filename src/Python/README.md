@@ -84,7 +84,7 @@ Any top-level key other than the basic:
 - metadata
 - data
 
-... is rejected unless it begins with `"@"`; if it does, it is ignored.  Handling these `"@"`-prefaced custom objects requires subclassing `WCONWorms`.
+...are ignored.  It is convenient, but not required, to follow the convention of beginning custom fields with the prefix `"@"`.  Handling custom objects requires subclassing `WCONWorms`.
 
 
 ### WCON parser: proof of concept
