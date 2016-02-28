@@ -6,6 +6,7 @@ array.
 
 """
 import six
+import gc
 import warnings
 import numpy as np
 import pandas as pd
@@ -615,6 +616,7 @@ def _data_segment_as_odict(worm_id, df_segment):
     method of data_as_array.
 
     """
+    gc.disable()
     data_segment = [("id", worm_id)]
 
     # We only care about time indices for which we have some "aspect" or
@@ -668,6 +670,8 @@ def _data_segment_as_odict(worm_id, df_segment):
                 jagged_array.append(cur_entry)
 
         data_segment.append((key, jagged_array))
+
+    gc.enable()
 
     return OrderedDict(data_segment)
 
