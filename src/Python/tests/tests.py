@@ -282,7 +282,7 @@ class TestWCONParser(unittest.TestCase):
 
         self.assertEqual(w, w_from_saved)
 
-        os.remove(test_path)        
+        os.remove(test_path)
 
     def test_data1(self):
         # Single-valued 't' subelement should be fine
