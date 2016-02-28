@@ -249,6 +249,12 @@ class TestWCONParser(unittest.TestCase):
                     '{"units":{"t":"s","t":"s","x":"mm","y":"mm"},'
                     '"data":[]}'))
 
+    def test_arrayed_software(self):
+        WCONWorms.load(StringIO('{ "units":{"t":"s", "x":"mm", "y":"mm"}, '
+                                '"data":[], "metadata":{'
+                                '"software":[{"name":"a"}, '
+                                '{"name":"b"}]} }'))
+
     def test_data1(self):
         # Single-valued 't' subelement should be fine
         WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'

@@ -70,23 +70,13 @@
                 "image_orientation": {"type": "string", "enum": ["imaged onto agar", "imaged through agar"]},
                 "protocol": { "$ref": "#/definitions/string_or_array_of_strings" },
                 "software": {
-                    "type": "object",
-                    "properties": {
-                        "tracker": {
-                            "type": "object",
-                            "properties": {
-                                "name": {"type": "string"},
-                                "version": {
-                                    "description": "Supports semantic versioning (MAJOR.MINOR.PATCH) (http://semver.org/), written as a string, or any other string.",
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "featureID": {
-                            "description": "i.e. the lab strain designation followed by an optional suffix (e.g. '@OMG')",
-                            "type":"string"
+                    "oneOf": [
+                        { "$ref": "#/definitions/software_metadata" },
+                        {
+                            "type": "array",
+                            "items": { "$ref": "#/definitions/software_metadata" }
                         }
-                    }
+                    ]
                 },
                 "settings": {}
             },
@@ -150,6 +140,25 @@
                 {"type": "string"}, 
                 {"type": "array", "items": {"type":"string"}}
             ]
-        } 
+        },
+        "software_metadata": {
+            "type": "object",
+            "properties": {
+                "tracker": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "version": {
+                            "description": "Supports semantic versioning (MAJOR.MINOR.PATCH) (http://semver.org/), written as a string, or any other string.",
+                            "type": "string"
+                        }
+                    }
+                },
+                "featureID": {
+                    "description": "i.e. the lab strain designation followed by an optional suffix (e.g. '@OMG')",
+                    "type":"string"
+                }
+            }
+        }
     }
 }
