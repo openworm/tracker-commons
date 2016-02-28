@@ -255,6 +255,35 @@ class TestWCONParser(unittest.TestCase):
                                 '"software":[{"name":"a"}, '
                                 '{"name":"b"}]} }'))
 
+    def test_empty_aspect_size(self):
+        # Worms with a segment that is empty should still parse without issue.
+        WCON_string = \
+            """
+            {
+                "units":{"t":"s", "x":"mm", "y":"mm"},
+                "data":[{ "id":2, "t":1.4, "x":[125.11, 126.14, 117.12],
+                          "y":[23.3, 22.23, 21135.08] },
+                        { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12],
+                          "y":[234.89, 265.23, 235.08] },
+                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12],
+                          "y":[234.89, 265.23, 235.08] },
+                        { "id":1, "t":[1.3,1.5],
+                          "x":[[],[1215.11, 1216.14, 1217.12]],
+                          "y":[[],[234.89, 265.23, 235.08]] }
+                ]
+            }
+            """
+        w = WCONWorms.load(StringIO(WCON_string))
+
+        test_path = 'test_empty_aspect.wcon'
+
+        w.save_to_file(test_path, pretty_print=True)
+        w_from_saved = WCONWorms.load_from_file(test_path)
+
+        self.assertEqual(w, w_from_saved)
+
+        os.remove(test_path)        
+
     def test_data1(self):
         # Single-valued 't' subelement should be fine
         WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'

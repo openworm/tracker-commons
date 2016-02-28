@@ -660,8 +660,11 @@ def _data_segment_as_odict(worm_id, df_segment):
                 # so we must subtract one from cur_aspect_size, so if
                 # it's 3, for instance, we get only entries
                 # 0, 1, and 2, as required.
-                cur_entry = non_jagged_array.loc[t, 0:cur_aspect_size - 1]
-                cur_entry = list(np.array(cur_entry))
+                if cur_aspect_size == 0:
+                    cur_entry = []
+                else:
+                    cur_entry = non_jagged_array.loc[t, 0:cur_aspect_size - 1]
+                    cur_entry = list(np.array(cur_entry))
                 jagged_array.append(cur_entry)
 
         data_segment.append((key, jagged_array))
