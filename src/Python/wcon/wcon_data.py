@@ -662,6 +662,9 @@ def _data_segment_as_odict(worm_id, df_segment):
           (time.monotonic() - start_time))   
     start_time = time.monotonic()
 
+    accumulated_time1 = 0
+    accumulated_time2 = 0
+
     # e.g. x, y
     for key in [k for k in keys_used if k in elements_with_aspect]:
         non_jagged_array = df_segment.loc[:, (key)]
@@ -683,13 +686,24 @@ def _data_segment_as_odict(worm_id, df_segment):
                 else:
                     cur_entry = non_jagged_array.loc[t, 0:cur_aspect_size - 1]
                     cur_entry = list(np.array(cur_entry))
+                    
+                st = time.monotonic()
                 jagged_array.append(cur_entry)
+                accumulated_time1 += time.montonic() - st
 
+        st = time.monotonic()
         data_segment.append((key, jagged_array))
+        accumulated_time2 += time.montonic() - st
 
     print("TIMEPOINT 4: %.2f seconds" %
-          (time.monotonic() - start_time))   
+          (time.monotonic() - start_time))
     start_time = time.monotonic()
+
+    print("accumulatedtime1: %.2f seconds" %
+          (accumulated_time1))
+
+    print("accumulatedtime2: %.2f seconds" %
+          (accumulated_time2))
 
     gc.enable()
 
