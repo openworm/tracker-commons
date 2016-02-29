@@ -7,6 +7,7 @@ array.
 """
 import six
 import gc
+import time
 import warnings
 import numpy as np
 import pandas as pd
@@ -616,8 +617,15 @@ def _data_segment_as_odict(worm_id, df_segment):
     method of data_as_array.
 
     """
+    print("entering _data_segment_as_odict")
+    start_time = time.monotonic()
     gc.disable()
     data_segment = [("id", worm_id)]
+
+    print("TIMEPOINT 1: %.2f seconds" %
+          (time.monotonic() - start_time))   
+    start_time = time.monotonic()
+
 
     # We only care about time indices for which we have some "aspect" or
     # else which have some non-aspect
@@ -632,6 +640,10 @@ def _data_segment_as_odict(worm_id, df_segment):
     keys_used = [k for k in df_segment.columns.get_level_values('key')
                  if k != 'aspect_size']
 
+    print("TIMEPOINT 2: %.2f seconds" %
+          (time.monotonic() - start_time))   
+    start_time = time.monotonic()
+
     # e.g. ox, oy, head, ventral
     for key in [k for k in keys_used if k in elements_without_aspect]:
         cur_segment_slice = df_segment.loc[:, idx[key, 0]]
@@ -645,6 +657,10 @@ def _data_segment_as_odict(worm_id, df_segment):
                 cur_segment_slice.where(pd.notnull(cur_segment_slice), None)
         cur_list = list(np.array(cur_segment_slice))
         data_segment.append((key, cur_list))
+
+    print("TIMEPOINT 3: %.2f seconds" %
+          (time.monotonic() - start_time))   
+    start_time = time.monotonic()
 
     # e.g. x, y
     for key in [k for k in keys_used if k in elements_with_aspect]:
@@ -670,6 +686,10 @@ def _data_segment_as_odict(worm_id, df_segment):
                 jagged_array.append(cur_entry)
 
         data_segment.append((key, jagged_array))
+
+    print("TIMEPOINT 4: %.2f seconds" %
+          (time.monotonic() - start_time))   
+    start_time = time.monotonic()
 
     gc.enable()
 
