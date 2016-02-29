@@ -676,24 +676,26 @@ def _data_segment_as_odict(worm_id, df_segment):
             if np.isnan(worm_aspect_size.loc[t, 0]):
                 jagged_array.append([])
             else:
+                st = time.monotonic()
+
                 cur_aspect_size = int(worm_aspect_size.loc[t, 0])
+                accumulated_time1 += time.monotonic() - st
                 # For some reason loc's slice notation is INCLUSIVE!
                 # so we must subtract one from cur_aspect_size, so if
                 # it's 3, for instance, we get only entries
                 # 0, 1, and 2, as required.
+                st = time.monotonic()
                 if cur_aspect_size == 0:
                     cur_entry = []
                 else:
                     cur_entry = non_jagged_array.loc[t, 0:cur_aspect_size - 1]
                     cur_entry = list(np.array(cur_entry))
-                    
-                st = time.monotonic()
-                jagged_array.append(cur_entry)
-                accumulated_time1 += time.monotonic() - st
 
-        st = time.monotonic()
+                accumulated_time2 += time.monotonic() - st
+                    
+                jagged_array.append(cur_entry)
+
         data_segment.append((key, jagged_array))
-        accumulated_time2 += time.monotonic() - st
 
     print("TIMEPOINT 4: %.2f seconds" %
           (time.monotonic() - start_time))
