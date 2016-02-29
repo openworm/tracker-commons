@@ -617,15 +617,9 @@ def _data_segment_as_odict(worm_id, df_segment):
     method of data_as_array.
 
     """
-    print("entering _data_segment_as_odict")
-    start_time = time.monotonic()
+    # Disable garbage collection to speed up list append operations
     gc.disable()
     data_segment = [("id", worm_id)]
-
-    print("TIMEPOINT 1: %.2f seconds" %
-          (time.monotonic() - start_time))   
-    start_time = time.monotonic()
-
 
     # We only care about time indices for which we have some "aspect" or
     # else which have some non-aspect
@@ -639,10 +633,6 @@ def _data_segment_as_odict(worm_id, df_segment):
 
     keys_used = [k for k in df_segment.columns.get_level_values('key')
                  if k != 'aspect_size']
-
-    print("TIMEPOINT 2: %.2f seconds" %
-          (time.monotonic() - start_time))   
-    start_time = time.monotonic()
 
     # e.g. ox, oy, head, ventral
     for key in [k for k in keys_used if k in elements_without_aspect]:
@@ -658,20 +648,9 @@ def _data_segment_as_odict(worm_id, df_segment):
         cur_list = list(np.array(cur_segment_slice))
         data_segment.append((key, cur_list))
 
-    print("TIMEPOINT 3: %.2f seconds" %
-          (time.monotonic() - start_time))   
-    start_time = time.monotonic()
-
-    accumulated_time0 = 0
-    accumulated_time1 = 0
-    accumulated_time2 = 0
-    accumulated_time3 = 0
-
     # e.g. x, y
     for key in [k for k in keys_used if k in elements_with_aspect]:
-        st = time.monotonic()
         non_jagged_array = df_segment.loc[:, (key)]
-        accumulated_time0 += time.monotonic() - st
 
         jagged_array = []
 
@@ -680,10 +659,7 @@ def _data_segment_as_odict(worm_id, df_segment):
             if np.isnan(worm_aspect_size.loc[t, 0]):
                 jagged_array.append([])
             else:
-                st = time.monotonic()
-
                 cur_aspect_size = int(worm_aspect_size.loc[t, 0])
-                accumulated_time1 += time.monotonic() - st
                 # For some reason loc's slice notation is INCLUSIVE!
                 # so we must subtract one from cur_aspect_size, so if
                 # it's 3, for instance, we get only entries
@@ -691,34 +667,15 @@ def _data_segment_as_odict(worm_id, df_segment):
                 if cur_aspect_size == 0:
                     cur_entry = []
                 else:
-                    st = time.monotonic()
                     cur_entry = non_jagged_array.loc[t, 0:cur_aspect_size - 1]
-                    accumulated_time2 += time.monotonic() - st
-                    st = time.monotonic()
                     cur_entry = list(np.array(cur_entry))
-                    accumulated_time3 += time.monotonic() - st
-
 
                 jagged_array.append(cur_entry)
 
         data_segment.append((key, jagged_array))
 
-    print("TIMEPOINT 4: %.2f seconds" %
-          (time.monotonic() - start_time))
-    start_time = time.monotonic()
-
-    print("accumulatedtime0: %.2f seconds" %
-          (accumulated_time0))
-
-    print("accumulatedtime1: %.2f seconds" %
-          (accumulated_time1))
-
-    print("accumulatedtime2: %.2f seconds" %
-          (accumulated_time2))
-
-    print("accumulatedtime3: %.2f seconds" %
-          (accumulated_time3))
-
+    # Re-enable garbage collection now that all our list append 
+    # operations are done.
     gc.enable()
 
     return OrderedDict(data_segment)
