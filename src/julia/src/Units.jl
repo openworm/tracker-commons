@@ -212,10 +212,6 @@ function parsed_json_to_units(x :: Dict{AbstractString, Any})
     if !haskey(m,"t") || !haskey(m,"x") || !haskey(m, "y")
         result = string("Units must be specified for all of t, x, and y")
     else
-        if !haskey(m,"cx") m["cx"] = m["x"] end
-        if !haskey(m,"cy") m["cy"] = m["y"] end
-        if !haskey(m,"ox") m["ox"] = m["x"] end
-        if !haskey(m,"oy") m["oy"] = m["y"] end
         result = KnownUnits(m,c)
     end
     return result

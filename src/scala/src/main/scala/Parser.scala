@@ -60,15 +60,12 @@ object Parser {
       case (None, _) => Left("Not valid WCON--no units.")
       case (_, None) => Left("Not valid WCON--no data.")
       case (Some(Right(u)), Some(Right(d))) =>
+        var someO, someC = false
         val uni: UnitMap = (UnitMap from u) match {
           case Left(l) => return Left(l)
           case Right(um) =>
             Seq("t", "x", "y").foreach{ e => if (um missing e) return Left("Units data does not contain entry for " + e) }
-            var um2 = um
-            Seq("ox", "oy", "cx", "cy").foreach{ e =>
-              if (um2 missing e) um2 = um2.copy(lookup = um2.lookup + (e -> um.lookup(e.substring(1))))
-            }
-            um2
+            um
         }
         val meta = om match {
           case None => Metadata.empty
@@ -80,7 +77,17 @@ object Parser {
         }
         val datas = d.map{ di => (DataSet dataEntry uni.fix(di)) match {
           case Left(l) => return Left(l)
-          case Right(d)=> d
+          case Right(d)=>
+            // Make sure we know whether ox, oy, cx, cy were used
+            if (!someO || !someC) d match {
+              case Left(da) =>
+                if (da.independentC) someC = true
+                if (da.specifiedO) someO = true
+              case Right(db) =>
+                if (db.independentC) someC = true
+                if (db.specifiedO) someO = true
+            }
+            d
         }}
         val fs = ofs match {
           case None => FileSet.empty
@@ -90,7 +97,9 @@ object Parser {
             case Right(r) => r
           }
         }
-        Right(DataSet(meta, uni, datas, fs, uni.fix(json.ObjJ(cust.toMap))))
+        if      (someO && !(uni.lookup.contains("ox") && uni.lookup.contains("oy"))) Left("Used ox/oy without units")
+        else if (someC && !(uni.lookup.contains("cx") && uni.lookup.contains("cy"))) Left("Used cx/cy without units")
+        else Right(DataSet(meta, uni, datas, fs, uni.fix(json.ObjJ(cust.toMap))))
       case (Some(Left(l)), _) => Left(l)
       case (_, Some(Left(l))) => Left(l)
     }

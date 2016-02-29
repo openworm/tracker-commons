@@ -44,6 +44,8 @@ end
 
 function parsed_json_to_dataset(j0 :: Dict{AbstractString, Any}, fullname :: AbstractString)
     result :: Union{AbstractString, DataSet} = ""
+    someC :: Bool = false
+    someO :: Bool = false
     j = copy(j0)
     u = begin
             if !haskey(j, "units")
@@ -95,11 +97,26 @@ function parsed_json_to_dataset(j0 :: Dict{AbstractString, Any}, fullname :: Abs
                     result = string("Failed to parse WCON data, element ", i, ".  ", convert(AbstractString, ai))
                     return result
                 end
+                cw = convert(CommonWorm, ai)
+                if (!someO && cw.had_origin)
+                    someO = true
+                end
+                if (!someC && length(cw.cx > 0))
+                    someC = true
+                end
                 ans[i] = convert(CommonWorm, ai)
             end
             ans
         end
     c = extract_custom(j)
+    if (someO && !haskey(u.mapper, "ox"))
+        result = string("Failed to parse WCON because ox/oy was used but had no units")
+        return result
+    end
+    if (someC && !haskey(u.mapper, "cx"))
+        result = string("Failed to parse WCON because cx/cy was used but had no units")
+        return result
+    end
     all = DataSet(u, m, d, fullname, Nullable{AbstractString}(), Nullable{AbstractString}(), no_custom(), c)
     if haskey(j, "files")
         if ~isa(j["files"], Dict{AbstractString, Any})

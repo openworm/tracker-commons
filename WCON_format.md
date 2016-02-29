@@ -84,7 +84,7 @@ in millimeters; when it is practical, we encourage other labs to adopt these to 
 
 For compound units, `*` can be used for multiplication, `/` for division, and `^` for exponentiation.  For instance, a unit of acceleration could be written `"mm^2/s"`.  Use `"1"` for a unitless quantity (or `"%"`, as appropriate).
 
-`"units"` is required and must be single-valued.  Units must be specified at least for `"t"`, `"x"`, and `"y"`.
+`"units"` is required and must be single-valued.  Units must be specified for all quantities used.  If the data set is non-empty, that means there must be units at least for `"t"`, `"x"`, and `"y"` since those are required.  It is permitted to specify units for variables that do not exist.  An empty `"data"` section is also permitted, but WCON readers are allowed to fail on this degenerate case if units for `"t"`, `"x"`, and `"y"` are not supplied.
 
 #### Data
 
@@ -351,14 +351,19 @@ The origin used to define the worm's xy-coordinates can change over time to redu
 
 It is often the case that the centroid of an animal is known with considerably greater accuracy than any other position.  The centroid positions can be specified by `cx` and `cy`, and must be given for every time point.  If `ox` and `oy` are not specified, it is assumed that the value of `cx` and `cy` is used for the origin; if `ox` and `oy` are specified, the values of `cx` and `cy` are relative to the origin.  If you wish to specify absolute numbers for `cx` and `cy` as well as `x` and `y`, use `"ox":0, "oy":0` to explicity set the origin to `(0,0)`.
 
+Note that you must specify units for `cx`, `cy`, `ox`, and `oy` if you use them.  Also, note that they must be used in pairs: a `cx` without a `cy` is uninterpretable.
+
 Here is an example WCON file using origin and centroid points:
 
 ```JSON
 {
-    "units":{"t":"s", "x":"mm", "y":"mm"},
+    "units":{
+        "t":"s", "x":"mm", "y":"mm",
+        "cx":"mm", "cy":"mm", "ox":"mm", "oy":"mm"
+    },
     "data":[
         {"id":1, "t":1.3, "x":[7.2, 8.1], "y":[0.5, 0.3],
-         "ox":32.4, "oy":9.2, "@SmithLab": {"cx":7.676, "cy": 0.384}}
+         "ox":32.4, "oy":9.2, "cx":7.676, "cy": 0.384}
     ]
 }
 ```
