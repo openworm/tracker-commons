@@ -610,7 +610,7 @@ SAVING DATA
 
 precision = 2  # TODO
 
-
+@profile
 def _data_segment_as_odict(worm_id, df_segment):
     """
     Convert a pandas dataframe into an ordered_dictionary.  This is a support
