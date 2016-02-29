@@ -689,11 +689,11 @@ def _data_segment_as_odict(worm_id, df_segment):
                     
                 st = time.monotonic()
                 jagged_array.append(cur_entry)
-                accumulated_time1 += time.montonic() - st
+                accumulated_time1 += time.monotonic() - st
 
         st = time.monotonic()
         data_segment.append((key, jagged_array))
-        accumulated_time2 += time.montonic() - st
+        accumulated_time2 += time.monotonic() - st
 
     print("TIMEPOINT 4: %.2f seconds" %
           (time.monotonic() - start_time))
