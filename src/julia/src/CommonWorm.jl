@@ -12,19 +12,18 @@ type CommonWorm
     y  :: Array{Array{Float64, 1}, 1}
     cx :: Array{Float64, 1}
     cy :: Array{Float64, 1}
+    had_origin :: Bool
     custom :: Dict{AbstractString, Any}
 end
 
 function empty_worm()
-    CommonWorm("", [], [], [], [], [], Dict())
+    CommonWorm("", [], [], [], [], [], false, Dict())
 end
 
 function convert_for_json(cw :: CommonWorm)
     d = Dict{AbstractString, Any}("id" => cw.id, "t" => cw.t, "x" => cw.x, "y" => cw.y)
     if (length(cw.cx) > 0)
         d["cx"] = cw.cx
-    end
-    if (length(cw.cy) > 0)
         d["cy"] = cw.cy
     end
     if (length(cw.custom) > 0)
@@ -115,9 +114,17 @@ function parsed_json_to_worm(d :: Dict{AbstractString, Any})
     end
     for i in 1:length(x)
         if length(x[i]) != length(y[i])
-            result = string("Failed to parse worm ", id, " lengths of x and y spines do not agree at t = ", t[i])
+            result = string("Failed to parse worm ", id, ": lengths of x and y spines do not agree at t = ", t[i])
             return result
         end
+    end
+    if (haskey(d, "cx") != haskey(d, "cy"))
+        result = string("Failed to parse worm ", id, ": only one of cx, cy but should have both or neither")
+        return result
+    end
+    if (haskey(d, "ox") != haskey(d, "oy"))
+        result = string("Failed to parse worm ", id, ": only one of ox, oy but should have both or neither")
+        return rsult
     end
     cx = haskey(d,"cx") ? fill(NaN, length(t)) : Array{Float64, 1}()
     cy = haskey(d,"cy") ? fill(NaN, length(t)) : Array{Float64, 1}()
@@ -176,6 +183,6 @@ function parsed_json_to_worm(d :: Dict{AbstractString, Any})
             end
         end
     end
-    result = CommonWorm(id, t, x, y, cx, cy, extract_custom(d))
+    result = CommonWorm(id, t, x, y, cx, cy, haskey(d, "ox"), extract_custom(d))
     return result
 end

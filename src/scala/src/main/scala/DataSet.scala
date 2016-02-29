@@ -60,9 +60,9 @@ extends json.Jsonable {
                 }.toMap
               )
             }
-          val cX = datas.forall(_.derivedCx)
-          val cY = datas.forall(_.derivedCy)
-          Data(datas(0).nid, datas(0).sid, ts, xs, ys, cxs, cys, custom).setDerived(cX, cY)
+          val ic = datas.forall(_.independentC)
+          val so = datas.exists(_.specifiedO)
+          Data(datas(0).nid, datas(0).sid, ts, xs, ys, cxs, cys, custom).setCO(ic, so)
         }
       }
     )
