@@ -657,13 +657,14 @@ def _data_segment_as_odict(worm_id, df_segment):
 
         for i, t in enumerate(non_jagged_array.index):
             cur_aspect_size = num_spine_points[i]
-            # For some reason loc's slice notation is INCLUSIVE!
-            # so we must subtract one from cur_aspect_size, so if
-            # it's 3, for instance, we get only entries
-            # 0, 1, and 2, as required.
+
             if cur_aspect_size == 0:
                 cur_entry = []
             else:
+                # For some reason loc's slice notation is INCLUSIVE!
+                # so we must subtract one from cur_aspect_size, so if
+                # it's 3, for instance, we get only entries
+                # 0, 1, and 2, as required.
                 cur_entry = non_jagged_array.loc[t, 0:cur_aspect_size - 1]
                 cur_entry = list(np.array(cur_entry))
 
