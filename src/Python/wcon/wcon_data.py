@@ -7,7 +7,6 @@ array.
 """
 import six
 import gc
-import time
 import warnings
 import numpy as np
 import pandas as pd
@@ -648,29 +647,27 @@ def _data_segment_as_odict(worm_id, df_segment):
         cur_list = list(np.array(cur_segment_slice))
         data_segment.append((key, cur_list))
 
+    num_spine_points = worm_aspect_size.loc[:, 0].astype(int)
+
     # e.g. x, y
     for key in [k for k in keys_used if k in elements_with_aspect]:
         non_jagged_array = df_segment.loc[:, (key)]
 
         jagged_array = []
 
-        for t in non_jagged_array.index:
-            # If aspect size isn't defined, don't bother adding data here:
-            if np.isnan(worm_aspect_size.loc[t, 0]):
-                jagged_array.append([])
+        for i, t in enumerate(non_jagged_array.index):
+            cur_aspect_size = num_spine_points[i]
+            # For some reason loc's slice notation is INCLUSIVE!
+            # so we must subtract one from cur_aspect_size, so if
+            # it's 3, for instance, we get only entries
+            # 0, 1, and 2, as required.
+            if cur_aspect_size == 0:
+                cur_entry = []
             else:
-                cur_aspect_size = int(worm_aspect_size.loc[t, 0])
-                # For some reason loc's slice notation is INCLUSIVE!
-                # so we must subtract one from cur_aspect_size, so if
-                # it's 3, for instance, we get only entries
-                # 0, 1, and 2, as required.
-                if cur_aspect_size == 0:
-                    cur_entry = []
-                else:
-                    cur_entry = non_jagged_array.loc[t, 0:cur_aspect_size - 1]
-                    cur_entry = list(np.array(cur_entry))
+                cur_entry = non_jagged_array.loc[t, 0:cur_aspect_size - 1]
+                cur_entry = list(np.array(cur_entry))
 
-                jagged_array.append(cur_entry)
+            jagged_array.append(cur_entry)
 
         data_segment.append((key, jagged_array))
 
