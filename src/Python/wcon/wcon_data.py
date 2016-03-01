@@ -609,7 +609,7 @@ SAVING DATA
 
 precision = 2  # TODO
 
-@profile
+
 def _data_segment_as_odict(worm_id, df_segment):
     """
     Convert a pandas dataframe into an ordered_dictionary.  This is a support
@@ -647,32 +647,24 @@ def _data_segment_as_odict(worm_id, df_segment):
         cur_list = list(np.array(cur_segment_slice))
         data_segment.append((key, cur_list))
 
-    num_spine_points = worm_aspect_size.loc[:, 0].astype(int)
+    num_spine_points = worm_aspect_size.loc[:, 0].astype(int).tolist()
 
     # e.g. x, y
     for key in [k for k in keys_used if k in elements_with_aspect]:
         non_jagged_array = df_segment.loc[:, (key)]
 
-        jagged_array = []
+        jagged_array = non_jagged_array.values.tolist()
 
-        for i, t in enumerate(non_jagged_array.index):
+        num_time_points = len(jagged_array)
+
+        for i in range(num_time_points):
             cur_aspect_size = num_spine_points[i]
 
-            if cur_aspect_size == 0:
-                cur_entry = []
-            else:
-                # For some reason loc's slice notation is INCLUSIVE!
-                # so we must subtract one from cur_aspect_size, so if
-                # it's 3, for instance, we get only entries
-                # 0, 1, and 2, as required.
-                cur_entry = non_jagged_array.ix[i, 0:(cur_aspect_size - 1)]
-                cur_entry = list(np.array(cur_entry))
-
-            jagged_array.append(cur_entry)
+            jagged_array[i] = jagged_array[i][:cur_aspect_size]
 
         data_segment.append((key, jagged_array))
 
-    # Re-enable garbage collection now that all our list append 
+    # Re-enable garbage collection now that all our list append
     # operations are done.
     gc.enable()
 
