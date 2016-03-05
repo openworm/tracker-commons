@@ -7,12 +7,17 @@ array.
 """
 import six
 import gc
+import os
 import warnings
 import numpy as np
 import pandas as pd
 import itertools
+from multiprocessing import Queue, Process
+import multiprocessing
 from collections import OrderedDict
 idx = pd.IndexSlice
+
+os.system("taskset -p 0xff %d" % os.getpid())
 
 # "Aspect" is my term for the articulation points at a given time frame
 # So if you track 49 skeleton points per frame, then x and y have
@@ -288,7 +293,7 @@ def parse_data(data):
 
     return time_df
 
-
+#@profile
 def _obtain_time_series_data_frame(time_series_data):
     """
     Obtain a time-series pandas DataFrame
@@ -357,14 +362,14 @@ def _obtain_time_series_data_frame(time_series_data):
                     data_segment[k][i] +
                     [np.NaN] * (max_aspect_size - len(data_segment[k][i])))
 
+        num_timeframes = len(cur_timeframes)
+
         # Stage the data for addition to our DataFrame.
         # Shape KxI where K is the number of keys and
         #                 I is the number of "aspects"
-        cur_data = np.array(
-            [np.concatenate(
-                [data_segment[k][i] for k in cur_data_keys]
-            ) for i in range(len(cur_timeframes))]
-        )
+        cur_data = _stage_dataframe_data_multi(num_timeframes,
+                                         data_segment, cur_data_keys)
+
 
         cur_df = pd.DataFrame(cur_data, columns=cur_columns)
 
@@ -421,6 +426,84 @@ def _obtain_time_series_data_frame(time_series_data):
 
     return time_df
 
+def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
+    """
+    Transform the WCON data segment into one properly arranged for adding to
+    a pandas DataFrame
+
+    """
+    cur_data = np.array(
+        [np.concatenate(
+           [data_segment[k][i] for k in cur_data_keys]
+        ) for i in range(num_timeframes)]
+    )
+
+    return cur_data
+
+def __get_segment(q, data_seg, cur_data_keyss, i_start, i_end):
+    """
+    Pivot the data properly for the dataframe, for a certain range
+    of frames f where i_start <= f < i_end.
+
+    """
+    #myList = np.random.randint(0, 10, 3333333/4)
+    #finalSum = sum(myList)
+
+    cur_data_slice = \
+        [np.concatenate(
+            [data_seg[k][i] for k in cur_data_keyss]
+        ) for i in range(i_start, i_end)]
+
+    # Put the result in the Queue to return the the calling process
+    q.put(cur_data_slice)
+
+def _stage_dataframe_data_multi(num_timeframes, data_segment, cur_data_keys):
+    """
+    Transform the WCON data segment into one properly arranged for adding to
+    a pandas DataFrame.
+
+    (This version attempts to use multiple processors)
+
+    """
+    # Don't use multiple processes unless we have many frames of data
+    if num_timeframes <= 5:
+        return _stage_dataframe_data(num_timeframes, data_segment,
+                                     cur_data_keys)
+
+    # Create a Queue to share results
+    q = Queue()
+    # Create 4 sub-processes to do the work
+    num_cores = multiprocessing.cpu_count()
+    splits = list(range(0, num_timeframes, num_timeframes//num_cores))
+    # If the number of frames is not divisible by the step length,
+    # range will fall short of ranging up to the num_timeframes
+    # so here we overwrite the last endpoint
+    splits[-1] = num_timeframes
+
+    # print("num_timeframes:" + str(num_timeframes))
+    # print("splits:" + str(splits))
+    processes = []
+    for i in range(num_cores):
+        processes.append(Process(target=__get_segment, args=(q,
+                                 data_segment, cur_data_keys,
+                                 splits[i], splits[i+1])))
+
+    for i in range(len(processes)):
+        processes[i].start()
+
+    cur_data = []
+    # Grab 4 values from the queue, one for each process
+    for i in range(len(processes)):
+        # Set block=True to block until we get a result
+        cur_data.extend(q.get(True))
+
+    # Combine all the processes' data into one list
+    cur_data = np.array(cur_data)
+
+    for i in range(len(processes)):
+        processes[i].join()
+
+    return cur_data    
 
 def _validate_time_series_data(time_series_data):
     """
