@@ -28,6 +28,7 @@ elements_without_aspect = ['ox', 'oy', 'cx', 'cy', 'head', 'ventral']
 basic_data_keys = elements_with_aspect + elements_without_aspect
 supported_data_keys = basic_data_keys + ['id', 't']
 MIN_FRAMES_FOR_MULTIPROCESSING = 3000
+USE_MULTIPROCESSING = False
 
 def get_mask(arr, desired_key):
     """
@@ -498,7 +499,8 @@ def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
 
     # Don't use multiple processes unless we have many frames of data,
     # and unless we have multiple CPUs to spread the work around
-    if num_timeframes < MIN_FRAMES_FOR_MULTIPROCESSING or num_cores <= 1:
+    if ((not USE_MULTIPROCESSING) or
+        num_timeframes < MIN_FRAMES_FOR_MULTIPROCESSING or num_cores <= 1):
         return __pivot_data_for_staging(data_segment, cur_data_keys,
                                         range(num_timeframes))
 
