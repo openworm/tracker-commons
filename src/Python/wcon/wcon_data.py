@@ -527,6 +527,12 @@ def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
     # Grab 4 values from the queue, one for each process
     for i in range(len(processes)):
         # Set block=True to block until we get a result
+        # DEBUG: these blocks calculated by sub-processes could arrive
+        # out of order, so some mechanism for putting them all together
+        # in cur_data in the correct order must be devised.  I suspect
+        # .put((core_index, cur_data_slice)) instead of .put(cur_data_slice)
+        # in the above method, then receive the data here, then outside
+        # this loop use a list comprehension to assemble in the right order.
         cur_data.extend(q.get(True))
 
     # Combine all the processes' data into one list
