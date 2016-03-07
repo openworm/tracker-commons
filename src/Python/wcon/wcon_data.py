@@ -14,10 +14,10 @@ import pandas as pd
 import itertools
 from multiprocessing import Queue, Process
 import multiprocessing
+import psutil
+import time
 from collections import OrderedDict
 idx = pd.IndexSlice
-
-os.system("taskset -p 0xff %d" % os.getpid())
 
 # "Aspect" is my term for the articulation points at a given time frame
 # So if you track 49 skeleton points per frame, then x and y have
@@ -27,7 +27,7 @@ elements_with_aspect = ['x', 'y']
 elements_without_aspect = ['ox', 'oy', 'cx', 'cy', 'head', 'ventral']
 basic_data_keys = elements_with_aspect + elements_without_aspect
 supported_data_keys = basic_data_keys + ['id', 't']
-
+MIN_FRAMES_FOR_MULTIPROCESSING = 3000
 
 def get_mask(arr, desired_key):
     """
@@ -257,7 +257,6 @@ def reverse_backwards_worms(df, coord_keys=['x', 'y']):
 
     pass
 
-
 def parse_data(data):
     """
     Parse the an array of entries conforming to the WCON schema definition
@@ -293,7 +292,6 @@ def parse_data(data):
 
     return time_df
 
-#@profile
 def _obtain_time_series_data_frame(time_series_data):
     """
     Obtain a time-series pandas DataFrame
@@ -367,7 +365,7 @@ def _obtain_time_series_data_frame(time_series_data):
         # Stage the data for addition to our DataFrame.
         # Shape KxI where K is the number of keys and
         #                 I is the number of "aspects"
-        cur_data = _stage_dataframe_data_multi(num_timeframes,
+        cur_data = _stage_dataframe_data(num_timeframes,
                                          data_segment, cur_data_keys)
 
 
@@ -426,67 +424,99 @@ def _obtain_time_series_data_frame(time_series_data):
 
     return time_df
 
-def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
+def __pivot_data_for_staging(data_segment, cur_data_keys, index_range,
+                             core_index=None, queue=None):
     """
     Transform the WCON data segment into one properly arranged for adding to
     a pandas DataFrame
 
+    i.e. Pivot the data properly for the dataframe, for a certain range
+    of frames f where i_start <= f < i_end, where 
+    i_start = min(index_range) and i_end = max(index_range).
+    
+    Parameters
+    ----------
+    data_segment: list of lists of floats
+        Taken directly from the WCON file being loaded
+    cur_data_keys: list of 1-character strings
+        The keys, e.g. 'x', 'y', that need to be obtained
+    index_range: range object
+        The timeframes across which the transformation is to be applied
+    core_index: int
+        None if this is not a sub-process
+        Otherwise, this is the core that the sub-process should be pinned to
+        (there is a problem with subprocesses using multiple cores when
+        numpy is involved, so we must explicitly pin them to separate cores)
+    queue: multiprocessing.Queue object
+        None if this is not a sub-process
+        Otherwise, this is a sub-process, and we should append our result
+        to queue rather than return a value
+
     """
-    cur_data = np.array(
+    # DEBUG: This code definitely gets used across multiple cores
+    #        use this to verify multiprocessing
+    # myList = np.random.randint(0, 10, 3333333/4)
+    # finalSum = sum(myList)
+
+    # Set process affinity if we are multiprocessing
+    if core_index:
+        cur_pid = os.getpid()
+        p = psutil.Process(cur_pid)
+        # print("Current pid:" + str(cur_pid))
+        # print("Parent pid:" + str(os.getppid()))
+        # print("PSUTIL CPU affinity:" + str(p.cpu_affinity()))
+        p.cpu_affinity([core_index]) 
+        # print("PSUTIL CPU affinity:" + str(p.cpu_affinity()))
+
+    # Pivot the data
+    cur_data_slice = np.array(
         [np.concatenate(
            [data_segment[k][i] for k in cur_data_keys]
-        ) for i in range(num_timeframes)]
+        ) for i in index_range]
     )
 
-    return cur_data
+    # Add to the queue only if we are multiprocessing
+    if queue is None:
+        return cur_data_slice
+    else:
+        queue.put(cur_data_slice)
 
-def __get_segment(q, data_seg, cur_data_keyss, i_start, i_end):
-    """
-    Pivot the data properly for the dataframe, for a certain range
-    of frames f where i_start <= f < i_end.
-
-    """
-    #myList = np.random.randint(0, 10, 3333333/4)
-    #finalSum = sum(myList)
-
-    cur_data_slice = \
-        [np.concatenate(
-            [data_seg[k][i] for k in cur_data_keyss]
-        ) for i in range(i_start, i_end)]
-
-    # Put the result in the Queue to return the the calling process
-    q.put(cur_data_slice)
-
-def _stage_dataframe_data_multi(num_timeframes, data_segment, cur_data_keys):
+def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
     """
     Transform the WCON data segment into one properly arranged for adding to
     a pandas DataFrame.
 
-    (This version attempts to use multiple processors)
+    As this is an "embarassingly parallel" problem since each frame can be
+    processed independently, we split the frames across multiple processes
+    if 
+    independent
+
+    (This version attempts to use multiple process)
 
     """
-    # Don't use multiple processes unless we have many frames of data
-    if num_timeframes <= 5:
-        return _stage_dataframe_data(num_timeframes, data_segment,
-                                     cur_data_keys)
+    num_cores = multiprocessing.cpu_count()
+
+    # Don't use multiple processes unless we have many frames of data,
+    # and unless we have multiple CPUs to spread the work around
+    if num_timeframes < MIN_FRAMES_FOR_MULTIPROCESSING or num_cores <= 1:
+        return __pivot_data_for_staging(data_segment, cur_data_keys,
+                                        range(num_timeframes))
 
     # Create a Queue to share results
     q = Queue()
     # Create 4 sub-processes to do the work
-    num_cores = multiprocessing.cpu_count()
     splits = list(range(0, num_timeframes, num_timeframes//num_cores))
     # If the number of frames is not divisible by the step length,
     # range will fall short of ranging up to the num_timeframes
     # so here we overwrite the last endpoint
     splits[-1] = num_timeframes
 
-    # print("num_timeframes:" + str(num_timeframes))
-    # print("splits:" + str(splits))
     processes = []
     for i in range(num_cores):
-        processes.append(Process(target=__get_segment, args=(q,
+        processes.append(Process(target=__pivot_data_for_staging, args=(
                                  data_segment, cur_data_keys,
-                                 splits[i], splits[i+1])))
+                                 range(splits[i], splits[i+1]),
+                                 i, q)))
 
     for i in range(len(processes)):
         processes[i].start()
