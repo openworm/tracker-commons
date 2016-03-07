@@ -746,18 +746,20 @@ def _data_segment_as_odict(worm_id, df_segment):
     # There is great duplication in df_segment.columns so we must
     # filter to just the unique entries (e.g. ['x', 'y'])
     keys_used = list(set(keys_used))
+    keys_used.sort()
 
     # e.g. ox, oy, head, ventral
     for key in [k for k in keys_used if k in elements_without_aspect]:
         cur_segment_slice = df_segment.loc[:, idx[key, 0]]
-        # We must replace NaN with None, otherwise the JSON encoder will
-        # save 'NaN' as the string and this will get rejected by our schema
-        # on any subsequent loads
+        # We must replace NaN with None, otherwise the JSON encoder
+        # will save 'NaN' as the string and this will get rejected
+        # by our schema on any subsequent loads
         # Note we can't use .fillna(None) due to this issue:
         # https://github.com/pydata/pandas/issues/1972
         if key in ['head', 'ventral']:
             cur_segment_slice = \
-                cur_segment_slice.where(pd.notnull(cur_segment_slice), None)
+                cur_segment_slice.where(pd.notnull(cur_segment_slice),
+                                        None)
         cur_list = list(np.array(cur_segment_slice))
         data_segment.append((key, cur_list))
 
