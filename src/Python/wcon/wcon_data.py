@@ -729,8 +729,6 @@ def _data_segment_as_odict(worm_id, df_segment):
     method of data_as_array.
 
     """
-    # Disable garbage collection to speed up list append operations
-    gc.disable()
     data_segment = [("id", worm_id)]
 
     # We only care about time indices for which we have some "aspect" or
@@ -745,6 +743,9 @@ def _data_segment_as_odict(worm_id, df_segment):
 
     keys_used = [k for k in df_segment.columns.get_level_values('key')
                  if k != 'aspect_size']
+    # There is great duplication in df_segment.columns so we must
+    # filter to just the unique entries (e.g. ['x', 'y'])
+    keys_used = list(set(keys_used))
 
     # e.g. ox, oy, head, ventral
     for key in [k for k in keys_used if k in elements_without_aspect]:
@@ -776,10 +777,6 @@ def _data_segment_as_odict(worm_id, df_segment):
             jagged_array[i] = jagged_array[i][:cur_aspect_size]
 
         data_segment.append((key, jagged_array))
-
-    # Re-enable garbage collection now that all our list append
-    # operations are done.
-    gc.enable()
 
     return OrderedDict(data_segment)
 
