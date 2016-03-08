@@ -27,8 +27,8 @@ elements_with_aspect = ['x', 'y']
 elements_without_aspect = ['ox', 'oy', 'cx', 'cy', 'head', 'ventral']
 basic_data_keys = elements_with_aspect + elements_without_aspect
 supported_data_keys = basic_data_keys + ['id', 't']
-MIN_FRAMES_FOR_MULTIPROCESSING = 3000
-USE_MULTIPROCESSING = False
+MIN_FRAMES_FOR_MULTIPROCESSING = 3000 # This is somewhat arbitrary
+USE_MULTIPROCESSING = True
 
 
 def get_mask(arr, desired_key):
@@ -483,7 +483,10 @@ def __pivot_data_for_staging(data_segment, cur_data_keys, index_range,
     if queue is None:
         return cur_data_slice
     else:
-        queue.put(cur_data_slice)
+        # We put a duple into the queue, the first entry
+        # being the correct final order of the data, the
+        # second entry being the data we just calculated
+        queue.put((core_index, cur_data_slice))
 
 
 def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
@@ -527,17 +530,21 @@ def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
     for i in range(len(processes)):
         processes[i].start()
 
-    cur_data = []
+    data_pieces = {}
     # Grab 4 values from the queue, one for each process
+    # They are calculated by subprocesses and hence might 
+    # arrive in the queue out of order, so we collect them into
+    # a dictionary keyed with their correct final order.
     for i in range(len(processes)):
         # Set block=True to block until we get a result
-        # DEBUG: these blocks calculated by sub-processes could arrive
-        # out of order, so some mechanism for putting them all together
-        # in cur_data in the correct order must be devised.  I suspect
-        # .put((core_index, cur_data_slice)) instead of .put(cur_data_slice)
-        # in the above method, then receive the data here, then outside
-        # this loop use a list comprehension to assemble in the right order.
-        cur_data.extend(q.get(True))
+        data_piece = q.get(True)
+        # data_piece is a tuple with the first entry providing the order
+        data_pieces[data_piece[0]] = data_piece[1]
+
+    # Now put the pieces together in the correct order
+    cur_data = []
+    for i in range(len(processes)):
+        cur_data.extend(data_pieces[i])
 
     # Combine all the processes' data into one list
     cur_data = np.array(cur_data)
