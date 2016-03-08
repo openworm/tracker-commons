@@ -30,6 +30,7 @@ supported_data_keys = basic_data_keys + ['id', 't']
 MIN_FRAMES_FOR_MULTIPROCESSING = 3000
 USE_MULTIPROCESSING = False
 
+
 def get_mask(arr, desired_key):
     """
     In an array of dicts, obtain a mask on arr of elements having
@@ -258,6 +259,7 @@ def reverse_backwards_worms(df, coord_keys=['x', 'y']):
 
     pass
 
+
 def parse_data(data):
     """
     Parse the an array of entries conforming to the WCON schema definition
@@ -292,6 +294,7 @@ def parse_data(data):
     time_df = _obtain_time_series_data_frame(data)
 
     return time_df
+
 
 def _obtain_time_series_data_frame(time_series_data):
     """
@@ -369,7 +372,6 @@ def _obtain_time_series_data_frame(time_series_data):
         cur_data = _stage_dataframe_data(num_timeframes,
                                          data_segment, cur_data_keys)
 
-
         cur_df = pd.DataFrame(cur_data, columns=cur_columns)
 
         cur_df.index = cur_timeframes
@@ -425,6 +427,7 @@ def _obtain_time_series_data_frame(time_series_data):
 
     return time_df
 
+
 def __pivot_data_for_staging(data_segment, cur_data_keys, index_range,
                              core_index=None, queue=None):
     """
@@ -432,9 +435,9 @@ def __pivot_data_for_staging(data_segment, cur_data_keys, index_range,
     a pandas DataFrame
 
     i.e. Pivot the data properly for the dataframe, for a certain range
-    of frames f where i_start <= f < i_end, where 
+    of frames f where i_start <= f < i_end, where
     i_start = min(index_range) and i_end = max(index_range).
-    
+
     Parameters
     ----------
     data_segment: list of lists of floats
@@ -466,13 +469,13 @@ def __pivot_data_for_staging(data_segment, cur_data_keys, index_range,
         # print("Current pid:" + str(cur_pid))
         # print("Parent pid:" + str(os.getppid()))
         # print("PSUTIL CPU affinity:" + str(p.cpu_affinity()))
-        p.cpu_affinity([core_index]) 
+        p.cpu_affinity([core_index])
         # print("PSUTIL CPU affinity:" + str(p.cpu_affinity()))
 
     # Pivot the data
     cur_data_slice = np.array(
         [np.concatenate(
-           [data_segment[k][i] for k in cur_data_keys]
+            [data_segment[k][i] for k in cur_data_keys]
         ) for i in index_range]
     )
 
@@ -482,6 +485,7 @@ def __pivot_data_for_staging(data_segment, cur_data_keys, index_range,
     else:
         queue.put(cur_data_slice)
 
+
 def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
     """
     Transform the WCON data segment into one properly arranged for adding to
@@ -489,7 +493,7 @@ def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
 
     As this is an "embarassingly parallel" problem since each frame can be
     processed independently, we split the frames across multiple processes
-    if 
+    if
     independent
 
     (This version attempts to use multiple process)
@@ -500,14 +504,14 @@ def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
     # Don't use multiple processes unless we have many frames of data,
     # and unless we have multiple CPUs to spread the work around
     if ((not USE_MULTIPROCESSING) or
-        num_timeframes < MIN_FRAMES_FOR_MULTIPROCESSING or num_cores <= 1):
+            num_timeframes < MIN_FRAMES_FOR_MULTIPROCESSING or num_cores <= 1):
         return __pivot_data_for_staging(data_segment, cur_data_keys,
                                         range(num_timeframes))
 
     # Create a Queue to share results
     q = Queue()
     # Create 4 sub-processes to do the work
-    splits = list(range(0, num_timeframes, num_timeframes//num_cores))
+    splits = list(range(0, num_timeframes, num_timeframes // num_cores))
     # If the number of frames is not divisible by the step length,
     # range will fall short of ranging up to the num_timeframes
     # so here we overwrite the last endpoint
@@ -517,7 +521,7 @@ def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
     for i in range(num_cores):
         processes.append(Process(target=__pivot_data_for_staging, args=(
                                  data_segment, cur_data_keys,
-                                 range(splits[i], splits[i+1]),
+                                 range(splits[i], splits[i + 1]),
                                  i, q)))
 
     for i in range(len(processes)):
@@ -541,7 +545,8 @@ def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
     for i in range(len(processes)):
         processes[i].join()
 
-    return cur_data    
+    return cur_data
+
 
 def _validate_time_series_data(time_series_data):
     """
@@ -753,8 +758,7 @@ def _data_segment_as_odict(worm_id, df_segment):
                  if k != 'aspect_size']
     # There is great duplication in df_segment.columns so we must
     # filter to just the unique entries (e.g. ['x', 'y'])
-    keys_used = list(set(keys_used))
-    keys_used.sort()
+    keys_used = sorted(set(keys_used))
 
     # e.g. ox, oy, head, ventral
     for key in [k for k in keys_used if k in elements_without_aspect]:
