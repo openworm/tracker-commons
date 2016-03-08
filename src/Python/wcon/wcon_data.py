@@ -27,7 +27,7 @@ elements_with_aspect = ['x', 'y']
 elements_without_aspect = ['ox', 'oy', 'cx', 'cy', 'head', 'ventral']
 basic_data_keys = elements_with_aspect + elements_without_aspect
 supported_data_keys = basic_data_keys + ['id', 't']
-MIN_FRAMES_FOR_MULTIPROCESSING = 3000 # This is somewhat arbitrary
+MIN_FRAMES_FOR_MULTIPROCESSING = 3000  # This is somewhat arbitrary
 USE_MULTIPROCESSING = True
 
 
@@ -532,7 +532,7 @@ def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
 
     data_pieces = {}
     # Grab 4 values from the queue, one for each process
-    # They are calculated by subprocesses and hence might 
+    # They are calculated by subprocesses and hence might
     # arrive in the queue out of order, so we collect them into
     # a dictionary keyed with their correct final order.
     for i in range(len(processes)):
