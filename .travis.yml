@@ -41,7 +41,7 @@ before_install:
     # Old versions are at: http://repo.continuum.io/miniconda/ but don't 
     # match Python versions and it seems like continuum doesn't want you 
     # to try and match
-    - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy pandas jsonschema
+    - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy pandas jsonschema psutil
  
      # Diagnostic information
     - which python
