@@ -75,6 +75,15 @@ class TestDocumentationExamples(unittest.TestCase):
 
 class TestMeasurementUnit(unittest.TestCase):
 
+    def test_units_with_numbers(self):
+        MU = MeasurementUnit
+        self.assertTrue(MU.create('0.04*s').to_canon(1) == 0.04)
+        self.assertTrue(MU.create('0.04/C').to_canon(1) == 0.04)
+        self.assertTrue(MU.create('0.04/us').to_canon(-34.5) == -1380000)
+        self.assertTrue(MU.create('4').from_canon(4) == 1)
+        self.assertTrue(MU.create('0.04*s').canonical_unit_string == 's')
+        self.assertTrue(MU.create('1/234234').canonical_unit_string == '')
+
     def test_unit_equivalence(self):
         MU = MeasurementUnit
         self.assertTrue(MU.create('mm') == MU.create('millimetre'))
