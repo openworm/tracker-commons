@@ -3,14 +3,34 @@
 This is primarily an Octave prototype, but it is expected to be portable/ported
 to Matlab without any major compatibility issues, very probably with no changes.
 
+The prototype is currently tested against the following setup:
+
+Mac OS X (El Capitan)
+Octave 4.0.0_5
+
 ### Setup
+
+Install Octave as required. On Mac OS X, we recommend using homebrew:
+
+```bash
+brew install octave
+```
 
 This package relies on the jsonlab library for JSON parsing capabilities. The
 current prototype expects the git repository to be installed in the "externals"
 folder. When setting up this package for the first time:
 
-cd externals;
+```bash
+cd externals
 git clone https://github.com/fangq/jsonlab
+```
+
+### Running the Prototype
+
+```bash
+cd driver
+octave main.m
+```
 
 ### Current Status 
 
