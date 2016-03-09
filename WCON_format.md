@@ -82,7 +82,9 @@ We recommend that this be done not just for values specified in the base WCON fo
 The WCON readers and writers provided in the Tracker Commons package internally represent times in seconds and distances
 in millimeters; when it is practical, we encourage other labs to adopt these to reduce the risk of loss of precision or inaccurate values due to unit conversions.  Seconds can be specified as one of `"s"`, `"second"`, or `"seconds"`), and millimetres are specified as one of `"mm"`, `"millimetre"`, or `"millimetres"`, or the American English versions "millimeter" or "millimeters".
 
-For compound units, `*` can be used for multiplication, `/` for division, and `^` for exponentiation.  For instance, a unit of acceleration could be written `"mm^2/s"`.  Use `"1"` for a unitless quantity (or `"%"`, as appropriate).
+For compound units, `*` can be used for multiplication, `/` for division, and `^` for exponentiation.  For instance, a unit of acceleration could be written `"mm^2/s"`.  Use `"1"` for a unitless quantity (or `"%"`, as appropriate).  `""` is treated as `"1"`.
+
+Other numerical values may be used in the expressions: for instance, `"0.04*s"` can be used for frame indices in a 25 FPS sample.
 
 `"units"` is required and must be single-valued.  Units must be specified at least for `"t"`, `"x"`, and `"y"`.
 
