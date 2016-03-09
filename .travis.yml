@@ -50,9 +50,10 @@ before_install:
 
 before_script:
     - ls -l
-    - cd $TRAVIS_BUILD_DIR
+    - cd $TRAVIS_BUILD_DIR/tests
     - ls -l
     - wget "https://drive.google.com/uc?export=download&id=0B9dU7zPD0s_LRkNzS0N3VnhoODQ" -O from_schafer_lab.wcon
+    - wget "https://drive.google.com/uc?export=download&id=0B_nHdM3TPDarczNwTy1Uc3VVRGs" -O from_kerr.wcon
     - pwd
  
 script:
