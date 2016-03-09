@@ -49,12 +49,14 @@ before_install:
     - pydoc modules
 
 before_script:
-    - ls -l
     - cd $TRAVIS_BUILD_DIR/tests
+    - pwd
     - ls -l
     - wget "https://drive.google.com/uc?export=download&id=0B9dU7zPD0s_LRkNzS0N3VnhoODQ" -O from_schafer_lab.wcon
     - wget "https://drive.google.com/uc?export=download&id=0B_nHdM3TPDarczNwTy1Uc3VVRGs" -O from_kerr.wcon
+    - cd $TRAVIS_BUILD_DIR
     - pwd
+    - ls -l
  
 script:
     # Run pep8 on all .py files in all subfolders
@@ -71,6 +73,6 @@ script:
     # git commit -a -m "autopep8"
     # git push
 
-    - cd src/Python/tests/
+    - cd $TRAVIS_BUILD_DIR/src/Python/tests/
     - pwd
     - python -m unittest discover
