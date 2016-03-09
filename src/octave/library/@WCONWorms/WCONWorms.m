@@ -1,9 +1,5 @@
-## -*- texinfo -*-
-## @deftypefn  {Function File} {} WCONWorms ()
-## Create a WCONWorms object representing an instance of Worm Movement Data
-##
-
 function w = WCONWorms ()
   w.meta = [0];
   w = class (w, "WCONWorms");
+  dat=loadjson('{"obj":{"string":"value","array":[1,2,3]}}')
 endfunction

@@ -1,4 +1,4 @@
-addpath("../library");
+addpath("../library:../externals/jsonlab");
 
 worm = WCONWorms();
 result = isobject(worm);
