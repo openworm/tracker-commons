@@ -16,6 +16,7 @@ from collections import OrderedDict
 from six import StringIO
 from os import path
 import os
+import shutil
 import json
 import jsonschema
 import zipfile
@@ -486,25 +487,46 @@ class WCONWorms():
         # Check if the specified file is compressed
         if zipfile.is_zipfile(JSON_path):
             zf = zipfile.ZipFile(JSON_path, 'r')
-            if len(zf.namelist()) <= 0:
+
+            zf_namelist = zf.namelist()
+            if len(zf_namelist) <= 0:
                 raise Exception("Filename %s is a zip archive, which is fine, "
                                 "but the archive does not contain any files.")
-            elif len(zf.namelist()) == 1:
+            elif len(zf_namelist) == 1:
                 # Just one file is in the archive.
+                print("The file is a zip archive with one file.  Attempting "
+                      "to uncompress and then load.")
                 wcon_bytes = zf.read(zf.namelist()[0])
                 wcon_string = wcon_bytes.decode("utf-8")
                 infile = StringIO(wcon_string)
                 w_current = cls.load(infile, validate_against_schema)
             else:
-                # The zip archive contains multiple files.  Let's
-                # 1. extract them all to a temporary folder
-                # 2. call load_from_file on the first file
-                # 3. delete the temporary folder
-                # 4. return the results from step 2
-                # TODO
-                raise NotImplementedError("Opening a zip archive of multiple "
-                                          "WCON files has not yet been "
-                                          "implemented")
+                print("The zip archive contains multiple files.  We will "
+                      "extract to a temporary folder and then try to load "
+                      "the first file in the archive, then delete the "
+                      "temporary folder.")
+                # 1. make a temporary archive folder
+                cur_path = os.path.abspath(__file__)
+                archive_path = os.path.join(cur_path, '_zip_archive')
+                if os.path.exists(archive_path):
+                    raise Exception("Archive path %s already exists!"
+                                    % archive_path)
+                else:
+                    os.makedirs(archive_path)
+
+                # 2. extract zip archive to temporary folder
+                for name in zf_namelist:
+                    zf.extract(name, archive_path)
+                zf.close()
+
+                # 3. call load_from_file on the first file
+                w = cls.load_from_file(zf_namelist[0]) 
+
+                # 4. delete the temporary folder
+                shutil.rmtree(archive_path, ignore_errors=True)
+
+                # 5. return the results from step 3
+                return w
         else:
             # The file is not a zip file, so assume it's just plaintext JSON
             with open(JSON_path, 'r') as infile:
