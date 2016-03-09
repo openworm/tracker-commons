@@ -36,16 +36,6 @@ def flatten(list_of_lists):
             yield element
 
 
-class TestMultifileZip(unittest.TestCase):
-    def test_single_files_zipped(self):
-        # zip all the files in /tests, then run that big test below on it
-        pass
-
-    def test_multifiles_zipped(self):
-        # zip the multifile thing in /tests, then run the big test on it
-        pass
-
-
 class TestDocumentationExamples(unittest.TestCase):
 
     def test_pull_doc_examples(self):

@@ -505,8 +505,12 @@ class WCONWorms():
                       "extract to a temporary folder and then try to load "
                       "the first file in the archive, then delete the "
                       "temporary folder.")
-                # 1. make a temporary archive folder
-                cur_path = os.path.abspath(__file__)
+                # Note: the first file is all we should need since we assume
+                #       the files in the archive are linked together using
+                #       their respective JSON "files" entries
+                
+                # Make a temporary archive folder
+                cur_path = os.path.abspath(os.path.dirname(JSON_path))
                 archive_path = os.path.join(cur_path, '_zip_archive')
                 if os.path.exists(archive_path):
                     raise Exception("Archive path %s already exists!"
@@ -514,18 +518,18 @@ class WCONWorms():
                 else:
                     os.makedirs(archive_path)
 
-                # 2. extract zip archive to temporary folder
+                # Extract zip archive to temporary folder
                 for name in zf_namelist:
                     zf.extract(name, archive_path)
                 zf.close()
 
-                # 3. call load_from_file on the first file
-                w = cls.load_from_file(zf_namelist[0])
+                # Call load_from_file on the first file
+                first_path = os.path.join(archive_path, zf_namelist[0])
+                w = cls.load_from_file(first_path)
 
-                # 4. delete the temporary folder
+                # Delete the temporary folder
                 shutil.rmtree(archive_path, ignore_errors=True)
 
-                # 5. return the results from step 3
                 return w
         else:
             # The file is not a zip file, so assume it's just plaintext JSON
