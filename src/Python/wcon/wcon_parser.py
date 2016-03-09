@@ -520,7 +520,7 @@ class WCONWorms():
                 zf.close()
 
                 # 3. call load_from_file on the first file
-                w = cls.load_from_file(zf_namelist[0]) 
+                w = cls.load_from_file(zf_namelist[0])
 
                 # 4. delete the temporary folder
                 shutil.rmtree(archive_path, ignore_errors=True)
