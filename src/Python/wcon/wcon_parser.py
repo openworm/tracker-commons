@@ -508,7 +508,7 @@ class WCONWorms():
                 # Note: the first file is all we should need since we assume
                 #       the files in the archive are linked together using
                 #       their respective JSON "files" entries
-                
+
                 # Make a temporary archive folder
                 cur_path = os.path.abspath(os.path.dirname(JSON_path))
                 archive_path = os.path.join(cur_path, '_zip_archive')
