@@ -14,7 +14,7 @@ classdef WCONWorms
     end
 
     function obj = to_canon(obj)
-      disp("Conversion to canonical form - unimplemented.");
+      disp('Conversion to canonical form - unimplemented.');
     end
 
     function obj = load_from_file(obj, filename)
@@ -26,7 +26,7 @@ classdef WCONWorms
 
     function obj = save_to_file(obj, filename)
 %      disp(filename);
-      disp(["Output to [" filename "] - unimplemented."]);
+      disp(['Output to [' filename '] - unimplemented.']);
     end
 
     function obj = load(obj, json_string)
@@ -43,7 +43,7 @@ classdef WCONWorms
     end
 
     function obj = merge(obj, obj2)
-      disp("Merging two objects - unimplemented.");
+      disp('Merging two objects - unimplemented.');
     end
   end
 end
