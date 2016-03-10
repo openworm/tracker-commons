@@ -95,7 +95,7 @@ def df_upsert(src, dest):
                         right_index=True, how='outer')
     else:
         # Scenario 2: src is worm already in dest.
-        
+
         # Handle the timepoints NOT shared with dest
         if any(~src.index.isin(dest.index)):
             # Add all rows that don't currently exist in dest
