@@ -7,7 +7,7 @@ python:
     # test_save_and_load fails on minimax.wcon with Python 3.3, and I haven't had 
     # create a Python 3.3 debugging environment to find out why
     #- 3.3  
-    - 3.4.4
+    - 3.4
     - 3.5
 
 notifications:
