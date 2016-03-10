@@ -42,4 +42,4 @@ The Tracker Commons repository contains implementations for reading and writing 
 | [R](src/R)  | n/a  | Preliminary notes only | n/a | no |
 | [Rust](src/Rust)  | n/a  | Preliminary notes only | n/a | no |
 | Matlab  | n/a  | [Currently seeking contributors](https://github.com/openworm/tracker-commons/issues/45) | n/a | no |
-| Octave  | n/a  | [Currently seeking contributors](https://github.com/openworm/tracker-commons/issues/45) | n/a | no |
+| Octave  | Chee Lee Wai  | [Wrapper of Python version](https://github.com/openworm/tracker-commons/issues/45) | none | no |
