@@ -39,7 +39,7 @@ The Tracker Commons repository contains implementations for reading and writing 
 | [Scala](src/scala)  | Rex Kerr  | Feature-complete, beta  | [![Build Status](https://semaphoreci.com/api/v1/ichoran/tracker-commons/branches/master/badge.svg)](https://semaphoreci.com/ichoran/tracker-commons) | no |
 | [Julia](src/julia)  | Rex Kerr  | Runnable implementation (alpha) | none | no |
 | [Python](src/Python)  | Michael Currie | Feature-complete, beta | [![Build Status](https://travis-ci.org/openworm/tracker-commons.svg?branch=master)](https://travis-ci.org/openworm/tracker-commons) | [![PyPI package](https://badge.fury.io/py/wcon.svg)](http://badge.fury.io/py/wcon)  |
+| [Octave](src/octave)  | Chee Lee Wai  | [Under development](https://github.com/openworm/tracker-commons/issues/45) | none | no |
 | [R](src/R)  | n/a  | Preliminary notes only | n/a | no |
 | [Rust](src/Rust)  | n/a  | Preliminary notes only | n/a | no |
-| [Octave](src/octave)  | Chee Lee Wai  | [Wrapper of Python version](https://github.com/openworm/tracker-commons/issues/45) | none | no |
 | Matlab  | n/a  | [Currently seeking contributors](https://github.com/openworm/tracker-commons/issues/45) | n/a | no |
