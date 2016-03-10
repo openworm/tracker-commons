@@ -204,12 +204,14 @@ class TestWCONParser(unittest.TestCase):
                 print("LOADING FOR TEST: " + JSON_path +
                       " (PRETTY = " + str(pretty) + ")")
 
-                w_loaded = WCONWorms.load_from_file(JSON_path)
+                w_loaded = WCONWorms.load_from_file(
+                    JSON_path, validate_against_schema=False)
 
                 # Save these worm tracks to a file, then load that file
                 test_path = 'test.wcon'
                 w_loaded.save_to_file(test_path, pretty_print=pretty)
-                w_from_saved = WCONWorms.load_from_file(test_path)
+                w_from_saved = WCONWorms.load_from_file(
+                    test_path, validate_against_schema=False)
 
                 self.assertEqual(w_loaded, w_from_saved)
 
@@ -219,7 +221,8 @@ class TestWCONParser(unittest.TestCase):
                 # isn't in the WCON standard it's nice for human
                 # readability, i.e. to have "units" before "data",
                 # "id" first in a data segment, etc.)
-                w_loaded_again = WCONWorms.load_from_file(test_path)
+                w_loaded_again = WCONWorms.load_from_file(
+                    test_path, validate_against_schema=False)
                 self.assertEqual(w_loaded, w_loaded_again)
                 self.assertEqual(w_loaded, w_from_saved)
                 self.assertEqual(w_loaded_again, w_from_saved)
