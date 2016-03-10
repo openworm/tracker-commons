@@ -66,9 +66,9 @@ def df_upsert(src, dest):
     we have three scenarios:
 
     1. src is a new worm, not in dest.  thus basically do a FULL OUTER JOIN.
-    OTHERWISE src is a worm already in dest.  rows can be:
-    2. new timepoints.  so UNION
-    3. revisions to old timepoints
+    2. OTHERWISE src is a worm already in dest. in this case rows can be:
+       - new timepoints.  so UNION
+       - revisions to old timepoints
         In this last case if any of the revisions are changes, error.
         If not, do not insert any duplicate rows, but any new rows, UNION.
 
@@ -91,6 +91,8 @@ def df_upsert(src, dest):
     # DEBUG: disabled because it doesn't appear necessary to do this, and this
     #        saves oodles of time
     # dest.sort_index(axis=1, inplace=True)
+    #import pdb
+    #pdb.set_trace()
 
     # Add all columns for worms that don't currently exist in dest
     # but have entries on the same timeframes
@@ -98,17 +100,16 @@ def df_upsert(src, dest):
         # Scenario 1: src is a new worm.  So OUTER JOIN
         dest = pd.merge(dest, src, left_index=True,
                         right_index=True, how='outer')
-    elif any(~src.index.isin(dest.index)):
-        # Scenario 2: src is a worm already in dest, with some
-        # new timepoints
+    else:
+        # Scenario 2: src is worm already in dest.
+        
+        # Handle the timepoints NOT shared with dest
+        if any(~src.index.isin(dest.index)):
+            # Add all rows that don't currently exist in dest
+            dest = pd.concat([dest, src[~src.index.isin(dest.index)]], axis=0)
 
-        # Add all rows that don't currently exist in dest
-        dest = pd.concat([dest, src[~src.index.isin(dest.index)]], axis=0)
-
+        # Handle the timepoints are shared with dest
         if any(src.index.isin(dest.index)):
-            # Scenario 3: src is a worm already in dest, but
-            # some timepoints are shared with dest
-
             # Obtain a sliced version of dest, showing only
             # the columns and rows shared with the src
             dest_sliced = \
@@ -420,6 +421,8 @@ def _obtain_time_series_data_frame(time_series_data):
 
     # We want the index (time) to be in order.
     time_df.sort_index(axis=0, inplace=True)
+    # The columns also need to be in order.
+    time_df.sort_index(axis=1, inplace=True)
 
     # We have to do this because somehow with entire worms who have 'head' or
     # 'ventral' columns, all their columns (even the numeric ones)
