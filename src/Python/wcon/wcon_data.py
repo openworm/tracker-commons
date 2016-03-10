@@ -61,6 +61,17 @@ def df_upsert(src, dest):
 
     Return the new dest
 
+    src always corresponds to a data segment, which is always for exactly
+    one worm.  dest is our target, containing possibly many worms.  So
+    we have three scenarios:
+
+    1. src is a new worm, not in dest.  thus basically do a FULL OUTER JOIN.
+    OTHERWISE src is a worm already in dest.  rows can be:
+    2. new timepoints.  so UNION
+    3. revisions to old timepoints
+        In this last case if any of the revisions are changes, error.
+        If not, do not insert any duplicate rows, but any new rows, UNION.
+
     Parameters
     -----------
     src, dest: pandas DataFrames
@@ -76,45 +87,59 @@ def df_upsert(src, dest):
     # to use the operation over several datasets, use a list comprehension."
 
     """
-    dest.sort_index(axis=1, inplace=True)
-    # Append src to dest
+    # Sort the columns
+    # DEBUG: disabled because it doesn't appear necessary to do this, and this
+    #        saves oodles of time
+    # dest.sort_index(axis=1, inplace=True)
 
-    # Add all rows that don't currently exist in dest
-    dest = pd.concat([dest, src[~src.index.isin(dest.index)]])
+    # Add all columns for worms that don't currently exist in dest
+    # but have entries on the same timeframes
+    if not any(src.columns.isin(dest.columns)):
+        # Scenario 1: src is a new worm.  So OUTER JOIN
+        dest = pd.merge(dest, src, left_index=True,
+                        right_index=True, how='outer')
+    elif any(~src.index.isin(dest.index)):
+        # Scenario 2: src is a worm already in dest, with some
+        # new timepoints
 
-    dest.sort_index(axis=1, inplace=True)
+        # Add all rows that don't currently exist in dest
+        dest = pd.concat([dest, src[~src.index.isin(dest.index)]], axis=0)
 
-    # Obtain a sliced version of dest, showing only
-    # the columns and rows shared with the src
-    dest_sliced = \
-        dest.loc[dest.index.isin(src.index),
-                 dest.columns.isin(src.columns)]
+        if any(src.index.isin(dest.index)):
+            # Scenario 3: src is a worm already in dest, but
+            # some timepoints are shared with dest
 
-    src_sliced = \
-        src.loc[src.index.isin(dest.index),
-                src.columns.isin(dest.columns)]
+            # Obtain a sliced version of dest, showing only
+            # the columns and rows shared with the src
+            dest_sliced = \
+                dest.loc[dest.index.isin(src.index),
+                         dest.columns.isin(src.columns)]
 
-    # Sort our slices so they will be lined up for comparison
-    dest_sliced.sort_index(inplace=True)
-    src_sliced.sort_index(inplace=True)
+            src_sliced = \
+                src.loc[src.index.isin(dest.index),
+                        src.columns.isin(dest.columns)]
 
-    # Obtain a mask of the conflicts in the current segment
-    # as compared with all previously loaded data.  That is:
-    # NaN NaN = False
-    # NaN 2   = False
-    # 2   2   = False
-    # 2   3   = True
-    # 2   NaN = True
-    data_conflicts = (pd.notnull(dest_sliced) &
-                      (dest_sliced != src_sliced))
+            # Sort our slices so they will be lined up for comparison
+            dest_sliced.sort_index(inplace=True)
+            src_sliced.sort_index(inplace=True)
 
-    if data_conflicts.any().any():
-        raise AssertionError("Data from this segment conflicted "
-                             "with previously loaded data:\n",
-                             data_conflicts)
+            # Obtain a mask of the conflicts in the current segment
+            # as compared with all previously loaded data.  That is:
+            # NaN NaN = False
+            # NaN 2   = False
+            # 2   2   = False
+            # 2   3   = True
+            # 2   NaN = True
+            data_conflicts = (pd.notnull(dest_sliced) &
+                              (dest_sliced != src_sliced))
 
-    # Replace any rows that do exist with the src version
-    dest.update(src)
+            if data_conflicts.any().any():
+                raise AssertionError("Data from this segment conflicted "
+                                     "with previously loaded data:\n",
+                                     data_conflicts)
+
+            # Replace any rows that do exist with the src version
+            dest.update(src_sliced)
 
     # Sort the time series indices
     dest.sort_index(axis=0, inplace=True)
@@ -383,6 +408,11 @@ def _obtain_time_series_data_frame(time_series_data):
         # Apparently multiindex must be sorted to work properly:
         cur_df.sort_index(axis=1, inplace=True)
 
+        # If we don't do this, for very large files (>50 MB) the memory
+        # footprint grows until the program crashes
+        # gc.collect()
+
+        # Add the segment to our main DataFrame
         if time_df is None:
             time_df = cur_df
         else:
@@ -513,12 +543,19 @@ def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
 
     # Create a Queue to share results
     q = Queue()
+
     # Create 4 sub-processes to do the work
     splits = list(range(0, num_timeframes, num_timeframes // num_cores))
     # If the number of frames is not divisible by the step length,
     # range will fall short of ranging up to the num_timeframes
     # so here we overwrite the last endpoint
-    splits[-1] = num_timeframes
+    if not num_timeframes % num_cores:
+        # If num_timeframes is divisible by num_cores, add an entry
+        splits.append(num_timeframes)
+    else:
+        # Otherwise, we already have enough entries, so just extend
+        # the final one
+        splits[-1] = num_timeframes
 
     processes = []
     for i in range(num_cores):
