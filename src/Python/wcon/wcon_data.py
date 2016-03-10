@@ -7,11 +7,15 @@ array.
 """
 import six
 import gc
-import time
+import os
 import warnings
 import numpy as np
 import pandas as pd
 import itertools
+from multiprocessing import Queue, Process
+import multiprocessing
+import psutil
+import time
 from collections import OrderedDict
 idx = pd.IndexSlice
 
@@ -23,6 +27,8 @@ elements_with_aspect = ['x', 'y']
 elements_without_aspect = ['ox', 'oy', 'cx', 'cy', 'head', 'ventral']
 basic_data_keys = elements_with_aspect + elements_without_aspect
 supported_data_keys = basic_data_keys + ['id', 't']
+MIN_FRAMES_FOR_MULTIPROCESSING = 3000  # This is somewhat arbitrary
+USE_MULTIPROCESSING = True
 
 
 def get_mask(arr, desired_key):
@@ -358,14 +364,13 @@ def _obtain_time_series_data_frame(time_series_data):
                     data_segment[k][i] +
                     [np.NaN] * (max_aspect_size - len(data_segment[k][i])))
 
+        num_timeframes = len(cur_timeframes)
+
         # Stage the data for addition to our DataFrame.
         # Shape KxI where K is the number of keys and
         #                 I is the number of "aspects"
-        cur_data = np.array(
-            [np.concatenate(
-                [data_segment[k][i] for k in cur_data_keys]
-            ) for i in range(len(cur_timeframes))]
-        )
+        cur_data = _stage_dataframe_data(num_timeframes,
+                                         data_segment, cur_data_keys)
 
         cur_df = pd.DataFrame(cur_data, columns=cur_columns)
 
@@ -421,6 +426,133 @@ def _obtain_time_series_data_frame(time_series_data):
             time_df.loc[:, idx[:, 'aspect_size', :]].astype(float)
 
     return time_df
+
+
+def __pivot_data_for_staging(data_segment, cur_data_keys, index_range,
+                             core_index=None, queue=None):
+    """
+    Transform the WCON data segment into one properly arranged for adding to
+    a pandas DataFrame
+
+    i.e. Pivot the data properly for the dataframe, for a certain range
+    of frames f where i_start <= f < i_end, where
+    i_start = min(index_range) and i_end = max(index_range).
+
+    Parameters
+    ----------
+    data_segment: list of lists of floats
+        Taken directly from the WCON file being loaded
+    cur_data_keys: list of 1-character strings
+        The keys, e.g. 'x', 'y', that need to be obtained
+    index_range: range object
+        The timeframes across which the transformation is to be applied
+    core_index: int
+        None if this is not a sub-process
+        Otherwise, this is the core that the sub-process should be pinned to
+        (there is a problem with subprocesses using multiple cores when
+        numpy is involved, so we must explicitly pin them to separate cores)
+    queue: multiprocessing.Queue object
+        None if this is not a sub-process
+        Otherwise, this is a sub-process, and we should append our result
+        to queue rather than return a value
+
+    """
+    # DEBUG: This code definitely gets used across multiple cores
+    #        use this to verify multiprocessing
+    # myList = np.random.randint(0, 10, 3333333/4)
+    # finalSum = sum(myList)
+
+    # Set process affinity if we are multiprocessing
+    if core_index:
+        cur_pid = os.getpid()
+        p = psutil.Process(cur_pid)
+        # print("Current pid:" + str(cur_pid))
+        # print("Parent pid:" + str(os.getppid()))
+        # print("PSUTIL CPU affinity:" + str(p.cpu_affinity()))
+        p.cpu_affinity([core_index])
+        # print("PSUTIL CPU affinity:" + str(p.cpu_affinity()))
+
+    # Pivot the data
+    cur_data_slice = np.array(
+        [np.concatenate(
+            [data_segment[k][i] for k in cur_data_keys]
+        ) for i in index_range]
+    )
+
+    # Add to the queue only if we are multiprocessing
+    if queue is None:
+        return cur_data_slice
+    else:
+        # We put a duple into the queue, the first entry
+        # being the correct final order of the data, the
+        # second entry being the data we just calculated
+        queue.put((core_index, cur_data_slice))
+
+
+def _stage_dataframe_data(num_timeframes, data_segment, cur_data_keys):
+    """
+    Transform the WCON data segment into one properly arranged for adding to
+    a pandas DataFrame.
+
+    As this is an "embarassingly parallel" problem since each frame can be
+    processed independently, we split the frames across multiple processes
+    if
+    independent
+
+    (This version attempts to use multiple process)
+
+    """
+    num_cores = multiprocessing.cpu_count()
+
+    # Don't use multiple processes unless we have many frames of data,
+    # and unless we have multiple CPUs to spread the work around
+    if ((not USE_MULTIPROCESSING) or
+            num_timeframes < MIN_FRAMES_FOR_MULTIPROCESSING or num_cores <= 1):
+        return __pivot_data_for_staging(data_segment, cur_data_keys,
+                                        range(num_timeframes))
+
+    # Create a Queue to share results
+    q = Queue()
+    # Create 4 sub-processes to do the work
+    splits = list(range(0, num_timeframes, num_timeframes // num_cores))
+    # If the number of frames is not divisible by the step length,
+    # range will fall short of ranging up to the num_timeframes
+    # so here we overwrite the last endpoint
+    splits[-1] = num_timeframes
+
+    processes = []
+    for i in range(num_cores):
+        processes.append(Process(target=__pivot_data_for_staging, args=(
+                                 data_segment, cur_data_keys,
+                                 range(splits[i], splits[i + 1]),
+                                 i, q)))
+
+    for i in range(len(processes)):
+        processes[i].start()
+
+    data_pieces = {}
+    # Grab 4 values from the queue, one for each process
+    # They are calculated by subprocesses and hence might
+    # arrive in the queue out of order, so we collect them into
+    # a dictionary keyed with their correct final order.
+    for i in range(len(processes)):
+        # Set block=True to block until we get a result
+        data_piece = q.get(True)
+        # data_piece is a tuple with the first entry providing the order
+        data_pieces[data_piece[0]] = data_piece[1]
+
+    # Now put the pieces together in the correct order
+    cur_data = []
+    for i in range(len(processes)):
+        cur_data.extend(data_pieces[i])
+
+    # Combine all the processes' data into one list
+    cur_data = np.array(cur_data)
+
+    for i in range(len(processes)):
+        processes[i].join()
+
+    return cur_data
 
 
 def _validate_time_series_data(time_series_data):
@@ -617,15 +749,7 @@ def _data_segment_as_odict(worm_id, df_segment):
     method of data_as_array.
 
     """
-    print("entering _data_segment_as_odict")
-    start_time = time.monotonic()
-    gc.disable()
     data_segment = [("id", worm_id)]
-
-    print("TIMEPOINT 1: %.2f seconds" %
-          (time.monotonic() - start_time))   
-    start_time = time.monotonic()
-
 
     # We only care about time indices for which we have some "aspect" or
     # else which have some non-aspect
@@ -639,59 +763,41 @@ def _data_segment_as_odict(worm_id, df_segment):
 
     keys_used = [k for k in df_segment.columns.get_level_values('key')
                  if k != 'aspect_size']
-
-    print("TIMEPOINT 2: %.2f seconds" %
-          (time.monotonic() - start_time))   
-    start_time = time.monotonic()
+    # There is great duplication in df_segment.columns so we must
+    # filter to just the unique entries (e.g. ['x', 'y'])
+    keys_used = sorted(set(keys_used))
 
     # e.g. ox, oy, head, ventral
     for key in [k for k in keys_used if k in elements_without_aspect]:
         cur_segment_slice = df_segment.loc[:, idx[key, 0]]
-        # We must replace NaN with None, otherwise the JSON encoder will
-        # save 'NaN' as the string and this will get rejected by our schema
-        # on any subsequent loads
+        # We must replace NaN with None, otherwise the JSON encoder
+        # will save 'NaN' as the string and this will get rejected
+        # by our schema on any subsequent loads
         # Note we can't use .fillna(None) due to this issue:
         # https://github.com/pydata/pandas/issues/1972
         if key in ['head', 'ventral']:
             cur_segment_slice = \
-                cur_segment_slice.where(pd.notnull(cur_segment_slice), None)
+                cur_segment_slice.where(pd.notnull(cur_segment_slice),
+                                        None)
         cur_list = list(np.array(cur_segment_slice))
         data_segment.append((key, cur_list))
 
-    print("TIMEPOINT 3: %.2f seconds" %
-          (time.monotonic() - start_time))   
-    start_time = time.monotonic()
+    num_spine_points = worm_aspect_size.loc[:, 0].astype(int).tolist()
 
     # e.g. x, y
     for key in [k for k in keys_used if k in elements_with_aspect]:
         non_jagged_array = df_segment.loc[:, (key)]
 
-        jagged_array = []
+        jagged_array = non_jagged_array.values.tolist()
 
-        for t in non_jagged_array.index:
-            # If aspect size isn't defined, don't bother adding data here:
-            if np.isnan(worm_aspect_size.loc[t, 0]):
-                jagged_array.append([])
-            else:
-                cur_aspect_size = int(worm_aspect_size.loc[t, 0])
-                # For some reason loc's slice notation is INCLUSIVE!
-                # so we must subtract one from cur_aspect_size, so if
-                # it's 3, for instance, we get only entries
-                # 0, 1, and 2, as required.
-                if cur_aspect_size == 0:
-                    cur_entry = []
-                else:
-                    cur_entry = non_jagged_array.loc[t, 0:cur_aspect_size - 1]
-                    cur_entry = list(np.array(cur_entry))
-                jagged_array.append(cur_entry)
+        num_time_points = len(jagged_array)
+
+        for i in range(num_time_points):
+            cur_aspect_size = num_spine_points[i]
+
+            jagged_array[i] = jagged_array[i][:cur_aspect_size]
 
         data_segment.append((key, jagged_array))
-
-    print("TIMEPOINT 4: %.2f seconds" %
-          (time.monotonic() - start_time))   
-    start_time = time.monotonic()
-
-    gc.enable()
 
     return OrderedDict(data_segment)
 

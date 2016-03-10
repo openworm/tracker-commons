@@ -428,7 +428,8 @@ class WCONWorms():
     @classmethod
     def load_from_file(cls, JSON_path,
                        load_prev_chunks=True,
-                       load_next_chunks=True):
+                       load_next_chunks=True,
+                       validate_against_schema=True):
         """
         Factory method returning a merged WCONWorms instance of the file
         located at JSON_path and all related "chunks" as specified in the
@@ -438,13 +439,16 @@ class WCONWorms():
 
         Parameters
         -------------
-        JSON_path: a file path to a file that can be opened
-
+        JSON_path: str
+            A file path to a file that can be opened
+        validate_against_schema: bool
+            If True, validate before trying to load the file, otherwise don't.
+            jsonschema.validate takes 99% of the compute time for large files
+            so use with caution.
         load_prev_chunks: bool
             If a "files" key is present, load the previous chunks and merge
             them with this one.  If not present, return only the current
             file's worm.
-
         load_next_chunks: bool
             If a "files" key is present, load the next chunks and merge
             them with this one.  If not present, return only the current
@@ -456,7 +460,7 @@ class WCONWorms():
         cls.validate_filename(JSON_path)
 
         with open(JSON_path, 'r') as infile:
-            w_current = cls.load(infile)
+            w_current = cls.load(infile, validate_against_schema)
 
         # CASE 1: NO "files" OBJECT, hence no multiple files.  We are done.
         if w_current.files is None:
@@ -501,7 +505,8 @@ class WCONWorms():
                                  suffix)
                 w_new = cls.load_from_file(new_file_name,
                                            cur_load_prev_chunks,
-                                           cur_load_next_chunks)
+                                           cur_load_next_chunks,
+                                           validate_against_schema)
                 w_current = w_current + w_new
 
         # If no merging took place, we'll still need to delete the "files"
@@ -512,7 +517,7 @@ class WCONWorms():
         return w_current
 
     @classmethod
-    def load(cls, JSON_stream):
+    def load(cls, JSON_stream, validate_against_schema=True):
         """
         Factory method to create a WCONWorms instance
 
@@ -525,6 +530,10 @@ class WCONWorms():
         -------------
         JSON_stream: a text stream implementing .read()
             e.g. an object inheriting from TextIOBase
+        validate_against_schema: bool
+            If True, validate before trying to load the file, otherwise don't.
+            jsonschema.validate takes 99% of the compute time for large files
+            so use with caution.
 
         """
         w = cls()
@@ -539,7 +548,8 @@ class WCONWorms():
         # BASIC TOP-LEVEL VALIDATION AGAINST THE SCHEMA
 
         # Validate the raw file against the WCON schema
-        jsonschema.validate(root, w.schema)
+        if validate_against_schema:
+            jsonschema.validate(root, w.schema)
 
         # ===================================================
         # HANDLE THE REQUIRED ELEMENTS: 'units', 'data'
