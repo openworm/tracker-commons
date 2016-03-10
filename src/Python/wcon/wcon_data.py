@@ -87,13 +87,6 @@ def df_upsert(src, dest):
     # to use the operation over several datasets, use a list comprehension."
 
     """
-    # Sort the columns
-    # DEBUG: disabled because it doesn't appear necessary to do this, and this
-    #        saves oodles of time
-    # dest.sort_index(axis=1, inplace=True)
-    #import pdb
-    #pdb.set_trace()
-
     # Add all columns for worms that don't currently exist in dest
     # but have entries on the same timeframes
     if not any(src.columns.isin(dest.columns)):
