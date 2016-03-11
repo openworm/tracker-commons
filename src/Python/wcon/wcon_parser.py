@@ -17,6 +17,7 @@ from six import StringIO
 from os import path
 import json
 import jsonschema
+import numpy as np
 import pandas as pd
 idx = pd.IndexSlice
 
@@ -334,6 +335,15 @@ class WCONWorms():
                 # Just ignore cases where there are "units" entries but no
                 # corresponding data
                 pass
+
+        # Special case: change the dataframe index, i.e. the time units
+        tmu = self.units['t']
+        if tmu.unit_string != tmu.canonical_unit_string:
+            # Create a function that can be applied elementwise to the
+            # index values
+            t_converter = np.vectorize(tmu.to_canon)
+
+            w.data.set_index(t_converter(w.data.index.values), inplace=True)
 
         # Go through each "units" attribute
         return w
