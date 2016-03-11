@@ -47,6 +47,13 @@ before_install:
     - which python
     - python --version
     - pydoc modules
+
+before_script:
+    - ls -l
+    - cd $TRAVIS_BUILD_DIR
+    - ls -l
+    - wget "https://drive.google.com/uc?export=download&id=0B9dU7zPD0s_LRkNzS0N3VnhoODQ" -O from_schafer_lab.wcon
+    - pwd
  
 script:
     # Run pep8 on all .py files in all subfolders

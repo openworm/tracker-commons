@@ -535,7 +535,17 @@ class MeasurementUnit():
         unit_string = unit_string.replace('m_in', 'min')
 
         node = ast.parse(unit_string, mode='eval').body
-        return cls._create_from_node(node)
+
+        # Create our unit by recursively traversing its expression tree
+        u = cls._create_from_node(node)
+
+        # The convention is to have the unit string '' mean '1', so
+        # For equality testing we'll need '1' to be displayed as ''
+        u._canonical_unit_string = u._canonical_unit_string.replace('1*', '')
+        if u._canonical_unit_string in ['1', '1.0']:
+            u._canonical_unit_string = ''
+
+        return u
 
     # =====================================================================
     # "private" methods
@@ -564,19 +574,19 @@ class MeasurementUnit():
     @classmethod
     def _create_from_node(cls, node):
         """
-        node: ast.Num or ast.BinOp or ast.UnaryOp or ast.Str or ast.Name
+        node: is ast.Num or ast.BinOp or ast.UnaryOp or ast.Str or ast.Name
             The expression to be transformed into a MeasurementUnit
 
         """
         if isinstance(node, ast.Num):  # <number>
-            assert(node.n != 0)  # A unit cannot have zero in the expression
+            n = node.n
+            assert(n != 0)  # A unit cannot have zero in the expression
 
             u = cls()
-
-            u._unit_string = str(node.n)
-            u._canonical_unit_string = str(node.n)
-            u.to_canon = lambda x: node.n
-            u.from_canon = lambda x: node.n
+            u._unit_string = str(n)
+            u._canonical_unit_string = '1'
+            u.to_canon = lambda x: x * n
+            u.from_canon = lambda x: x / n
 
             return u
 
@@ -645,8 +655,14 @@ class MeasurementUnit():
         # Combine the left and right nodes together
         u._unit_string = l._unit_string + \
             u.operator_symbols[oper] + r._unit_string
-        u._canonical_unit_string = l._canonical_unit_string + \
-            u.operator_symbols[oper] + r._canonical_unit_string
+        lus = l._canonical_unit_string
+        rus = r._canonical_unit_string
+        if (lus == rus == '1'):
+            # If it's an expression like 1*1, collapse it to 1
+            # (we support 1+1 = 2 here, but that's not really encouraged)
+            u._canonical_unit_string = str(oper(1, 1))
+        else:
+            u._canonical_unit_string = lus + u.operator_symbols[oper] + rus
 
         return u
 
