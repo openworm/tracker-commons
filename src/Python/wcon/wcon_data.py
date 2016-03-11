@@ -16,6 +16,8 @@ from multiprocessing import Queue, Process
 import multiprocessing
 import psutil
 import time
+if six.PY3:
+    from functools import reduce
 from collections import OrderedDict
 idx = pd.IndexSlice
 
@@ -314,7 +316,6 @@ def parse_data(data):
 
     return time_df
 
-
 def _obtain_time_series_data_frame(time_series_data):
     """
     Obtain a time-series pandas DataFrame
@@ -334,8 +335,8 @@ def _obtain_time_series_data_frame(time_series_data):
 
     """
 
-    # Our DataFrame to return
-    time_df = None
+    # Convert each segment into a dataframe
+    data_segment_dfs = []
 
     # Consider only time-series data stamped with an id:
     for data_segment in time_series_data:
@@ -404,13 +405,35 @@ def _obtain_time_series_data_frame(time_series_data):
 
         # If we don't do this, for very large files (>50 MB) the memory
         # footprint grows until the program crashes
-        gc.collect()
+        # gc.collect()
 
-        # Add the segment to our main DataFrame
-        if time_df is None:
-            time_df = cur_df
-        else:
-            time_df = df_upsert(src=cur_df, dest=time_df)
+        data_segment_dfs.append(cur_df)
+
+    # Our DataFrame to return
+    time_df = None
+
+    # Obtain a list of lists of the worm ids
+    worm_ids = [cur_df.columns.levels[0].values for cur_df in data_segment_dfs]
+
+    # To see if any worms appear more than once, flatten the list and
+    # check for duplicates
+    worm_ids_flat = [item for sublist in worm_ids for item in sublist]
+
+    # if worm_ids are mutually distinct in each dataframe, then
+    if len(set(worm_ids_flat)) == len(worm_ids):
+        time_df = reduce(lambda l,r: pd.merge(l, r, left_index=True,
+                         right_index=True, how='outer'), data_segment_dfs)
+    else:
+        # Otherwise we have to iterate
+        # TODO: we could do the above time shortcut with all available
+        #       mutually distinct segments, rather than only doing it if
+        #       ALL segments are mutually distinct
+        for cur_df in data_segment_dfs:
+            # Add the segment to our main DataFrame
+            if time_df is None:
+                time_df = cur_df
+            else:
+                time_df = df_upsert(src=cur_df, dest=time_df)
 
     # We want the index (time) to be in order.
     time_df.sort_index(axis=0, inplace=True)
