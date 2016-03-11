@@ -50,8 +50,6 @@ if __name__ == '__main__':
                                           validate_against_schema=False)
             print("Time to load w1: " + str(timing_function() - start_time))
 
-            continue
-
             # Save these worm tracks to a file, then load that file
             test_path = 'test.wcon'
             start_time = timing_function()
@@ -63,11 +61,11 @@ if __name__ == '__main__':
                                           validate_against_schema=False)
             print("Time to load w2: " + str(timing_function() - start_time))
 
-            x1 = w1.data.loc[:, idx[0, 'x', 0]].fillna(0)
-            x2 = w2.data.loc[:, idx[0, 'x', 0]].fillna(0)
-            cmm = np.flatnonzero(x1 != x2)
-            xx = pd.concat([x1, x2], axis=1)
-            xx = xx.loc[cmm]
+            # x1 = w1.data.loc[:, idx[0, 'x', 0]].fillna(0)
+            # x2 = w2.data.loc[:, idx[0, 'x', 0]].fillna(0)
+            # cmm = np.flatnonzero(x1 != x2)
+            # xx = pd.concat([x1, x2], axis=1)
+            # xx = xx.loc[cmm]
 
             # Then load and save AGAIN and do a file comparison to make
             # sure it's the same
