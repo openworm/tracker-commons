@@ -28,7 +28,7 @@ elements_without_aspect = ['ox', 'oy', 'cx', 'cy', 'head', 'ventral']
 basic_data_keys = elements_with_aspect + elements_without_aspect
 supported_data_keys = basic_data_keys + ['id', 't']
 MIN_FRAMES_FOR_MULTIPROCESSING = 3000  # This is somewhat arbitrary
-USE_MULTIPROCESSING = True
+USE_MULTIPROCESSING = False
 
 
 def get_mask(arr, desired_key):
