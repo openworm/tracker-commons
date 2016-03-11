@@ -14,6 +14,7 @@ notifications:
   email: false
 
 before_install:
+    - sudo apt-get update
     - pip install --upgrade pip
     - pip install six
     - pip install pep8
