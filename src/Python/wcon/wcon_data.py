@@ -316,6 +316,7 @@ def parse_data(data):
 
     return time_df
 
+
 def _obtain_time_series_data_frame(time_series_data):
     """
     Obtain a time-series pandas DataFrame
@@ -421,8 +422,15 @@ def _obtain_time_series_data_frame(time_series_data):
 
     # if worm_ids are mutually distinct in each dataframe, then
     if len(set(worm_ids_flat)) == len(worm_ids):
-        time_df = reduce(lambda l,r: pd.merge(l, r, left_index=True,
-                         right_index=True, how='outer'), data_segment_dfs)
+        time_df = reduce(
+            lambda l,
+            r: pd.merge(
+                l,
+                r,
+                left_index=True,
+                right_index=True,
+                how='outer'),
+            data_segment_dfs)
     else:
         # Otherwise we have to iterate
         # TODO: we could do the above time shortcut with all available
