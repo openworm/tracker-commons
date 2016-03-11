@@ -4,8 +4,7 @@ python:
     # conda doesn't seem to work with 2.6 so let's forget about testing it
     #- 2.6  
     - 2.7
-    # test_save_and_load fails on minimax.wcon with Python 3.3, and I haven't had 
-    # create a Python 3.3 debugging environment to find out why
+    # test_save_and_load fails on minimax.wcon with Python 3.3, haven't had change to look into it
     #- 3.3  
     - 3.4
     - 3.5
@@ -14,7 +13,6 @@ notifications:
   email: false
 
 before_install:
-    - sudo apt-get update
     - pip install --upgrade pip
     - pip install six
     - pip install pep8

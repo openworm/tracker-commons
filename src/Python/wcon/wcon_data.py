@@ -404,7 +404,7 @@ def _obtain_time_series_data_frame(time_series_data):
 
         # If we don't do this, for very large files (>50 MB) the memory
         # footprint grows until the program crashes
-        # gc.collect()
+        gc.collect()
 
         # Add the segment to our main DataFrame
         if time_df is None:
