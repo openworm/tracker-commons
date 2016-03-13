@@ -501,7 +501,7 @@ class TestWcon {
         Parser(c.text) match {
           case Left(x) => println(c); println(x); throw new IllegalArgumentException(x)
           case _ =>
-        }        
+        }
       }
       else json.Struct.All.parse(c.text.trim) match {
         case fastparse.core.Result.Failure(x) => println(c); println(x); throw new IllegalArgumentException(x.toString)
