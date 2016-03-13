@@ -52,28 +52,58 @@ assert(filecmp.cmp('file1.wcon', file2.wcon'))
 w3 = w1 + w2  # Merge the two.  An exception is raised if the data clashes
 ```
 
+### Formal API
 
-### `WCONWorms` class: Attributes
-
-- `units`: dict
-    - May be empty, but is never None since 'units' is required 
-    to be specified.
-- `metadata`: dict
-    - If 'metadata' was not specified, metadata is None.
-    - The values in this dict might be nested into further dicts or other
-    data types.
-- `data`: Pandas DataFrame or None
-    - If 'data' was not specified, data is None.
-- [Note: `files`, if present in the input, is not persisted unless the `.load`
-       factory method is used.]
-
-### `WCONWorms` class: Public-Facing Methods
-
-- `load_from_file`   (JSON_path)                [class method]
-- `save_to_file`     (JSON_path, pretty_print)
-- `to_canon`                                    [property]
-- `__add__`                                     [use `+`]
-- `__eq__`                                      [use `==`]
+- Class `WCONWorms`
+  - methods
+    - `load_from_file`
+      - [class method]
+      - parameters:
+        - `JSON_path`, a `str`, the path of the file
+    - `save_to_file`
+      - parameters:
+        - `JSON_path`, a `str`, the path of the file
+        - `compress_file`, a boolean, whether to compress the file
+        - `pretty_print`, a boolean, whether to render the output on multiple lines
+    - `to_canon`
+      - [property]
+      - returns: a copy of this object but in canonical form
+    - `__add__`
+      - [use `+`]
+    - `__eq__`
+      - [use `==`]
+  - attributes
+    - `units`: dict
+        - May be empty, but is never None since 'units' is required 
+        to be specified.
+    - `metadata`: dict
+        - If 'metadata' was not specified, metadata is None.
+        - The values in this dict might be nested into further dicts or other
+        data types.
+    - `data`: Pandas DataFrame or None
+        - If 'data' was not specified, data is None.
+    - [Note: `files`, if present in the input, is not persisted unless the `.load`
+           factory method is used.]
+- Class `MeasurementUnit`
+  - Note: this class does not need to be used publicly, but it can be if desired.
+    - consequently it can be ommitted from a public API
+  - methods
+    - `create`
+      - [class method]
+      - Factory method
+      - parameter: `unit_string`, a `str`, the unit expression (e.g. `"mm"` or `"cm/s"` or `"C"`)
+      - returns: an instance of this class
+    - `to_canon`
+      - transforms `v` from original units to canonical units
+      - parameter: `v` (a `float`)
+      - returns: float
+    - `from_canon`
+      - the inverse of `to_canon`
+  - attributes
+    - `unit_string`: str
+      - The original string (e.g. `"m/s^2"`)
+    - `canonical_unit_string`: str
+      - The canonical form for all units within the original string (e.g. `"mm/s^2"`)
 
 ### Custom WCON objects
 
