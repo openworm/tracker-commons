@@ -45,8 +45,10 @@ class WCONWorms():
         If 'metadata' was not specified, metadata is None.
         The values in this dict might be nested into further dicts or other
         data types.
-    data: Pandas DataFrame or None
-        If 'data' was not specified, data is None.
+    _data: dictionary of Pandas DataFrames  [private]
+    num_worms: int                              [property]
+    data_as_dict: dict                          [property]
+    data: DataFrame if num_worms == 1 else dict of DataFrames [property]
 
     [Note: the "files" key is not persisted unless the .load
            factory method is used.]
@@ -104,6 +106,56 @@ class WCONWorms():
     """
 
     basic_keys = ['files', 'units', 'metadata', 'data']
+
+    @property
+    def num_worms(self):
+        try:
+            return self._num_worms
+        except AttributeError:
+            self._num_worms = len(self.worm_ids)
+            return self._num_worms
+
+    @property
+    def worm_ids(self):
+        try:
+            return self._worm_ids
+        except AttributeError:
+            self._worm_ids = list(self._data.keys())
+            return self._worm_ids
+
+    @property
+    def data(self):
+        """
+        Return all worms as one giant DataFrame.  Since this can
+        be inefficient for sparse multiworm data, it is only "lazily"
+        calculated, i.e. once requested, not at object initialization
+
+        """
+        try:
+            return self._data_df
+        except AttributeError:
+            if self.num_worms == 0:
+                self._data_df = None
+            else:
+                # Get a list of all dfs
+                dfs = list(self._data.values())
+                l = dfs[0]
+                # Merge all the worm dfs together into one
+                for r in dfs[1:]:
+                    l = pd.merge(l, r, left_index=True, right_index=True,
+                                 how='outer')
+                self._data_df = l
+
+            return self._data_df
+
+    @property
+    def data_as_odict(self):
+        """
+        Return the native ordered-dict-of-DataFrames, the cheapest
+        option for sparse multiworm data
+
+        """
+        return self._data
 
     @property
     def schema(self):
@@ -172,11 +224,15 @@ class WCONWorms():
             metadata_obj = get_sorted_ordered_dict(self.metadata)
             ord_dict.update({'metadata': metadata_obj})
 
-        canonical_data = self.to_canon.data
-        if canonical_data is None:
+        canonical = self.to_canon
+        if canonical._data == {}:
             data_arr = []
         else:
-            data_arr = data_as_array(canonical_data)
+            src = canonical.data_as_odict
+            data_arr = []
+            for worm_id in src:
+                data_arr.extend(data_as_array(src[worm_id]))
+
         ord_dict.update({'data': data_arr})
 
         return ord_dict
@@ -235,35 +291,31 @@ class WCONWorms():
             the only option
 
         """
+        # import pdb; pdb.set_trace()
+        if w1.num_worms != w2.num_worms:
+            return False
 
         if convert_units:
-            d1 = w1.to_canon.data
-            d2 = w2.to_canon.data
-
+            d1 = w1.to_canon._data
+            d2 = w2.to_canon._data
         else:
-            d1 = w1.data
-            d2 = w2.data
+            d1 = w1._data
+            d2 = w2._data
 
-        if (d1 is None) ^ (d2 is None):
-            # If one is None but the other is not (XOR), data is not equal
-            return False
-        elif d1 is None and d2 is None:
-            # If both None, they are equal
-            return True
+        for worm_id in w1.worm_ids:
+            df1 = d1[worm_id]
+            df2 = d2[worm_id]
+            if (df1 is None) ^ (df2 is None):
+                # If one is None but the other is not (XOR), data is not equal
+                return False
+            elif df1 is None and df2 is None:
+                # If both None, they are equal
+                continue
 
-        # I don't use DataFrame.equals because it returned False for no
-        # apparent reason with one of the centroid unit tests
-        def pd_equals(d1, d2):
-            try:
-                pd.util.testing.assert_frame_equal(d1, d2)
-            except AssertionError:
+            if not pd_equals(df1, df2):
                 return False
 
-            return True
-
-        return (pd_equals(d1, d2) and
-                d1.columns.identical(d2.columns) and
-                d1.index.identical(d2.index))
+        return True
 
     def __eq__(self, other):
         """
@@ -314,12 +366,15 @@ class WCONWorms():
         w.units = self.canonical_units
 
         # Corner case
-        if self.data is None:
-            w.data = None
+        if self._data == {}:
+            w._data = OrderedDict({})
             return w
 
-        w.data = self.data.copy()
+        w._data = OrderedDict()
+        for worm_id in self.worm_ids:
+            w._data[worm_id] = self._data[worm_id].copy()
 
+        # Go through each "units" key
         for data_key in self.units:
             mu = self.units[data_key]
 
@@ -328,33 +383,36 @@ class WCONWorms():
             if mu.unit_string == mu.canonical_unit_string:
                 continue
 
-            try:
-                # Apply across all worm ids and all aspects
-                mu_slice = w.data.loc[:, idx[:, data_key, :]].copy()
+            tmu = self.units['t']
+            for worm_id in w.worm_ids:
 
-                w.data.loc[:, idx[:, data_key, :]] = \
-                    mu_slice.applymap(mu.to_canon)
-            except KeyError:
-                # Just ignore cases where there are "units" entries but no
-                # corresponding data
-                pass
+                try:
+                    # Apply across all worm ids and all aspects
+                    mu_slice = \
+                        w._data[worm_id].loc[:, idx[:, data_key, :]].copy()
 
-        # Special case: change the dataframe index, i.e. the time units
-        tmu = self.units['t']
-        if tmu.unit_string != tmu.canonical_unit_string:
-            # Create a function that can be applied elementwise to the
-            # index values
-            t_converter = np.vectorize(tmu.to_canon)
+                    w._data[worm_id].loc[:, idx[:, data_key, :]] = \
+                        mu_slice.applymap(mu.to_canon)
+                except KeyError:
+                    # Just ignore cases where there are "units" entries but no
+                    # corresponding data
+                    pass
 
-            w.data.set_index(t_converter(w.data.index.values), inplace=True)
+                # Special case: change the dataframe index, i.e. the time units
+                if tmu.unit_string != tmu.canonical_unit_string:
+                    # Create a function that can be applied elementwise to the
+                    # index values
+                    t_converter = np.vectorize(tmu.to_canon)
+                    new_index = t_converter(w._data[worm_id].index.values)
 
-        # Go through each "units" attribute
+                    w._data[worm_id].set_index(new_index, inplace=True)
+
         return w
 
     @classmethod
     def merge(cls, w1, w2):
         """
-        Merge two worms, in their standard forms.
+        Merge two worm groups, in their standard forms.
 
         Units can differ, but not in their standard forms.
 
@@ -375,13 +433,26 @@ class WCONWorms():
         w1c = w1.to_canon
         w2c = w2.to_canon
 
-        try:
-            # Try to upsert w2c's data into w1c.  If we cannot
-            # without an error being raised, the data clashes.
-            w1c.data = df_upsert(w1c.data, w2c.data)
-        except AssertionError as err:
-            raise AssertionError("Data conflicts between worms to "
-                                 "be merged: {0}".format(err))
+        for worm_id in w2c.worm_ids:
+            if worm_id in w1c.worm_ids:
+                try:
+                    # Try to upsert w2c's data into w1c.  If we cannot
+                    # without an error being raised, the data clashes.
+                    w1c._data[worm_id] = df_upsert(w1c._data[worm_id],
+                                                   w2c._data[worm_id])
+                except AssertionError as err:
+                    raise AssertionError("Data conflicts between worms to "
+                                         "be merged on worm {0}: {1}"
+                                         .format(str(worm_id), err))
+            else:
+                # The worm isn't in the 1st group, so just add it
+                w1c._data[worm_id] = w2c._data[worm_id]
+
+        # Sort w1c's list of worms
+        if six.PY3:
+            w1c._data = OrderedDict(sorted(w1c._data.items()))
+        else:
+            w1c._data = OrderedDict(sorted(w1c._data.iteritems()))
 
         return w1c
 
@@ -639,30 +710,37 @@ class WCONWorms():
         w.units['aspect_size'] = MeasurementUnit.create('')
 
         if len(root['data']) > 0:
-            w.data = parse_data(root['data'])
+            w._data = parse_data(root['data'])
 
             # Shift the coordinates by the amount in the offsets 'ox' and 'oy'
-            convert_origin(w.data)
+            for worm_id in w.worm_ids:
+                convert_origin(w._data[worm_id])
 
-            # Any worms with head=='R' should have their
-            # coordinates reversed and head reset to 'L'
-            reverse_backwards_worms(w.data)
+                # Any worms with head=='R' should have their
+                # coordinates reversed and head reset to 'L'
+                reverse_backwards_worms(w._data[worm_id])
         else:
             # "data": {}
-            w.data = None
+            w._data = OrderedDict({})
 
         # Raise error if there are any data keys without units
-        if w.data is None:
-            data_keys = set()
-        else:
-            data_keys = set(w.data.columns.get_level_values(1))
         units_keys = set(w.units.keys())
-        # "head" and "ventral" don't require units.
-        keys_missing_units = data_keys - units_keys - set(['head', 'ventral'])
-        if keys_missing_units != set():
-            raise AssertionError('The following data keys are missing '
-                                 'entries in the "units" object: ' +
-                                 str(keys_missing_units))
+
+        for worm_id in w._data:
+            df = w._data[worm_id]
+            if df is None:
+                data_keys = set()
+            else:
+                data_keys = set(df.columns.get_level_values(1))
+
+            # "head" and "ventral" don't require units.
+            keys_missing_units = \
+                data_keys - units_keys - set(['head', 'ventral'])
+            if keys_missing_units != set():
+                raise AssertionError('In worm ' + str(worm_id) + ', the '
+                                     'following data keys are missing '
+                                     'entries in the "units" object: ' +
+                                     str(keys_missing_units))
 
         # ===================================================
         # HANDLE THE OPTIONAL ELEMENTS: 'files', 'metadata'
@@ -687,6 +765,26 @@ class WCONWorms():
             w.metadata = None
 
         return w
+
+
+def pd_equals(df1, df2):
+    """
+    I don't use DataFrame.equals because it returned False for no
+    apparent reason with one of the centroid unit tests
+
+    """
+    if not df1.columns.identical(df2.columns):
+        return False
+
+    if not df1.index.identical(df2.index):
+        return False
+
+    try:
+        pd.util.testing.assert_frame_equal(df1, df2)
+    except AssertionError:
+        return False
+
+    return True
 
 
 def reject_duplicates(ordered_pairs):

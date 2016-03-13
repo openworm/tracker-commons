@@ -172,8 +172,6 @@ class TestWCONParser(unittest.TestCase):
         w2c = w2.to_canon
         # A change to_canon should change the data in one but equality
         # should remain
-        self.assertFalse((w2.data == w2c.data).all().all())
-        # This has the same effect as above
         self.assertFalse(WCONWorms.is_data_equal(w2, w2c, convert_units=False))
         self.assertEqual(w2, w2)
         self.assertEqual(w2c, w2c)
@@ -183,10 +181,6 @@ class TestWCONParser(unittest.TestCase):
         # force a difference now, with w2c)
         w2.units['y'] = MeasurementUnit.create('mm')
         self.assertNotEqual(w2, w2c)
-
-        # Confirm that data was not altered in situ after performing
-        # the to_canon operation
-        self.assertTrue((w2data == w2.data).any().any())
 
     def test_save_and_load(self):
         """
@@ -487,13 +481,13 @@ class TestWCONParser(unittest.TestCase):
 
         # Modifying w2's data in just one spot is enough to make the data
         # clash and the merge should fail
-        w2.data.loc[1.3, (1, 'x', 0)] = 4000
+        w2._data[1].loc[1.3, (1, 'x', 0)] = 4000
         with self.assertRaises(AssertionError):
             w4 = w2 + w3
 
-        # But if we drop that entire row in w2, it should accomodate the new
+        # But if we drop that entire row in w3, it should accomodate the new
         # figure
-        w3.data.drop(1.3, axis=0, inplace=True)
+        w3._data[1].drop(1.3, axis=0, inplace=True)
         w4 = w2 + w3
         self.assertEqual(w4.data.loc[1.3, (1, 'x', 0)], 4000)
 

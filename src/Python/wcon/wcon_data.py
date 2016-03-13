@@ -30,7 +30,7 @@ elements_without_aspect = ['ox', 'oy', 'cx', 'cy', 'head', 'ventral']
 basic_data_keys = elements_with_aspect + elements_without_aspect
 supported_data_keys = basic_data_keys + ['id', 't']
 MIN_FRAMES_FOR_MULTIPROCESSING = 3000  # This is somewhat arbitrary
-USE_MULTIPROCESSING = False
+USE_MULTIPROCESSING = False    # If False, multiprocessing is never used
 
 
 def get_mask(arr, desired_key):
@@ -253,6 +253,9 @@ def reverse_backwards_worms(df, coord_keys=['x', 'y']):
     None.  Modifies `df` in place.
 
     """
+    # TODO: this method is not fully implemented
+    return
+
     if 'head' not in df.columns.get_level_values(level='key'):
         return
 
@@ -266,13 +269,13 @@ def reverse_backwards_worms(df, coord_keys=['x', 'y']):
             # Nothing to do
             continue
 
-        cur_mask = mask_of_times_to_reverse.loc[:, idx[1, 'head', 0]]
+        cur_mask = mask_of_times_to_reverse.loc[:, idx[worm_id, 'head', 0]]
 
         for key in coord_keys:
             if key not in cur_keys:
                 continue
 
-            thing_to_reverse = df.loc[cur_mask, idx[1, 'x', :]]
+            thing_to_reverse = df.loc[cur_mask, idx[worm_id, 'x', :]]
 
             # TODO: I need to reverse "thing_to_reverse", accounting for
             # aspect size.  [::-1] just reverses the row order.
@@ -283,8 +286,8 @@ def reverse_backwards_worms(df, coord_keys=['x', 'y']):
 
 def parse_data(data):
     """
-    Parse the an array of entries conforming to the WCON schema definition
-    for the "data" array in the root object.  The canonical example is
+    Parse the array of entries conforming to the WCON schema definition
+    for "_data" in the root object.  The canonical example is
     that of worm "skeleton" (midline) information over time.
 
     This could be the standard "data" array from the root object, or
@@ -293,7 +296,9 @@ def parse_data(data):
     Note that all elements are required to have "id", "t", and "x" and "y"
     entries.
 
-    Return an object encapsulating that data.
+    Returns
+    --------
+    An ordered dict of DataFrames, one DataFrame per worm id.
 
     """
     # If data is single-valued, wrap it in a list so it will be just
@@ -312,9 +317,9 @@ def parse_data(data):
     # Clean up and validate all time-series data segments
     _validate_time_series_data(data)
 
-    time_df = _obtain_time_series_data_frame(data)
+    df_odict = _obtain_time_series_data_frame(data)
 
-    return time_df
+    return df_odict
 
 
 def _obtain_time_series_data_frame(time_series_data):
@@ -329,8 +334,9 @@ def _obtain_time_series_data_frame(time_series_data):
 
     Returns
     ----------
-    pandas dataframe
-        Time-series data goes into this Pandas DataFrame
+    ordered dictionary of pandas DataFrames
+        - keys are the worm_ids
+        - Time-series data goes into this Pandas DataFrame
         The dataframe will have t as index, and multilevel columns
         with id at the first level and all other keys at second level.
 
@@ -342,7 +348,7 @@ def _obtain_time_series_data_frame(time_series_data):
     # Consider only time-series data stamped with an id:
     for data_segment in time_series_data:
         # Add this data_segment to a Pandas dataframe
-        segment_id = data_segment['id']
+        worm_id = data_segment['id']
         segment_keys = np.array([k for k in data_segment.keys()
                                  if k not in ['t', 'id']])
 
@@ -361,10 +367,10 @@ def _obtain_time_series_data_frame(time_series_data):
         # DataFrame
         max_aspect_size = int(max([k[0] for k in data_segment['aspect_size']]))
 
-        key_combos = list(itertools.product([segment_id],
+        key_combos = list(itertools.product([worm_id],
                                             cur_elements_with_aspect,
                                             range(max_aspect_size)))
-        key_combos.extend(list(itertools.product([segment_id],
+        key_combos.extend(list(itertools.product([worm_id],
                                                  cur_elements_without_aspect,
                                                  [0])))
 
@@ -411,7 +417,7 @@ def _obtain_time_series_data_frame(time_series_data):
         data_segment_dfs.append(cur_df)
 
     # Our DataFrame to return
-    time_df = None
+    df_odict = OrderedDict()
 
     # Obtain a list of lists of the worm ids
     worm_ids = [cur_df.columns.levels[0].values for cur_df in data_segment_dfs]
@@ -420,69 +426,78 @@ def _obtain_time_series_data_frame(time_series_data):
     # check for duplicates
     worm_ids_flat = [item for sublist in worm_ids for item in sublist]
 
-    # if worm_ids are mutually distinct in each dataframe, then
+    # If worm_ids are mutually distinct in each dataframe, then
     if len(set(worm_ids_flat)) == len(worm_ids):
-        time_df = reduce(
-            lambda l,
-            r: pd.merge(
-                l,
-                r,
-                left_index=True,
-                right_index=True,
-                how='outer'),
-            data_segment_dfs)
+        df_odict = OrderedDict(zip(worm_ids_flat, data_segment_dfs))
+        # l = data_segment_dfs[0]
+        # memory_use_log = [l.memory_usage().sum()]
+        # memory_use_indiv = [l.memory_usage().sum()]
+        # for r in data_segment_dfs[1:]:
+        #   l = pd.merge(l, r, left_index=True, right_index=True, how='outer')
+        # time_df = l
     else:
         # Otherwise we have to iterate
         # TODO: we could do the above time shortcut with all available
         #       mutually distinct segments, rather than only doing it if
         #       ALL segments are mutually distinct
         for cur_df in data_segment_dfs:
+            worm_id = cur_df.columns.levels[0].values[0]
             # Add the segment to our main DataFrame
-            if time_df is None:
-                time_df = cur_df
+            if worm_id not in df_odict:
+                # if it's not there, INSERT
+                df_odict[worm_id] = cur_df
             else:
-                time_df = df_upsert(src=cur_df, dest=time_df)
+                # if it is already there, UPDATE
+                df_odict[worm_id] = df_upsert(src=cur_df,
+                                              dest=df_odict[worm_id])
 
-    # We want the index (time) to be in order.
-    time_df.sort_index(axis=0, inplace=True)
-    # The columns also need to be in order.
-    time_df.sort_index(axis=1, inplace=True)
+    for worm_id in df_odict:
+        # We want the index (time) to be in order.
+        df_odict[worm_id].sort_index(axis=0, inplace=True)
+        # The columns also need to be in order.
+        df_odict[worm_id].sort_index(axis=1, inplace=True)
 
-    # We have to do this because somehow with entire worms who have 'head' or
-    # 'ventral' columns, all their columns (even the numeric ones)
-    # have dtype = object !  We want dtype=float64 (or some float anyway)
-    # (Ignore the FutureWarning here about convert_objects being deprecated,
-    # because to_numeric only acts on Series and I don't know which ones
-    # we need to convert.)
-    with warnings.catch_warnings():
-        warnings.filterwarnings(action="ignore", category=FutureWarning)
-        time_df = time_df.convert_objects(convert_numeric=True)
+        # We have to do this because somehow with entire worms who have 'head'
+        # or 'ventral' columns, all their columns (even the numeric ones)
+        # have dtype = object !  We want dtype=float64 (or some float anyway)
+        # (Ignore the FutureWarning here about convert_objects being
+        # deprecated, because to_numeric only acts on Series and I don't know
+        # which ones we need to convert.)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(action="ignore", category=FutureWarning)
+            df_odict[worm_id] = \
+                df_odict[worm_id].convert_objects(convert_numeric=True)
 
-    # If 'head' or 'ventral' is NaN, we must specify '?' since
-    # otherwise, when saving this object, to specify "no value" we would
-    # have to create a new data segment with no 'head' column at all.
-    # But since both 'head' and 'ventral' have this issue, we might need
-    # segments with just 'head', just 'ventral', and both 'head' and
-    # 'ventral', and none.  That's too unwieldy for a rare use case.
-    # So instead we treat nan as '?'.
+        # If 'head' or 'ventral' is NaN, we must specify '?' since
+        # otherwise, when saving this object, to specify "no value" we would
+        # have to create a new data segment with no 'head' column at all.
+        # But since both 'head' and 'ventral' have this issue, we might need
+        # segments with just 'head', just 'ventral', and both 'head' and
+        # 'ventral', and none.  That's too unwieldy for a rare use case.
+        # So instead we treat nan as '?'.
 
-    # We must replace NaN with None, otherwise the JSON encoder will
-    # save 'NaN' as the string and this will get rejected by our schema
-    # on any subsequent loads
-    # Note we can't use .fillna(None) due to this issue:
-    # https://github.com/pydata/pandas/issues/1972
-    df_keys = set(time_df.columns.get_level_values('key'))
-    for k in ['head', 'ventral']:
-        if k in df_keys:
-            cur_slice = time_df.loc[:, idx[:, k, :]]
-            time_df.loc[:, idx[:, k, :]] = cur_slice.fillna(value=np.nan)
+        # We must replace NaN with None, otherwise the JSON encoder will
+        # save 'NaN' as the string and this will get rejected by our schema
+        # on any subsequent loads
+        # Note we can't use .fillna(None) due to this issue:
+        # https://github.com/pydata/pandas/issues/1972
+        df_keys = set(df_odict[worm_id].columns.get_level_values('key'))
+        for k in ['head', 'ventral']:
+            if k in df_keys:
+                cur_slice = df_odict[worm_id].loc[:, idx[:, k, :]]
+                df_odict[worm_id].loc[:, idx[:, k, :]] = \
+                    cur_slice.fillna(value=np.nan)
 
-    # Make sure aspect_size is a float, since only floats are nullable:
-    if 'aspect_size' in df_keys:
-        time_df.loc[:, idx[:, 'aspect_size', :]] = \
-            time_df.loc[:, idx[:, 'aspect_size', :]].astype(float)
+        # Make sure aspect_size is a float, since only floats are nullable:
+        if 'aspect_size' in df_keys:
+            df_odict[worm_id].loc[:, idx[:, 'aspect_size', :]] = \
+                df_odict[worm_id].loc[:, idx[:, 'aspect_size', :]] \
+                .astype(float)
 
-    return time_df
+    if six.PY3:
+        return OrderedDict(sorted(df_odict.items()))
+    else:
+        return OrderedDict(sorted(df_odict.iteritems()))
 
 
 def __pivot_data_for_staging(data_segment, cur_data_keys, index_range,
