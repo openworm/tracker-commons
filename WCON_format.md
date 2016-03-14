@@ -201,7 +201,7 @@ For features that describe an entire plate rather than properties of individual 
 }
 ```
 
-This example presents only a small number of possibilities for how a custom reader could store information within a WCOM file.  The driving principle is that the custom readers and writers can do whatever they need to, so long as it is valid JSON, and any units that ought to be automatically converted are specfied in the `"units"` block.
+This example presents only a small number of possibilities for how a custom reader could store information within a WCOM file.  The driving principle is that the custom readers and writers can do whatever they need to, so long as it is valid JSON, and any units that ought to be automatically converted are specified in the `"units"` block.
 
 ## Common additions handled in accompanying code
 
@@ -225,7 +225,7 @@ A WCON parser should, if it's going to interpret units, handle the following SI 
 
 _Note: JSON must be unicode, so the micro-symbol must be encoded as unicode.  There are two choices: "micro symbol" `U+00B5` or "greek mu" `U+03BC`.  Both should be handled.  Some software does not understand unicode, however, so writing `u` is preferred._
 
-The following units should be handled:
+The following units should be handled (including both variants of meter/metre and celsius/centigrade):
 
 | Unit       | Abbreviations |
 | ---------- | ------------- |
@@ -234,6 +234,7 @@ The following units should be handled:
 | hour       | h             |
 | day        | d             |
 | metre      | m             |
+| meter      | m             |
 | inch       | in            |
 | micron     | *(none)*      |
 | fahrenheit | F             |
@@ -246,7 +247,7 @@ Abbreviated and full versions must not be mixed.  For instance, both `"ms"` and 
 
 If a numeric quantity is dimensionless, specify the units as an empty string `""` or the string `"1"`.
 
-Compound units can be built with the operators `*` (multiplication), `/` (division), and `^` (exponentiation, with integer powers only).  To write a reciprocal, a dimensionless `1` can be inserted.  For instance, a frequency might be represented with `"1/s"`.
+Compound units can be built with the operators `*` (multiplication), `/` (division), and `^` (exponentiation, with integer powers only).  Scalar factors can be included also (e.g. `"7*day"` if the units are weeks, or `"in/72"` if the units are points).  To write a reciprocal, a dimensionless `1` can be inserted.  For instance, a frequency might be represented by `"1/s"`.
 
 Tracker Commons software will automatically convert units to the standard internal representations (e.g. inches to mm) for all fields specified in the `units` block.  It _will_ look inside anything with a custom tag.  It will _not_ look inside the `settings` block in `metadata`, nor will it look inside unknown fields.
 
@@ -254,17 +255,17 @@ As an example, inside
 
 ```JSON
 {
-    "units":{"t":"s", "x":"in", "y":"in", "e":"min", "q":"%"},
+    "units":{"t":"s", "x":"12*in", "y":"12*in", "e":"min", "q":"%"},
     "metadata":{
         "q":45,
         "@XJ":{ "foo": { "e": 2 }, "yes": "I think so"},
         "settings":{"q": 4, "r": 5}
     },
-    "data": [{ "id":1, "t":0, "x":1, "y":2, "@XJ": {"e": 3, "f":{"q": 4}}}]
+    "data": [{ "id":1, "t":0, "x":1, "y":2, "@XJ": {"e": 3, "f":{"p": 4}}}]
 }
 ```
 
-the `q` inside `metadata` would be converted from percent to a fraction, the `e` inside `foo` inside `@XJ` inside `metadata` would be converted to seconds, the `q` inside `settings` inside `metadata` would not be converted, the `e` in `data` would be converted as would the `e` in `@XJ` in `data`, and the `q` inside `f` inside `data` would not be converted.
+the `q` inside `metadata` would be converted from percent to a fraction, the `e` inside `foo` inside `@XJ` inside `metadata` would be converted to seconds, the `q` inside `settings` inside `metadata` would not be converted, the `e` in `data` would be converted as would the `e` in `@XJ` in `data`, and the `p` inside `f` inside `data` would not be converted.
 
 ### Experiment and software metadata
 

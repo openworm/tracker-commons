@@ -52,14 +52,15 @@ package units {
     val minute = LinearConvert("min", 60, 0, 1)
     val hour = LinearConvert("hr", 3600, 0, 1)
     val day = LinearConvert("day", 86400, 0, 1)
-    val scalar = LinearConvert("", 1, 0, 0)
+    val one = LinearConvert("", 1, 0, 0)
+    def scalar(x: Double) = LinearConvert(x.toString, x, 0, 0)
     val percent = LinearConvert("%", 0.01, 0, 0)
     val celsius = new Convert { def name = "C"; def toInternal(x: Double) = x; def toExternal(x: Double) = x }
     val kelvin = new Convert { def name = "K"; def toInternal(x: Double) = x - 273.15; def toExternal(x: Double) = x + 273.15 }
     val fahrenheit = new Convert { def name = "F"; def toInternal(x: Double) = ((x-32)*5)/9; def toExternal(x: Double) = (x*9)/5 + 32 }    
   }
 
-  private[units] object ConvertParser {
+  object ConvertParser {
     import Standard._
     import fastparse.all._
     val W = P(CharsWhile(_.isWhitespace).?)
@@ -102,12 +103,11 @@ package units {
       P("G").map(_ => 9)
     val ShortLin =
       P("mm").map(_ => millimeter) |
-      P("1").map(_ => scalar) |
       P("%").map(_ => percent) |
       (ShortPrefix ~ ShortLinBase).map{ case (a,b) => b e a } |
       ShortLinBase
     type PLC = Parser[LinearConvert]
-    val OneLin: PLC = LongLin | ShortLin
+    val OneLin: PLC = P(org.openworm.trackercommons.Parser.PositiveDouble.map(x => if (x==1) one else scalar(x)) | LongLin | ShortLin)
     val ExpLin: PLC = P((ParLin ~ W ~ "^" ~ W ~ P("-".? ~ CharsWhile(_.isDigit)).!.map(_.toDouble.toInt)).map{ case (a,b) => a ^ b })
     val PrecA: PLC  = P(ExpLin | ParLin)
     val MulLin: PLC = P(((PrecA ~ W ~ PrecB) | (PrecA ~ W ~ "*" ~ W ~ PrecB)).map{ case (a,b) => a * b })
