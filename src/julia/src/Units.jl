@@ -57,7 +57,6 @@ long_units_list = collect(Dict(
 ))
 
 abbrev_units_list = collect(Dict(
-    "1" => 1.0,
     "%" => 0.01,
     "m" => 1e3,
     "in" => 25.4,
@@ -70,7 +69,7 @@ abbrev_units_list = collect(Dict(
 
 function make_nonscaled_converters(input :: AbstractString)
     result :: Nullable{Tuple{Function, Function}} = Nullable{Tuple{Function, Function}}()
-    if haskey(nonscaled_units_to_internal, input) && haskey(nonscaled_units_to_external)
+    if haskey(nonscaled_units_to_internal, input) && haskey(nonscaled_units_to_external, input)
         result = Nullable(nonscaled_units_to_internal(input), nonscaled_units_to_external(input))
     end
     return result
@@ -79,25 +78,34 @@ end
 function make_simple_scale(input :: AbstractString)
     result :: Float64 = NaN
     tidy = strip(input)
-    longi = findfirst(x -> endswith(tidy, first(x)), long_units_list)
-    if longi > 0
-        k, v = long_units_list[longi]
-        if tidy == k result = v
-        else
-            pre = tidy[1:(length(tidy) - length(k))]
-            if haskey(si_prefix_map, pre) && length(pre) > 1
-                result = v * si_prefix_map[pre]
-            end
+    if length(tidy) == 0
+        result = 1.0
+    elseif tidy[1] >= '0' && tidy[1] <= '9'
+        value = parse(Float64, tidy)
+        if value > 0 && value < Inf
+            result = value
         end
     else
-        shorti = findfirst(x -> endswith(input,first(x)), abbrev_units_list)
-        if shorti > 0
-            k, v = abbrev_units_list[shorti]
+        longi = findfirst(x -> endswith(tidy, first(x)), long_units_list)
+        if longi > 0
+            k, v = long_units_list[longi]
             if tidy == k result = v
-            elseif k != "1" && k != "%"
-                pre = tidy[1:(length(tidy)-length(k))]
-                if haskey(si_prefix_map, pre) && length(pre) == 1
+            else
+                pre = tidy[1:(length(tidy) - length(k))]
+                if haskey(si_prefix_map, pre) && length(pre) > 1
                     result = v * si_prefix_map[pre]
+                end
+            end
+        else
+            shorti = findfirst(x -> endswith(input,first(x)), abbrev_units_list)
+            if shorti > 0
+                k, v = abbrev_units_list[shorti]
+                if tidy == k result = v
+                elseif k != "1" && k != "%"
+                    pre = tidy[1:(length(tidy)-length(k))]
+                    if haskey(si_prefix_map, pre) && length(pre) == 1
+                        result = v * si_prefix_map[pre]
+                    end
                 end
             end
         end
@@ -112,7 +120,7 @@ function make_complex_scale(input :: AbstractString)
     else
         mul = findfirst(input, '*')
         if (mul > 0)
-            result = make_complex_scale(input[1:(mul-1)]) * make_complex_scale(input[(div+1):end])
+            result = make_complex_scale(input[1:(mul-1)]) * make_complex_scale(input[(mul+1):end])
         else
             pwr = findfirst(input, '^')
             if (pwr > 0)
