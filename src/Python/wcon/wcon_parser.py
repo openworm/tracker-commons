@@ -15,8 +15,11 @@ import warnings
 from collections import OrderedDict
 from six import StringIO
 from os import path
+import os
+import shutil
 import json
 import jsonschema
+import zipfile
 import numpy as np
 import pandas as pd
 idx = pd.IndexSlice
@@ -403,7 +406,8 @@ class WCONWorms():
                           'does not end in ".WCON", the recommended'
                           'file extension.')
 
-    def save_to_file(self, JSON_path, pretty_print=False, num_chunks=1):
+    def save_to_file(self, JSON_path, pretty_print=False,
+                     compress_file=False, num_chunks=1):
         """
         Save this object to the path specified.  The object
         will be serialized as a WCON JSON text file.
@@ -417,6 +421,8 @@ class WCONWorms():
             If True, adds newlines and spaces to make the file more human-
             readable.  Otherwise, the JSON output will use as few characters
             as possible.
+        compress_file: bool
+            If True, saves a compressed version of the WCON JSON text file
         num_chunks: int
             The number of chunks to break this object into.  If
             num_chunks > 1 then num_chunks files will be created.
@@ -434,6 +440,15 @@ class WCONWorms():
         with open(JSON_path, 'w') as outfile:
             json.dump(self.as_ordered_dict, outfile,
                       indent=4 if pretty_print else None)
+
+        if compress_file:
+            # Zip the file and overwrite the just-saved WCON file
+            archive_name = JSON_path + '.zip'  # Only temporary
+            zf = zipfile.ZipFile(archive_name, 'w', zipfile.ZIP_DEFLATED)
+            zf.write(JSON_path)
+            zf.close()
+            os.remove(JSON_path)
+            os.rename(archive_name, JSON_path)
 
     @classmethod
     def load_from_file(cls, JSON_path,
@@ -469,8 +484,57 @@ class WCONWorms():
 
         cls.validate_filename(JSON_path)
 
-        with open(JSON_path, 'r') as infile:
-            w_current = cls.load(infile, validate_against_schema)
+        # Check if the specified file is compressed
+        if zipfile.is_zipfile(JSON_path):
+            zf = zipfile.ZipFile(JSON_path, 'r')
+
+            zf_namelist = zf.namelist()
+            if len(zf_namelist) <= 0:
+                raise Exception("Filename %s is a zip archive, which is fine, "
+                                "but the archive does not contain any files.")
+            elif len(zf_namelist) == 1:
+                # Just one file is in the archive.
+                print("The file is a zip archive with one file.  Attempting "
+                      "to uncompress and then load.")
+                wcon_bytes = zf.read(zf.namelist()[0])
+                wcon_string = wcon_bytes.decode("utf-8")
+                infile = StringIO(wcon_string)
+                w_current = cls.load(infile, validate_against_schema)
+            else:
+                print("The zip archive contains multiple files.  We will "
+                      "extract to a temporary folder and then try to load "
+                      "the first file in the archive, then delete the "
+                      "temporary folder.")
+                # Note: the first file is all we should need since we assume
+                #       the files in the archive are linked together using
+                #       their respective JSON "files" entries
+                
+                # Make a temporary archive folder
+                cur_path = os.path.abspath(os.path.dirname(JSON_path))
+                archive_path = os.path.join(cur_path, '_zip_archive')
+                if os.path.exists(archive_path):
+                    raise Exception("Archive path %s already exists!"
+                                    % archive_path)
+                else:
+                    os.makedirs(archive_path)
+
+                # Extract zip archive to temporary folder
+                for name in zf_namelist:
+                    zf.extract(name, archive_path)
+                zf.close()
+
+                # Call load_from_file on the first file
+                first_path = os.path.join(archive_path, zf_namelist[0])
+                w = cls.load_from_file(first_path)
+
+                # Delete the temporary folder
+                shutil.rmtree(archive_path, ignore_errors=True)
+
+                return w
+        else:
+            # The file is not a zip file, so assume it's just plaintext JSON
+            with open(JSON_path, 'r') as infile:
+                w_current = cls.load(infile, validate_against_schema)
 
         # CASE 1: NO "files" OBJECT, hence no multiple files.  We are done.
         if w_current.files is None:
