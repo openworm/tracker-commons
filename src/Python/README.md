@@ -70,8 +70,10 @@ w3 = w1 + w2  # Merge the two.  An exception is raised if the data clashes
       - returns: a copy of this object but in canonical form
     - `__add__`
       - [use `+`]
+      - Merges WCONWorms objects together.  If the worm IDs or time periods are disjoint, or if the data agrees, this method works.  If not, an exception is thrown.
     - `__eq__`
       - [use `==`]
+      - Return a boolean indicating whether two WCONWorms objects are the same, after conversion of all quantities to canonical units.  Compares both data and metadata.
   - attributes
     - `units`: dict
         - May be empty, but is never None since 'units' is required 
@@ -82,8 +84,13 @@ w3 = w1 + w2  # Merge the two.  An exception is raised if the data clashes
         data types.
     - `data`: Pandas DataFrame or None
         - If 'data' was not specified, data is None.
-    - [Note: `files`, if present in the input, is not persisted unless the `.load`
-           factory method is used.]
+        - All the worms are merged into one DataFrame
+        - Expensive and memory-intensive for objects containing many worms, so try to avoid using this.  Use `data_as_odict` instead.
+    - [Note: `files`, if present in the input, is not persisted unless the `.load` factory method is used.]
+    - `num_worms`: int
+    - `worm_ids`: list
+    - `data_as_odict`: OrderedDict of pandas DataFrames, keyed by worm ID
+      - This is the native representation of the data in this object, and thus the fastest to load.  Try to use this instead of `data`.
 - Class `MeasurementUnit`
   - Note: this class does not need to be used publicly, but it can be if desired.
     - consequently it can be ommitted from a public API
