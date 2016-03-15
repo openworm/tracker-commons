@@ -494,10 +494,7 @@ def _obtain_time_series_data_frame(time_series_data):
                 df_odict[worm_id].loc[:, idx[:, 'aspect_size', :]] \
                 .astype(float)
 
-    if six.PY3:
-        return OrderedDict(sorted(df_odict.items()))
-    else:
-        return OrderedDict(sorted(df_odict.iteritems()))
+    return sort_odict(df_odict)
 
 
 def __pivot_data_for_staging(data_segment, cur_data_keys, index_range,
@@ -941,3 +938,19 @@ def get_sorted_ordered_dict(d):
         else:
             od[k] = v
     return od
+
+
+def sort_odict(odict, sort_as_strings=True):
+    """
+    Returns another odict with the items sorted.
+
+    """
+    if six.PY3:
+        to_sort = odict.items()
+    else:
+        to_sort = odict.iteritems()
+
+    if sort_as_strings:
+        return OrderedDict(sorted(to_sort, key=lambda k: str(k)))
+    else:
+        return OrderedDict(sorted(to_sort))

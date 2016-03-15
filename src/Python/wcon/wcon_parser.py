@@ -27,7 +27,7 @@ idx = pd.IndexSlice
 from .wcon_data import parse_data, convert_origin
 from .wcon_data import df_upsert, data_as_array
 from .wcon_data import get_sorted_ordered_dict
-from .wcon_data import reverse_backwards_worms
+from .wcon_data import reverse_backwards_worms, sort_odict
 from .measurement_unit import MeasurementUnit
 
 
@@ -449,10 +449,7 @@ class WCONWorms():
                 w1c._data[worm_id] = w2c._data[worm_id]
 
         # Sort w1c's list of worms
-        if six.PY3:
-            w1c._data = OrderedDict(sorted(w1c._data.items()))
-        else:
-            w1c._data = OrderedDict(sorted(w1c._data.iteritems()))
+        w1c._data = sort_odict(w1c._data)
 
         return w1c
 
