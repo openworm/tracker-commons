@@ -1,11 +1,12 @@
 package org.openworm.trackercommons
 
+import scala.util._
 import scala.util.control.NonFatal
 
 object ReadWrite {
-  def apply(s: String): Either[String, DataSet] = apply(new java.io.File(s))
+  def read(s: String): Either[String, DataSet] = read(new java.io.File(s))
 
-  def apply(f: java.io.File): Either[String, DataSet] = {
+  def read(f: java.io.File): Either[String, DataSet] = {
     try {
       val s = scala.io.Source.fromFile(f)
       try { Parser(s.mkString).left.map(err => s"Could not read ${f.getPath} because\n$err") }
@@ -14,9 +15,9 @@ object ReadWrite {
     catch { case NonFatal(_) => Left("Could not read " + f.getPath) }
   }
 
-  def all(s: String): Either[String, Vector[DataSet]] = all(new java.io.File(s))
+  def readAll(s: String): Either[String, Vector[DataSet]] = readAll(new java.io.File(s))
 
-  def all(f: java.io.File): Either[String, Vector[DataSet]] = apply(f) match {
+  def readAll(f: java.io.File): Either[String, Vector[DataSet]] = read(f) match {
     case Left(err) => Left(err)
     case Right(dset) =>
       if (dset.files.size <= 1) Right(Vector(dset))
@@ -32,7 +33,7 @@ object ReadWrite {
             case None => return Left("Extended data set was supposed to contain ${fs.you(i)} but can't find corresponding file")
             case Some(x) => x
           }
-          val di = apply(fi) match {
+          val di = read(fi) match {
             case Left(err) => return Left(err)
             case Right(x) => x
           }
@@ -57,5 +58,45 @@ object ReadWrite {
         }
         Right(ds)
       }
+  }
+
+  def write(ds: DataSet, file: String): Either[String, Unit] = write(ds, new java.io.File(file))
+
+  def write(ds: DataSet, root: String, file: String): Either[String, Unit] = write(ds, new java.io.File(root), file)
+
+  def write(ds: DataSet, f: java.io.File): Either[String, Unit] = write(ds, f.getParentFile, f.getName)
+
+  def write(ds: DataSet, f: java.io.File, fname: String): Either[String, Unit] = {
+    val lines = ds.copy(files = FileSet(Vector(fname), 0, json.ObjJ.empty)).toObjJ.toJsons
+    val fout = new java.io.File(f, fname)
+    writeLinesTo(lines, fout)
+  }
+
+  private def writeLinesTo(lines: Vector[json.Indented], fout: java.io.File): Either[String, Unit] = {
+    val pw = Try{ new java.io.PrintWriter(fout) } match {
+      case Success(x) => x
+      case Failure(e) => return Left("Could not open output file " + fout)
+    }
+    try {
+      lines.foreach(pw.println)
+      Right(())
+    }
+    catch {
+      case e: Exception => Left("Error while writing file " + fout + "\n" + e.toString + Option(e.getMessage).getOrElse(""))
+    }
+    finally Try { pw.close }
+  }
+
+  def writeAll(root: java.io.File, sets: Vector[(DataSet, String)]): Either[String, Unit] = {
+    val fileset = sets.map(_._2)
+    sets.zipWithIndex.foreach{ case ((ds, f), i) =>
+      val lines = ds.copy(files = FileSet(fileset, i, json.ObjJ.empty)).toObjJ.toJsons
+      val fout = new java.io.File(root, f)
+      writeLinesTo(lines, fout) match {
+        case x: Left[String, Unit] => return x
+        case _ =>
+      }
+    }
+    Right(())
   }
 }
