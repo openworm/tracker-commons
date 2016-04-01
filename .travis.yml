@@ -4,8 +4,7 @@ python:
     # conda doesn't seem to work with 2.6 so let's forget about testing it
     #- 2.6  
     - 2.7
-    # test_save_and_load fails on minimax.wcon with Python 3.3, and I haven't had 
-    # create a Python 3.3 debugging environment to find out why
+    # test_save_and_load fails on minimax.wcon with Python 3.3, haven't had change to look into it
     #- 3.3  
     - 3.4
     - 3.5
@@ -14,8 +13,6 @@ notifications:
   email: false
 
 before_install:
-    - sudo apt-get update
-    - sudo apt-get -y install python-pip
     - pip install --upgrade pip
     - pip install six
     - pip install pep8
@@ -49,11 +46,19 @@ before_install:
     - pydoc modules
 
 before_script:
+    - cd $TRAVIS_BUILD_DIR/tests
+    # Supplement our folder of test files with some larger ones we don't store directly in the GitHub repo
+    # Download files from Dropbox because it is impossible to download files directly from Google Drive
+    # if they are larger than the size at which Google warns that it can't scan for viruses; this popup
+    # means we don't get the file using wget.  Dropbox works like a charm, however.
+    # (See http://stackoverflow.com/questions/25010369/)
+    - wget "https://www.dropbox.com/s/gda92wl2hdoiu8y/testfile_new.wcon?dl=1" -O from_schafer_lab.wcon
+    - wget "https://www.dropbox.com/s/apjyc9lh1t7646q/XJ30_NaCl500mM4uL6h_10m45x10s40s_Ea.wcon?dl=1" -O from_kerr.wcon
+    # Zip the downloaded files so zipped versions can also be tested
+    - zip from_schafer_lab_zipped.wcon from_schafer_lab.wcon
+    - zip from_kerr_zipped.wcon from_kerr.wcon
     - ls -l
     - cd $TRAVIS_BUILD_DIR
-    - ls -l
-    - wget "https://drive.google.com/uc?export=download&id=0B9dU7zPD0s_LRkNzS0N3VnhoODQ" -O from_schafer_lab.wcon
-    - pwd
  
 script:
     # Run pep8 on all .py files in all subfolders
@@ -70,6 +75,6 @@ script:
     # git commit -a -m "autopep8"
     # git push
 
-    - cd src/Python/tests/
+    - cd $TRAVIS_BUILD_DIR/src/Python/tests/
     - pwd
     - python -m unittest discover

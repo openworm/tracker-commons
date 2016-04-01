@@ -20,6 +20,13 @@ object Parser {
     (java.time.LocalDateTime.of(y.toInt, mo.toInt, d.toInt, h.toInt, mi.toInt, ssi, ssns), loc.getOrElse(""))
   }
 
+  val PositiveDouble = P(
+    ( P("0." ~ "0".rep ~ CharIn("123456789") ~ D.rep) | 
+      P(CharIn("123456789") ~ D.rep ~ ("." ~ D.rep(1)).?)
+    ) ~ 
+    (CharIn("eE") ~ CharIn("+-").? ~ D.rep(1)).?
+  ).!.map(_.toDouble)
+
   val Units = P("\"units\"" ~ W(":") ~! Struct.Obj)
 
   val Meta = P("\"metadata\"" ~ W(":") ~! Struct.Obj)

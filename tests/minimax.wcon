@@ -25,6 +25,7 @@
         "x":"mm", 
         "y":"m",
         "ox":"mm",
+	"oy":"mm",
         "speed":"mm/s",
         "curvature":"1/mm",
         "width":"mm",
