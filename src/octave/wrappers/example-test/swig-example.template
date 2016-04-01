@@ -1,0 +1,5 @@
+%module SWIG_MOD_NAME
+%{
+#include "example.h"
+%}
+int gcd(int x, int y);
