@@ -67,6 +67,8 @@ extern "C" int static_WCONWorms_load_from_file(const char *wconpath) {
   PyObject *pErr, *pFunc;
   int retCode;
 
+  // TODO: Probably best done as a try-and-catch rather than
+  //   via C error checking. Internal code can be pure C++.
   retCode = initOctaveWconPythonWrapper();
   if (retCode == 0) {
     cout << "Failed to initialize wrapper library." << endl;
@@ -412,5 +414,295 @@ int WCONWorms_eq(const unsigned int selfHandle, const unsigned int handle) {
     cout << "ERROR: save_to_file not a callable function" << endl;
     Py_XDECREF(pFunc);
     return -1;
+  }
+}
+
+
+// MeasurementUnit Class
+extern "C" int static_MeasurementUnit_create(const char *unitStr) {
+  PyObject *pErr, *pFunc;
+  int retCode;
+
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return -1;
+  }
+  cout << "Attempting to create a MeasurementUnit object with ["
+       << unitStr << "]" << endl;
+
+  pFunc = 
+    PyObject_GetAttrString(wrapperGlobalMeasurementUnitClassObj,
+			   "create");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pFunc);
+    return -1; // failure condition
+  }
+
+  if (PyCallable_Check(pFunc) == 1) {
+    PyObject *pValue;
+    pValue = PyObject_CallFunctionObjArgs(pFunc, 
+					  PyUnicode_FromString(unitStr), 
+					  NULL);
+    pErr = PyErr_Occurred();
+    if (pErr != NULL) {
+      PyErr_Print();
+      Py_XDECREF(pValue);
+      Py_XDECREF(pFunc);
+      return -1;
+    }
+
+    if (pValue != NULL) {
+      // do not DECREF pValue until it is no longer referenced in the
+      //   wrapper sublayer.
+      int result = wrapInternalStoreReference(pValue);
+      if (result == -1) {
+	cout << "ERROR: failed to store object reference in wrapper." 
+	     << endl;
+	Py_DECREF(pValue);
+      }
+      Py_XDECREF(pFunc);
+      return result;
+    } else {
+      cout << "ERROR: Null handle from create" << endl;
+      // No need to DECREF a NULL pValue
+      Py_XDECREF(pFunc);
+      return -1;
+    }
+    Py_XDECREF(pFunc);
+  } else {
+    cout << "ERROR: create not a callable function" << endl;
+    Py_XDECREF(pFunc);
+    return -1;
+  }
+}
+
+// TODO: Ok ... for these I'm not even going to try dealing with error
+//   codes
+extern "C" double MeasurementUnit_to_canon(const unsigned int selfHandle,
+					   const double val) {
+  PyObject *MeasurementUnit_instance=NULL;
+  PyObject *pErr, *pFunc;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return -1; // closest approximation to a failure condition for now
+  }
+  cout << "Converting native value to canonical for MeasurementUnit "
+       << selfHandle << endl;
+
+  MeasurementUnit_instance = wrapInternalGetReference(selfHandle);
+  if (MeasurementUnit_instance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return -1;
+  }
+
+  pFunc = 
+    PyObject_GetAttrString(MeasurementUnit_instance,"to_canon");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pFunc);
+    return -1; 
+  }
+
+  if (PyCallable_Check(pFunc) == 1) {
+    PyObject *retValue;
+    retValue = PyObject_CallFunctionObjArgs(pFunc, 
+					    PyFloat_FromDouble(val),
+					    NULL);
+    pErr = PyErr_Occurred();
+    if (pErr != NULL) {
+      Py_XDECREF(retValue);
+      Py_DECREF(pFunc);
+      PyErr_Print();
+      return -1;
+    } else {
+      if (retValue != NULL) {
+	double retCValue;
+	retCValue = PyFloat_AsDouble(retValue);
+	pErr = PyErr_Occurred();
+	Py_DECREF(retValue);
+	Py_DECREF(pFunc);
+	if (pErr != NULL) {
+	  PyErr_Print();
+	  return -1;
+	} else {
+	  return retCValue;
+	}
+      } else {
+	// Nothing to DECREF for NULL retValue
+	Py_DECREF(pFunc);
+	return -1;
+      }
+    }
+  } else {
+    cout << "ERROR: to_canon not a callable function" << endl;
+    Py_XDECREF(pFunc);
+    return -1;
+  }
+}
+
+extern "C" double MeasurementUnit_from_canon(const unsigned int selfHandle,
+					     const double val) {
+  PyObject *MeasurementUnit_instance=NULL;
+  PyObject *pErr, *pFunc;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return -1; // closest approximation to a failure condition for now
+  }
+  cout << "Converting native value to canonical for MeasurementUnit "
+       << selfHandle << endl;
+
+  MeasurementUnit_instance = wrapInternalGetReference(selfHandle);
+  if (MeasurementUnit_instance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return -1;
+  }
+
+  pFunc = 
+    PyObject_GetAttrString(MeasurementUnit_instance,"from_canon");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pFunc);
+    return -1; 
+  }
+
+  if (PyCallable_Check(pFunc) == 1) {
+    PyObject *retValue;
+    retValue = PyObject_CallFunctionObjArgs(pFunc, 
+					    PyFloat_FromDouble(val),
+					    NULL);
+    pErr = PyErr_Occurred();
+    if (pErr != NULL) {
+      Py_XDECREF(retValue);
+      Py_DECREF(pFunc);
+      PyErr_Print();
+      return -1;
+    } else {
+      if (retValue != NULL) {
+	double retCValue;
+	retCValue = PyFloat_AsDouble(retValue);
+	pErr = PyErr_Occurred();
+	Py_DECREF(retValue);
+	Py_DECREF(pFunc);
+	if (pErr != NULL) {
+	  PyErr_Print();
+	  return -1;
+	} else {
+	  return retCValue;
+	}
+      } else {
+	// Nothing to DECREF for NULL retValue
+	Py_DECREF(pFunc);
+	return -1;
+      }
+    }
+  } else {
+    cout << "ERROR: from_canon not a callable function" << endl;
+    Py_XDECREF(pFunc);
+    return -1;
+  }
+}
+
+// TODO: These two API calls just seal the deal on whether to adopt
+//       MPI-style error code return mechanisms. Not that it was in
+//       any real doubt.
+
+extern "C" 
+const char *MeasurementUnit_unit_string(const unsigned int selfHandle) {
+  PyObject *MeasurementUnit_selfInstance=NULL;
+  PyObject *pErr, *pAttr;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return NULL;
+  }
+  cout << "Retrieve unit_string property of handle " << selfHandle << endl;
+
+  MeasurementUnit_selfInstance = wrapInternalGetReference(selfHandle);
+  if (MeasurementUnit_selfInstance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return NULL;
+  }
+
+  // to_canon is implemented as an object property and not a function
+  pAttr = 
+    PyObject_GetAttrString(MeasurementUnit_selfInstance,"unit_string");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pAttr);
+    return NULL;
+  }
+
+  if (pAttr != NULL) {
+    // TODO: This is quite a pain in the butt that will have to
+    //   be looked into further for robustness issues. It sure looks
+    //   like we're hitting some Python 2 versus Python 3 issues as well.
+    char *result;
+    result = PyBytes_AsString(PyUnicode_AsASCIIString(pAttr));
+    return result;
+  } else {
+    cout << "ERROR: Null handle from unit_string" << endl;
+    // No need to DECREF a NULL pAttr
+    return NULL;
+  }
+}
+
+extern "C" const char *MeasurementUnit_canonical_unit_string(const unsigned int selfHandle) {
+  PyObject *MeasurementUnit_selfInstance=NULL;
+  PyObject *pErr, *pAttr;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return NULL;
+  }
+  cout << "Retrieve canonical_unit_string property of handle " << selfHandle << endl;
+
+  MeasurementUnit_selfInstance = wrapInternalGetReference(selfHandle);
+  if (MeasurementUnit_selfInstance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return NULL;
+  }
+
+  // to_canon is implemented as an object property and not a function
+  pAttr = 
+    PyObject_GetAttrString(MeasurementUnit_selfInstance,
+			   "canonical_unit_string");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pAttr);
+    return NULL;
+  }
+
+  if (pAttr != NULL) {
+    // TODO: This is quite a pain in the butt that will have to
+    //   be looked into further for robustness issues. It sure looks
+    //   like we're hitting some Python 2 versus Python 3 issues as well.
+    char *result;
+    result = PyBytes_AsString(PyUnicode_AsASCIIString(pAttr));
+    return result;
+  } else {
+    cout << "ERROR: Null handle from canonical_unit_string" << endl;
+    // No need to DECREF a NULL pAttr
+    return NULL;
   }
 }

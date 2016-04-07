@@ -12,4 +12,12 @@ extern "C" int WCONWorms_add(const unsigned int selfHandle,
 			     const unsigned int handle);
 extern "C" int WCONWorms_eq(const unsigned int selfHandle,
 			    const unsigned int handle);
+
+extern "C" int static_MeasurementUnit_create(const char *unitStr);
+extern "C" double MeasurementUnit_to_canon(const unsigned int selfHandle,
+					const double val);
+extern "C" double MeasurementUnit_from_canon(const unsigned int selfHandle,
+					  const double val);
+extern "C" const char *MeasurementUnit_unit_string(const unsigned int selfHandle);
+extern "C" const char *MeasurementUnit_canonical_unit_string(const unsigned int selfHandle);
 #endif /* __OCTAVE_WCON_PYTHON_WRAPPER_H_ */

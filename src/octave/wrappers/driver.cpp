@@ -170,4 +170,28 @@ int main(int argc, char **argv) {
     cout << "No merge attempt since Mergeable file failed to load"
 	 << endl;
   }
+
+  // Testing MeasurementUnits now
+  int hoursUnitHandle = 0; // easy to check against canonical (s)
+
+  hoursUnitHandle = static_MeasurementUnit_create("h");
+  if (hoursUnitHandle != -1) {
+    cout << "Hours Unit object with handle " << hoursUnitHandle << endl;
+  } else {
+    cerr << "Error: Failed to create a MeasurementUnit instance" << endl;
+  }
+  double testHourVal = 1.0;
+  double testSecondVal = 3600.0;
+  cout << testHourVal << " hour(s) is " 
+       << MeasurementUnit_to_canon(hoursUnitHandle,testHourVal)
+       << " second(s)" << endl;
+  cout << testSecondVal << " second(s) is "
+       << MeasurementUnit_from_canon(hoursUnitHandle,testSecondVal)
+       << " hour(s)" << endl;
+
+  cout << "Hours Unit String [" 
+       << MeasurementUnit_unit_string(hoursUnitHandle) << "]" << endl;
+  cout << "Hours Canonical Unit String [" 
+       << MeasurementUnit_canonical_unit_string(hoursUnitHandle) 
+       << "]" << endl;
 }
