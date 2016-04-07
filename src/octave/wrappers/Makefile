@@ -1,4 +1,5 @@
 CPP=g++
+CFLAGS=-std=gnu++11
 
 PYTHON_VER=3.5
 PYTHON_CONFIG=python${PYTHON_VER}-config
@@ -10,19 +11,18 @@ PYTHON_PREFIX=$(shell ${PYTHON_CONFIG} --prefix)
 PYTHON_CFLAGS=$(shell ${PYTHON_CONFIG} --cflags)
 PYTHON_LDFLAGS=$(shell ${PYTHON_CONFIG} --ldflags)
 
-WRAPPER_OBJS=octaveWconPythonWrapper.o
-DRIVER_OBJS=driver.o
+WRAPPER_OBJS=octaveWconPythonWrapper.o wrapperInternal.o
 
 all: driver
 
-driver: ${WRAPPER_OBJS} ${DRIVER_OBJS}
-	$(CPP) -o driver ${WRAPPER_OBJS} ${DRIVER_OBJS} ${PYTHON_LDFLAGS}
+driver: ${WRAPPER_OBJS} driver.o
+	$(CPP) -o driver ${WRAPPER_OBJS} driver.o ${PYTHON_LDFLAGS}
 
-${WRAPPER_OBJS}: octaveWconPythonWrapper.cpp octaveWconPythonWrapper.h
-	$(CPP) -c octaveWconPythonWrapper.cpp ${PYTHON_CFLAGS}
+driver.o: driver.cpp
+	$(CPP) $(CFLAGS) -c driver.cpp
 
-${DRIVER_OBJS}: driver.cpp
-	$(CPP) -c driver.cpp
+%.o: %.cpp %.h
+	$(CPP) $(CFLAGS) -c $< ${PYTHON_CFLAGS}
 
 clean:
 	rm -f *~ *.o driver
