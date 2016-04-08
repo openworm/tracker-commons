@@ -1,42 +1,63 @@
 package org.openworm.trackercommons
 
-case class UnitMap(lookup: Map[String, units.Convert], custom: json.ObjJ) extends json.Jsonable {
+import kse.jsonal._
+import kse.jsonal.JsonConverters._
+
+case class UnitMap(lookup: Map[String, units.Convert], custom: Json.Obj) extends AsJson {
   import units._
-  val toObjJ = json.ObjJ(lookup.map{ case (k,v) => k -> (json.StrJ(v.name) :: Nil) } ++ custom.keyvals)
+  val json = Json ~~ lookup ~~ custom ~~ Json
   def has(s: String) = lookup contains s
   def missing(s: String) = !(lookup contains s)
-  def fix(j: json.JSON, known: Option[units.Convert] = None): j.type = {
+  // These are duplicated for speed.
+  private def renumF(n: Json.Num, u: units.Convert): Json = {
+    val x = n.double
+    val y = x from u
+    if (x == y || x.isNaN) n else Json.Num(y)
+  }
+  private def renumU(n: Json.Num, u: units.Convert): Json = {
+    val x = n.double
+    val y = x into u
+    if (x == y || x.isNaN) n else Json.Num(y)
+  }
+  // Note -- we need to go in both directions to take advantage of floating point division
+  // being more accurate than multiplication by the reciprocal
+  def fix(j: Json, known: Option[units.Convert] = None): Json = {
     j match {
-      case n @ json.NumJ(x) => known match { case Some(u) => n.value = x from u; case None => }
-      case json.ANumJ(xs) => known match { case Some(u) => xs changeFrom u; case None => }
-      case json.AANumJ(xss) => known match { case Some(u) => xss changeFrom u; case None => }
-      case json.ArrJ(js) => var i = 0; while (i < js.length) { fix(js(i), known); i +=1 }
-      case json.ObjJ(kv) => kv.foreach{ case (k,vs) => vs.foreach(v => fix(v, lookup.get(k) orElse known)) }
+      case n: Json.Num => known match { case Some(u) => renumF(n, u); case None => n }
+      case jad: Json.Arr.Dbl => known match { case Some(u) => jad.doubles changeFrom u; case None => }; jad
+      case jaa: Json.Arr.All => 
+        val a = jaa.values   // Will mutate underlying array directly
+        var i = 0
+        while (i < a.length) { val j = fix(a(i), known); if (a(i) ne j) a(i) = j; i += 1 }
+        jaa
+      case o: Json.Obj => o.transformValues{ (k,v) => fix(v, lookup.get(k) orElse known) }
       case _ =>
     }
     j
   }
-  def unfix(j: json.JSON, known: Option[units.Convert] = None): j.type = {
+  def unfix(j: Json, known: Option[units.Convert] = None): Json = {
     j match {
-      case n @ json.NumJ(x) => known match { case Some(u) => n.value = x into u; case None => }
-      case json.ANumJ(xs) => known match { case Some(u) => xs changeInto u; case None => }
-      case json.AANumJ(xss) => known match { case Some(u) => xss changeInto u; case None => }
-      case json.ArrJ(js) => var i = 0; while (i < js.length) { unfix(js(i), known); i += 1 }
-      case json.ObjJ(kv) => kv.foreach{ case (k,vs) => vs.foreach(v => unfix(v, lookup.get(k) orElse known)) }
+      case n: Json.Num => known match { case Some(u) => renumU(n, u); case None => n }
+      case jad: Json.Arr.Dbl => known match { case Some(u) => jad.doubles changeInto u; case None => }; jad
+      case jaa: Json.Arr.All => 
+        val a = jaa.values   // Will mutate underlying array directly
+        var i = 0
+        while (i < a.length) { val j = fix(a(i), known); if (a(i) ne j) a(i) = j; i += 1 }
+        jaa
+      case o: Json.Obj => o.transformValues{ (k,v) => fix(v, lookup.get(k) orElse known) }
       case _ =>
     }
     j
   }
 }
-object UnitMap extends json.Jsonic[UnitMap] {
-  def from(ob: json.ObjJ): Either[String, UnitMap] = Right(new UnitMap(
-    ob.keyvals.map{ 
-      case (k, json.StrJ(v) :: Nil) => units.parseUnit(v) match {
-        case Some(u) => k -> u
-        case None => return Left("Invalid unit: " + v)
+object UnitMap extends FromJson[UnitMap] {
+  import units._
+  def parse(j: Json): Either[JastError, UnitMap] = j match {
+    case o: Json.Obj =>
+      o.filter((k,_) => !k.startsWith("@")).to[Map[String, Convert]] match {
+        case Right(m) => Right(new UnitMap(m, o.filter((k, _) => k.startsWith("@"))))
+        case e: Left[_, _] => e.asInstanceOf[Left[JastError, UnitMap]]
       }
-      case _ => return Left("Invalid units: all units must be given once, and as text")
-    },
-    Metadata.getCustom(ob)
-  ))
+    case _ => Left(JastError("Units are not a JSON object"))
+  }
 }
