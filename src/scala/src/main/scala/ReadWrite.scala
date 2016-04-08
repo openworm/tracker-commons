@@ -3,17 +3,22 @@ package org.openworm.trackercommons
 import scala.util._
 import scala.util.control.NonFatal
 
+import kse.jsonal._
+import kse.jsonal.JsonConverters._
+
 object ReadWrite {
+  private implicit val parseDataSet: FromJson[DataSet] = DataSet
+
   def read(s: String): Either[String, DataSet] = read(new java.io.File(s))
 
   def read(f: java.io.File): Either[String, DataSet] = {
     if (f.getName.toLowerCase.endsWith(".zip")) return readZip(f)
     try {
       val s = scala.io.Source.fromFile(f)
-      try { Parser(s.mkString).left.map(err => s"Could not read ${f.getPath} because\n$err") }
+      try { Jast.parse(f).to[DataSet].left.map(err => s"Could not read ${f.getPath} because\n$err") }
       finally{ s.close }
     }
-    catch { case NonFatal(_) => Left("Could not read " + f.getPath) }
+    catch { case NonFatal(e) => e.printStackTrace; Left("Could not read " + f.getPath + " because of a " + e.getClass.getName) }
   }
 
   def readZip(f: java.io.File): Either[String, DataSet] = {
@@ -40,12 +45,12 @@ object ReadWrite {
         }
         if (theEntry.isEmpty) return Left("Could not find any files in zip file " + f.getPath)
         val s = scala.io.Source.fromInputStream(zf.getInputStream(theEntry.get))
-        try { Parser(s.mkString).left.map(err => f"Could not read ${f.getPath} because \n$err") }
+        try { Jast.parse(s.mkString).to[DataSet].left.map(err => f"Could not read ${f.getPath} because \n$err") }
         finally s.close
       }
       finally zf.close
     }
-    catch { case NonFatal(_) => Left ("Could not read zip file " + f.getPath) }
+    catch { case NonFatal(_) => Left("Could not read zip file " + f.getPath) }
   }
 
   def readAll(s: String): Either[String, Vector[DataSet]] = readAll(new java.io.File(s))
@@ -95,7 +100,7 @@ object ReadWrite {
         }
     }
 
-  private def orderAndCheckConsistency(ds: Vector[DataSet], names: Vector[String]):Either[String, Vector[DataSet]] = {
+  private def orderAndCheckConsistency(ds: Vector[DataSet], names: Vector[String]): Either[String, Vector[DataSet]] = {
     if (ds.length <= 1) return Right(ds)
 
     val nameset = names.toSet
@@ -148,7 +153,7 @@ object ReadWrite {
     }
   }
 
-  def readAllZip(zip: java.io.File): Either[String, Vector[DataSet]] = {
+  def readAllZip(zip: java.io.File): Either[String, Vector[DataSet]] = {    
     if (!zip.getName.toLowerCase.endsWith(".zip")) return Left("Zipped WCON files must have extension `.zip`")
     try {
       val zf = new java.util.zip.ZipFile(zip)
@@ -170,7 +175,7 @@ object ReadWrite {
         if (theEntries.isEmpty) return Left("Could not find any WCON files in zip file " + zip.getPath)
         val results = theEntries.map{ theEntry =>
           val s = scala.io.Source.fromInputStream(zf.getInputStream(theEntry))
-          try { Parser(s.mkString) match {
+          try { Jast.parse(s.mkString).to[DataSet] match {
             case Right(x) => x
             case Left(err) => return Left(f"Could not read ${theEntry.getName} in ${zip.getPath} because \n$err")
           }}
@@ -189,14 +194,21 @@ object ReadWrite {
 
   def write(ds: DataSet, f: java.io.File): Either[String, Unit] = write(ds, f.getParentFile, f.getName)
 
-  def write(ds: DataSet, f: java.io.File, fname: String): Either[String, Unit] = {
-    val lines = ds.copy(files = FileSet(Vector(fname), 0, json.ObjJ.empty)).toObjJ.toJsons
+  def write(ds: DataSet, f: java.io.File, fname: String): Either[String, Unit] =
+    writeUnfixed(ds.copy(files = FileSet(Vector(fname), 0, Json.Obj.empty)), f, fname)
+
+  def writeUnfixed(ds: DataSet, f: java.io.File, fname: String): Either[String, Unit] = {
     val fout = new java.io.File(f, fname)
-    writeLinesTo(lines, fout)
+    val pw = Try { new java.io.PrintWriter(fout) } match {
+      case Success(x) => x
+      case Failure(e) => return Left("Could not open output file " + fout)
+    }
+    try { pw.print( PrettyJson(ds.json) ); Right(()) }
+    catch { case NonFatal(e) => Left("Error while writing file " + fout + "\n" + e.toString + Option(e.getMessage).getOrElse("")) }
+    finally Try { pw.close }
   }
 
   def writeZip(ds: DataSet, zip: java.io.File, fname: String): Either[String, Unit] = {
-    val lines = ds.copy(files = FileSet(Vector(fname), 0, json.ObjJ.empty)).toObjJ.toJsons
     try {
       val fos = new java.io.FileOutputStream(
         if (zip.getName.toLowerCase.endsWith(".zip")) zip
@@ -207,7 +219,7 @@ object ReadWrite {
         try {
           val ze = new java.util.zip.ZipEntry(fname)
           zos.putNextEntry(ze)
-          lines.foreach(line => zos.write((line.toString + "\n").getBytes))
+          zos.write( PrettyJson.bytes(ds.copy(files = FileSet(Vector(fname), 0, Json.Obj.empty)).json) )
           zos.closeEntry
         }
         finally zos.close
@@ -220,41 +232,10 @@ object ReadWrite {
     }
   }
 
-  private def writeLinesTo(lines: Vector[json.Indented], fout: java.io.File): Either[String, Unit] = {
-    val pw = Try{ new java.io.PrintWriter(fout) } match {
-      case Success(x) => x
-      case Failure(e) => return Left("Could not open output file " + fout)
-    }
-    try {
-      lines.foreach(pw.println)
-      Right(())
-    }
-    catch {
-      case NonFatal(e) => Left("Error while writing file " + fout + "\n" + e.toString + Option(e.getMessage).getOrElse(""))
-    }
-    finally Try { pw.close }
-  }
-
-  private def writeLinesTo(lines: Vector[json.Indented], out: java.io.OutputStream): Either[String, Unit] = {
-    try {
-      val pw = new java.io.PrintWriter(out)
-      try {
-        lines.foreach(pw.println)
-        Right(())
-      }
-      finally { try pw.close finally out.close }
-    }
-    catch {
-      case NonFatal(e) => Left("Error while writing stream to zip\n" + e.toString + Option(e.getMessage).getOrElse(""))
-    }
-  }
-
   def writeAll(root: java.io.File, sets: Vector[(DataSet, String)]): Either[String, Unit] = {
     val fileset = sets.map(_._2)
     sets.zipWithIndex.foreach{ case ((ds, f), i) =>
-      val lines = ds.copy(files = FileSet(fileset, i, json.ObjJ.empty)).toObjJ.toJsons
-      val fout = new java.io.File(root, f)
-      writeLinesTo(lines, fout) match {
+      writeUnfixed(ds.copy(files = FileSet(fileset, i, Json.Obj.empty)), root, f) match {
         case x: Left[String, Unit] => return x
         case _ =>
       }
@@ -273,10 +254,9 @@ object ReadWrite {
         val zos = new java.util.zip.ZipOutputStream(fos)
         try {
           sets.zipWithIndex.foreach{ case ((ds, fname), i) =>
-            val lines = ds.copy(files = new FileSet(fileset, i, json.ObjJ.empty)).toObjJ.toJsons
             val ze = new java.util.zip.ZipEntry(fname)
             zos.putNextEntry(ze)
-            lines.foreach(line => zos.write((line.toString + "\n").getBytes))
+            zos.write( PrettyJson.bytes(ds.copy(files = new FileSet(fileset, i, Json.Obj.empty)).json) )
             zos.closeEntry
           }
         }
