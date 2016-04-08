@@ -15,3 +15,6 @@ merged.save_to_file('pythonMerged.wcon',pretty_print=True)
 
 merged2 = mergeable + worm
 merged2.save_to_file('pythonMerged2.wcon',pretty_print=True)
+
+nometa = WCONWorms.load_from_file('../../../tests/minimal.wcon')
+print (nometa.metadata)

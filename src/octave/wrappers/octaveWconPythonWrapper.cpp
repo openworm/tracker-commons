@@ -13,6 +13,10 @@ PyObject *wrapperGlobalModule=NULL;
 PyObject *wrapperGlobalWCONWormsClassObj=NULL;
 PyObject *wrapperGlobalMeasurementUnitClassObj=NULL;
 
+// Am exposing this as a wrapper interface method
+//   because it is conceivable a user or some 
+//   middleware tool might want to explicitly
+//   invoke the initializer.
 extern "C" int initOctaveWconPythonWrapper() {
   static bool isInitialized = false;
 
@@ -58,6 +62,9 @@ extern "C" int initOctaveWconPythonWrapper() {
 
   return 1;
 }
+
+// *****************************************************************
+// ********************** MeasurementUnit Class
 
 // A Tentative C-only interface
 //
@@ -417,8 +424,332 @@ int WCONWorms_eq(const unsigned int selfHandle, const unsigned int handle) {
   }
 }
 
+extern "C" int WCONWorms_units(const unsigned int selfHandle) {
+  PyObject *WCONWorms_selfInstance=NULL;
+  PyObject *pErr, *pAttr;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return -1;
+  }
+  cout << "Retrieve units property of handle " << selfHandle << endl;
 
-// MeasurementUnit Class
+  WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
+  if (WCONWorms_selfInstance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return -1;
+  }
+
+  // Attribute is a Python dict (Dictionary) object.
+  //   We are not going to mess with its internal structure for now.
+  //   Experience informs me that it is best to build an auxilary
+  //   interface for Octave to issue Dictionary-modifying commands
+  //   to the Python runtime, than to attempt to make its own copy
+  //   or have a copy managed by C/C++ (loosely related to threading
+  //   consistency issues.)
+  pAttr = 
+    PyObject_GetAttrString(WCONWorms_selfInstance,"units");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pAttr);
+    return -1;
+  }
+
+  if (pAttr != NULL) {
+    if (PyDict_Check(pAttr)) {
+      // TODO: Consider if we should maintain a separate hash table
+      //   for different object types. I'm thinking no, but I'm not sure.
+      int result = wrapInternalStoreReference(pAttr);
+      if (result == -1) {
+	cout << "ERROR: failed to store object reference in wrapper." 
+	     << endl;
+	Py_DECREF(pAttr);
+      }
+      return result;
+    } else {
+      cout << "ERROR: units should be a dict object but is not!" << endl;
+      Py_DECREF(pAttr);
+      return -1;
+    }
+  } else {
+    cout << "ERROR: Null handle from units" << endl;
+    // No need to DECREF a NULL pAttr
+    return -1;
+  }
+}
+
+extern "C" int WCONWorms_metadata(const unsigned int selfHandle) {
+  PyObject *WCONWorms_selfInstance=NULL;
+  PyObject *pErr, *pAttr;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return -1;
+  }
+  cout << "Retrieve metadata property of handle " << selfHandle << endl;
+
+  WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
+  if (WCONWorms_selfInstance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return -1;
+  }
+
+  // Attribute is a Python dict (Dictionary) object with complex members
+  pAttr = 
+    PyObject_GetAttrString(WCONWorms_selfInstance,"metadata");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pAttr);
+    return -1;
+  }
+
+  if (pAttr != NULL) {
+    // checking for None at the top makes it possible to
+    // cascade the conditionals because of the need to
+    // handle reference counts.
+    Py_INCREF(Py_None);
+    // C/C++ equality is supposed to work
+    if (pAttr == Py_None) {
+      Py_DECREF(Py_None);
+      return -1337;
+    } else if (PyDict_Check(pAttr)) {
+      // TODO: Consider if we should maintain a separate hash table
+      //   for different object types. I'm thinking no, but I'm not sure.
+      int result = wrapInternalStoreReference(pAttr);
+      if (result == -1) {
+	cout << "ERROR: failed to store object reference in wrapper." 
+	     << endl;
+	Py_DECREF(pAttr);
+      }
+      Py_DECREF(Py_None);
+      return result;
+    } else {
+      cout << "ERROR: metadata should be a dict object " 
+	   << "or None, but is neither!" << endl;
+      Py_DECREF(Py_None);
+      Py_DECREF(pAttr);
+      return -1;
+    }
+  } else {
+    cout << "ERROR: metadata is NULL" << endl;
+    // No need to DECREF a NULL pAttr
+    return -1;
+  }
+}
+
+extern "C" int WCONWorms_data(const unsigned int selfHandle) {
+  PyObject *WCONWorms_selfInstance=NULL;
+  PyObject *pErr, *pAttr;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return -1;
+  }
+  cout << "Retrieve data property of handle " << selfHandle << endl;
+
+  WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
+  if (WCONWorms_selfInstance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return -1;
+  }
+
+  // Attribute is a pandas package DataFrame object.
+  //   I currently have no clue what that is, so I'm leaving out
+  //   any error checks until I figure it out.
+  pAttr = 
+    PyObject_GetAttrString(WCONWorms_selfInstance,"data");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pAttr);
+    return -1;
+  }
+
+  if (pAttr != NULL) {
+    int result = wrapInternalStoreReference(pAttr);
+    if (result == -1) {
+      cout << "ERROR: failed to store object reference in wrapper." 
+	   << endl;
+      Py_DECREF(pAttr);
+    }
+    return result;
+  } else {
+    cout << "ERROR: Null handle from data" << endl;
+    // No need to DECREF a NULL pAttr
+    return -1;
+  }
+}
+
+extern "C" long WCONWorms_num_worms(const unsigned int selfHandle) {
+  PyObject *WCONWorms_selfInstance=NULL;
+  PyObject *pErr, *pAttr;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return -1; // still ok as an error condition. num_worms >= 0.
+  }
+  cout << "Retrieve num_worms property of handle " << selfHandle << endl;
+
+  WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
+  if (WCONWorms_selfInstance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return -1;
+  }
+
+  pAttr = 
+    PyObject_GetAttrString(WCONWorms_selfInstance,"num_worms");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pAttr);
+    return -1;
+  }
+
+  if (pAttr != NULL) {
+    long result;
+    result = PyLong_AsLong(pAttr);
+    pErr = PyErr_Occurred();
+    if (pErr != NULL) {
+      PyErr_Print();
+      Py_DECREF(pAttr);
+      cerr << "ERROR: Could not convert num_worms to a long value" << endl;
+      return -1;
+    }
+    return result;
+  } else {
+    cout << "ERROR: Null handle from num_worms" << endl;
+    // No need to DECREF a NULL pAttr
+    return -1;
+  }
+}
+
+extern "C" int WCONWorms_worm_ids(const unsigned int selfHandle) {
+  PyObject *WCONWorms_selfInstance=NULL;
+  PyObject *pErr, *pAttr;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return -1;
+  }
+  cout << "Retrieve metadata property of handle " << selfHandle << endl;
+
+  WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
+  if (WCONWorms_selfInstance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return -1;
+  }
+
+  // Attribute is a Python list object (of worm ids - of some type)
+  //   I've seen integers as well as strings, so that needs to be
+  //   sorted out as well.
+  pAttr = 
+    PyObject_GetAttrString(WCONWorms_selfInstance,"worm_ids");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pAttr);
+    return -1;
+  }
+
+  if (pAttr != NULL) {
+    if (PyList_Check(pAttr)) {
+      // TODO: Consider if we should maintain a separate hash table
+      //   for different object types. I'm thinking no, but I'm not sure.
+      int result = wrapInternalStoreReference(pAttr);
+      if (result == -1) {
+	cout << "ERROR: failed to store object reference in wrapper." 
+	     << endl;
+	Py_DECREF(pAttr);
+      }
+      return result;
+    } else {
+      cout << "ERROR: worm_ids should be a list object but is not!" << endl;
+      Py_DECREF(pAttr);
+      return -1;
+    }
+  } else {
+    cout << "ERROR: Null handle from worm_ids" << endl;
+    // No need to DECREF a NULL pAttr
+    return -1;
+  }
+}
+
+extern "C" int WCONWorms_data_as_odict(const unsigned int selfHandle) {
+  PyObject *WCONWorms_selfInstance=NULL;
+  PyObject *pErr, *pAttr;
+  int retCode;
+  
+  retCode = initOctaveWconPythonWrapper();
+  if (retCode == 0) {
+    cout << "Failed to initialize wrapper library." << endl;
+    return -1;
+  }
+  cout << "Retrieve metadata property of handle " << selfHandle << endl;
+
+  WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
+  if (WCONWorms_selfInstance == NULL) {
+    cerr << "ERROR: Failed to acquire object instance using handle "
+	 << selfHandle << endl;
+    return -1;
+  }
+
+  // Attribute is an OrderedDict object which is a subclass of Python's
+  //   dict object implemented in the collections package. There should
+  //   be no harm checking and treating the object as a regular dict
+  //   object.
+  pAttr = 
+    PyObject_GetAttrString(WCONWorms_selfInstance,"data_as_odict");
+  pErr = PyErr_Occurred();
+  if (pErr != NULL) {
+    PyErr_Print();
+    Py_XDECREF(pAttr);
+    return -1;
+  }
+
+  if (pAttr != NULL) {
+    if (PyDict_Check(pAttr)) {
+      // TODO: Consider if we should maintain a separate hash table
+      //   for different object types. I'm thinking no, but I'm not sure.
+      int result = wrapInternalStoreReference(pAttr);
+      if (result == -1) {
+	cout << "ERROR: failed to store object reference in wrapper." 
+	     << endl;
+	Py_DECREF(pAttr);
+      }
+      return result;
+    } else {
+      cout << "ERROR: data_as_odict should be a dict object but is not!" 
+	   << endl;
+      Py_DECREF(pAttr);
+      return -1;
+    }
+  } else {
+    cout << "ERROR: Null handle from data_as_odict" << endl;
+    // No need to DECREF a NULL pAttr
+    return -1;
+  }
+}
+
+
+// *****************************************************************
+// ********************** MeasurementUnit Class
 extern "C" int static_MeasurementUnit_create(const char *unitStr) {
   PyObject *pErr, *pFunc;
   int retCode;
@@ -639,7 +970,6 @@ const char *MeasurementUnit_unit_string(const unsigned int selfHandle) {
     return NULL;
   }
 
-  // to_canon is implemented as an object property and not a function
   pAttr = 
     PyObject_GetAttrString(MeasurementUnit_selfInstance,"unit_string");
   pErr = PyErr_Occurred();
@@ -682,7 +1012,6 @@ extern "C" const char *MeasurementUnit_canonical_unit_string(const unsigned int 
     return NULL;
   }
 
-  // to_canon is implemented as an object property and not a function
   pAttr = 
     PyObject_GetAttrString(MeasurementUnit_selfInstance,
 			   "canonical_unit_string");

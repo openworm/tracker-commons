@@ -18,3 +18,8 @@ WCONWorms.
 5. We will need developer documentation on the Python folders to inform people maintaining
 code there, that there is some coupling to their code from over here.
 
+6. Consider defining a PythonObjHandle type for type-safety issues when
+returning actual integers.
+
+7. PyLong_FromLong is a Python 3 construct. Pay attention to that when
+considering Python 3 and Python 2 portability issues later.

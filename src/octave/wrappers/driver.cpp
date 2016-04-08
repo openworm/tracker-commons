@@ -171,6 +171,92 @@ int main(int argc, char **argv) {
 	 << endl;
   }
 
+  // For now we will just test whether we can get our hands on
+  //   the WCONWorms attribute entities
+  handle = WCONWorms_units((unsigned int)loadedWCONWormsObjHandle);
+  if (handle == -1) {
+    cerr << "Error: Failed to acquire units from handle " 
+	 << loadedWCONWormsObjHandle << endl;
+  } else {
+    cout << "Got units dictionary handle " << handle 
+	 << " from object handle " << loadedWCONWormsObjHandle << endl;
+  }
+
+  handle = WCONWorms_metadata((unsigned int)loadedWCONWormsObjHandle);
+  if (handle == -1) {
+    cerr << "Error: Failed to acquire metadata from handle " 
+	 << loadedWCONWormsObjHandle << endl;
+  } else if (handle == -1337) {
+    cout << "Got None value for metadata from handle "
+	 << loadedWCONWormsObjHandle << endl;
+  } else {
+    cout << "Got metadata dictionary handle " << handle
+	 << " from object handle " << loadedWCONWormsObjHandle << endl;
+  }
+
+  int tempHandle;
+  // deliberately load a file with NO metadata to test that the None
+  //   tag is respected.
+  handle = static_WCONWorms_load_from_file("../../../tests/minimal.wcon");
+  if (handle < 0) {
+    cerr << "Error: Bad handle value " << handle << endl;
+    cerr << "Skipping test for None metadata value" << endl;
+    // skip the test if we cannot load the file, it's ok
+  } else {
+    tempHandle = handle;
+    handle = WCONWorms_metadata((unsigned int)tempHandle);
+    if (handle == -1) {
+      cerr << "Error: Failed to acquire metadata from handle " 
+	   << loadedWCONWormsObjHandle << endl;
+    } else if (handle == -1337) {
+      cout << "Got None value for metadata from handle "
+	   << loadedWCONWormsObjHandle << endl;
+    } else {
+      cout << "Got metadata dictionary handle " << handle
+	   << " from object handle " << loadedWCONWormsObjHandle << endl;
+    }
+  }
+
+  handle = WCONWorms_data((unsigned int)loadedWCONWormsObjHandle);
+  if (handle == -1) {
+    cerr << "Error: Failed to acquire data from handle " 
+	 << loadedWCONWormsObjHandle << endl;
+  } else {
+    cout << "Got data (pandas DataFrame) handle " << handle 
+	 << " from object handle " << loadedWCONWormsObjHandle << endl;
+  }
+
+  long numValue;
+  numValue = WCONWorms_num_worms((unsigned int)loadedWCONWormsObjHandle);
+  if (handle == -1) {
+    cerr << "Error: Failed to acquire num_worms from handle " 
+	 << loadedWCONWormsObjHandle << endl;
+  } else {
+    // expecting 3
+    cout << "num_worms = " << numValue
+	 << " in handle " << loadedWCONWormsObjHandle << endl;
+  }
+
+  handle = WCONWorms_worm_ids((unsigned int)loadedWCONWormsObjHandle);
+  if (handle == -1) {
+    cerr << "Error: Failed to acquire worm_ids from handle " 
+	 << loadedWCONWormsObjHandle << endl;
+  } else {
+    cout << "Got worm_ids list handle " << handle 
+	 << " from object handle " << loadedWCONWormsObjHandle << endl;
+  }
+
+  handle = WCONWorms_data_as_odict((unsigned int)loadedWCONWormsObjHandle);
+  if (handle == -1) {
+    cerr << "Error: Failed to acquire data_as_odict from handle " 
+	 << loadedWCONWormsObjHandle << endl;
+  } else {
+    cout << "Got data_as_odict OrderedDict of pandas DataFrame handle " 
+	 << handle 
+	 << " from object handle " << loadedWCONWormsObjHandle << endl;
+  }
+
+
   // Testing MeasurementUnits now
   int hoursUnitHandle = 0; // easy to check against canonical (s)
 

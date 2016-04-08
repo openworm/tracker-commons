@@ -12,6 +12,12 @@ extern "C" int WCONWorms_add(const unsigned int selfHandle,
 			     const unsigned int handle);
 extern "C" int WCONWorms_eq(const unsigned int selfHandle,
 			    const unsigned int handle);
+extern "C" int WCONWorms_units(const unsigned int selfHandle);
+extern "C" int WCONWorms_metadata(const unsigned int selfHandle);
+extern "C" int WCONWorms_data(const unsigned int selfHandle);
+extern "C" long WCONWorms_num_worms(const unsigned int selfHandle);
+extern "C" int WCONWorms_worm_ids(const unsigned int selfHandle);
+extern "C" int WCONWorms_data_as_odict(const unsigned int selfHandle);
 
 extern "C" int static_MeasurementUnit_create(const char *unitStr);
 extern "C" double MeasurementUnit_to_canon(const unsigned int selfHandle,
