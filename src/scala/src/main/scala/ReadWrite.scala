@@ -14,11 +14,9 @@ object ReadWrite {
   def read(f: java.io.File): Either[String, DataSet] = {
     if (f.getName.toLowerCase.endsWith(".zip")) return readZip(f)
     try {
-      val s = scala.io.Source.fromFile(f)
-      try { Jast.parse(f).to[DataSet].left.map(err => s"Could not read ${f.getPath} because\n$err") }
-      finally{ s.close }
+      Jast.parse(f).to[DataSet].left.map(err => s"Could not read ${f.getPath} because\n$err")
     }
-    catch { case NonFatal(e) => e.printStackTrace; Left("Could not read " + f.getPath + " because of a " + e.getClass.getName) }
+    catch { case NonFatal(e) => Left("Could not read " + f.getPath + " because of a " + e.getClass.getName) }
   }
 
   def readZip(f: java.io.File): Either[String, DataSet] = {
