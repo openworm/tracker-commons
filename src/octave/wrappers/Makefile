@@ -1,4 +1,5 @@
 CPP=g++
+AR=ar
 CFLAGS=-std=gnu++11
 
 PYTHON_VER=3.5
@@ -14,10 +15,16 @@ PYTHON_LDFLAGS=$(shell ${PYTHON_CONFIG} --ldflags)
 WRAPPER_OBJS=octaveWconPythonWrapper.o wrapperInternal.o
 COMMON_HEADERS=wrapperTypes.h
 
-all: driver
+WRAPPER_LIB=libWconOct.a
+WRAPPER_LIB_LDFLAGS=-L. -lWconOct
 
-driver: ${WRAPPER_OBJS} driver.o
-	$(CPP) -o driver ${WRAPPER_OBJS} driver.o ${PYTHON_LDFLAGS}
+all: driver ${WRAPPER_LIB}
+
+driver: driver.o ${WRAPPER_LIB}
+	$(CPP) -o driver driver.o ${WRAPPER_LIB_LDFLAGS} ${PYTHON_LDFLAGS}
+
+libWconOct.a: ${WRAPPER_OBJS}
+	$(AR) rcs libWconOct.a ${WRAPPER_OBJS}
 
 driver.o: driver.cpp
 	$(CPP) $(CFLAGS) -c driver.cpp
