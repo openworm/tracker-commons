@@ -17,7 +17,7 @@ PyObject *wrapperGlobalMeasurementUnitClassObj=NULL;
 //   because it is conceivable a user or some 
 //   middleware tool might want to explicitly
 //   invoke the initializer.
-extern "C" void wconOct_initWrapper(PyWrapError *err) {
+extern "C" void wconOct_initWrapper(WconOctError *err) {
   static bool isInitialized = false;
 
   PyObject *pErr;
@@ -73,19 +73,19 @@ extern "C" void wconOct_initWrapper(PyWrapError *err) {
   return;
 }
 
-extern "C" bool wconOct_isNullHandle(PyWrapHandle handle) {
-  if (handle == NULL_HANDLE) {
+extern "C" bool wconOct_isNullHandle(WconOctHandle handle) {
+  if (handle == WCONOCT_NULL_HANDLE) {
     return true;
   } else {
     return false;
   }
 }
 
-extern "C" PyWrapHandle wconOct_makeNullHandle() {
-  return NULL_HANDLE;
+extern "C" WconOctHandle wconOct_makeNullHandle() {
+  return WCONOCT_NULL_HANDLE;
 }
 
-extern "C" bool wconOct_isNoneHandle(PyWrapHandle handle) {
+extern "C" bool wconOct_isNoneHandle(WconOctHandle handle) {
   if (handle == WCONOCT_NONE_HANDLE) {
     return true;
   } else {

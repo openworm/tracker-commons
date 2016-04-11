@@ -4,18 +4,18 @@
 using namespace std;
 
 int main(int argc, char **argv) {
-  PyWrapHandle loadedWCONWormsObjHandle = wconOct_makeNullHandle();
-  PyWrapHandle canonicalWCONWormsObjHandle = wconOct_makeNullHandle();
-  PyWrapHandle conflictingWCONWormsObjHandle = wconOct_makeNullHandle();
-  PyWrapHandle mergeableWCONWormsObjHandle = wconOct_makeNullHandle();
+  WconOctHandle loadedWCONWormsObjHandle = wconOct_makeNullHandle();
+  WconOctHandle canonicalWCONWormsObjHandle = wconOct_makeNullHandle();
+  WconOctHandle conflictingWCONWormsObjHandle = wconOct_makeNullHandle();
+  WconOctHandle mergeableWCONWormsObjHandle = wconOct_makeNullHandle();
 
-  PyWrapHandle mergedHandle=0;
-  PyWrapHandle handle=0;
+  WconOctHandle mergedHandle=0;
+  WconOctHandle handle=0;
 
   bool conflictLoadFailed = false;
   bool mergeableLoadFailed = false;
 
-  PyWrapError err;
+  WconOctError err;
 
   handle = 
     wconOct_static_WCONWorms_load_from_file(&err,
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
   //   "success"? Currently they are treated as failures,
   //   which I think is the right way to go.
   bool mergeOpFailed = false;
-  PyWrapHandle result;
+  WconOctHandle result;
   result = wconOct_WCONWorms_add(&err,
 				 loadedWCONWormsObjHandle,
 				 canonicalWCONWormsObjHandle);

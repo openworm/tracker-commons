@@ -15,10 +15,10 @@ typedef enum __bool {
 #endif /* __STDC__ */
 #endif /* __cplusplus */
 
-typedef int PyWrapHandle;
-typedef enum PyWrapErrCodes {
+typedef int WconOctHandle;
+typedef enum WconOctErrCodes {
   SUCCESS,
   FAILED
-} PyWrapError;
+} WconOctError;
 
 #endif /* __WRAPPER_TYPES_H_ */

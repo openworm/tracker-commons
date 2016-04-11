@@ -6,13 +6,13 @@
 #include "wrapperTypes.h"
 
 // Special handle return values
-#define NULL_HANDLE -1337
+#define WCONOCT_NULL_HANDLE -1337
 #define WCONOCT_NONE_HANDLE -42
 
 // Internal functions
-PyWrapHandle wrapInternalStoreReference(PyObject *pythonRef);
-PyObject *wrapInternalGetReference(PyWrapHandle key);
+WconOctHandle wrapInternalStoreReference(PyObject *pythonRef);
+PyObject *wrapInternalGetReference(WconOctHandle key);
 
 // Internal Checks
-void wrapInternalCheckErrorVariable(PyWrapError *err);
+void wrapInternalCheckErrorVariable(WconOctError *err);
 #endif /* __WRAPPER_INTERNAL_H_ */

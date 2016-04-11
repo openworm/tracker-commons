@@ -20,17 +20,17 @@ unsigned int totalActiveRefs = 0;
 //   random key or a sequential key, both of
 //   which have their problems.
 
-PyWrapHandle wrapInternalStoreReference(PyObject *pythonRef) {
+WconOctHandle wrapInternalStoreReference(PyObject *pythonRef) {
 
   if (pythonRef == NULL) {
     cerr << "ERROR: NULL reference object supplied" << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   if (totalActiveRefs >= INT_MAX) {
     // We're already maxed out. Immediately return error.
     cerr << "ERROR: Out of room for new Python references" << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   // get a random number
@@ -51,13 +51,13 @@ PyWrapHandle wrapInternalStoreReference(PyObject *pythonRef) {
     count--;
   }
   // Error condition
-  return NULL_HANDLE;
+  return WCONOCT_NULL_HANDLE;
 }
 
-PyObject *wrapInternalGetReference(PyWrapHandle handle) {
+PyObject *wrapInternalGetReference(WconOctHandle handle) {
   unsigned int key = 0;
 
-  if (handle == NULL_HANDLE) {
+  if (handle == WCONOCT_NULL_HANDLE) {
     cerr << "ERROR: Trying to access a NULL handle." << endl;
     return NULL;
   } else if (handle == WCONOCT_NONE_HANDLE) {
@@ -76,7 +76,7 @@ PyObject *wrapInternalGetReference(PyWrapHandle handle) {
   }
 }
 
-void wrapInternalCheckErrorVariable(PyWrapError *err) {
+void wrapInternalCheckErrorVariable(WconOctError *err) {
   // passing a NULL value is strictly forbidden. Shut the entire
   // code down if this is detected.
   if (err == NULL) {

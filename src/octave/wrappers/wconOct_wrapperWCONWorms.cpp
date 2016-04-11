@@ -13,14 +13,14 @@ extern PyObject *wrapperGlobalWCONWormsClassObj;
 // ********************** WCONWorms Class
 
 extern "C" 
-PyWrapHandle wconOct_static_WCONWorms_load_from_file(PyWrapError *err,
+WconOctHandle wconOct_static_WCONWorms_load_from_file(WconOctError *err,
 						     const char *wconpath) {
   PyObject *pErr, *pFunc;
 
   wconOct_initWrapper(err); // just hand off user error variable
   if (*err == FAILED) {
     cerr << "ERROR: Failed to initialize wrapper library." << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   pFunc = 
@@ -30,7 +30,7 @@ PyWrapHandle wconOct_static_WCONWorms_load_from_file(PyWrapError *err,
     PyErr_Print();
     Py_XDECREF(pFunc);
     *err = FAILED;
-    return NULL_HANDLE; // failure condition
+    return WCONOCT_NULL_HANDLE; // failure condition
   }
 
   if (PyCallable_Check(pFunc) == 1) {
@@ -44,19 +44,19 @@ PyWrapHandle wconOct_static_WCONWorms_load_from_file(PyWrapError *err,
       PyErr_Print();
       Py_XDECREF(pValue);
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     }
 
     if (pValue != NULL) {
       // do not DECREF pValue until it is no longer referenced in the
       //   wrapper sublayer.
-      PyWrapHandle result = wrapInternalStoreReference(pValue);
+      WconOctHandle result = wrapInternalStoreReference(pValue);
       if (wconOct_isNullHandle(result)) {
 	cerr << "ERROR: Failed to store python object reference" 
 	     << endl;
 	Py_DECREF(pValue);
 	*err = FAILED;
-	return NULL_HANDLE;
+	return WCONOCT_NULL_HANDLE;
       } else {
 	*err = SUCCESS;
 	return result;
@@ -65,20 +65,20 @@ PyWrapHandle wconOct_static_WCONWorms_load_from_file(PyWrapError *err,
       cerr << "ERROR: Null handle from load_from_file." << endl;
       // No need to DECREF a NULL pValue
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     }
   } else {
     cerr << "ERROR: load_from_file not a callable python function" 
 	 << endl;
     Py_DECREF(pFunc);
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 }
 
 extern "C" 
-void wconOct_WCONWorms_save_to_file(PyWrapError *err,
-				    const PyWrapHandle selfHandle,
+void wconOct_WCONWorms_save_to_file(WconOctError *err,
+				    const WconOctHandle selfHandle,
 				    const char *output_path,
 				    bool pretty_print,
 				    bool compressed) {
@@ -154,15 +154,15 @@ void wconOct_WCONWorms_save_to_file(PyWrapError *err,
 }
 
 extern "C" 
-PyWrapHandle wconOct_WCONWorms_to_canon(PyWrapError *err,
-					const PyWrapHandle selfHandle) {
+WconOctHandle wconOct_WCONWorms_to_canon(WconOctError *err,
+					const WconOctHandle selfHandle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *pErr, *pAttr;
   
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
@@ -170,7 +170,7 @@ PyWrapHandle wconOct_WCONWorms_to_canon(PyWrapError *err,
     cerr << "ERROR: Failed to acquire object instance using handle "
 	 << selfHandle << endl;
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   // to_canon is implemented as an object property and not a function
@@ -181,19 +181,19 @@ PyWrapHandle wconOct_WCONWorms_to_canon(PyWrapError *err,
     PyErr_Print();
     Py_XDECREF(pAttr);
     *err = FAILED;
-    return NULL_HANDLE; // failure condition
+    return WCONOCT_NULL_HANDLE; // failure condition
   }
 
   if (pAttr != NULL) {
     // do not DECREF pAttr until it is no longer referenced in the
     //   wrapper sublayer.
-    PyWrapHandle result = wrapInternalStoreReference(pAttr);
+    WconOctHandle result = wrapInternalStoreReference(pAttr);
     if (wconOct_isNullHandle(result)) {
       cerr << "ERROR: Failed to store python object reference" 
 	   << endl;
       Py_DECREF(pAttr);
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     } else {
       *err = SUCCESS;
       return result;
@@ -202,7 +202,7 @@ PyWrapHandle wconOct_WCONWorms_to_canon(PyWrapError *err,
     cerr << "ERROR: Null handle from to_canon" << endl;
     // No need to DECREF a NULL pAttr
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 }
 
@@ -213,9 +213,9 @@ PyWrapHandle wconOct_WCONWorms_to_canon(PyWrapError *err,
 // TODO: When implementing C++ version of interface, consider
 //   operator overloading.
 extern "C" 
-PyWrapHandle wconOct_WCONWorms_add(PyWrapError *err,
-				   const PyWrapHandle selfHandle, 
-				   const PyWrapHandle handle) {
+WconOctHandle wconOct_WCONWorms_add(WconOctError *err,
+				   const WconOctHandle selfHandle, 
+				   const WconOctHandle handle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *WCONWorms_instance=NULL;
   PyObject *pErr, *pFunc;
@@ -223,7 +223,7 @@ PyWrapHandle wconOct_WCONWorms_add(PyWrapError *err,
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
@@ -231,7 +231,7 @@ PyWrapHandle wconOct_WCONWorms_add(PyWrapError *err,
     cerr << "ERROR: No valid object instance using handle "
 	 << selfHandle << endl;
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   WCONWorms_instance = wrapInternalGetReference(handle);
@@ -239,7 +239,7 @@ PyWrapHandle wconOct_WCONWorms_add(PyWrapError *err,
     cerr << "ERROR: No valid object instance using handle "
 	 << handle << endl;
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   pFunc = 
@@ -249,7 +249,7 @@ PyWrapHandle wconOct_WCONWorms_add(PyWrapError *err,
     PyErr_Print();
     Py_XDECREF(pFunc);
     *err = FAILED;
-    return NULL_HANDLE; // failure condition
+    return WCONOCT_NULL_HANDLE; // failure condition
   }
 
   if (PyCallable_Check(pFunc) == 1) {
@@ -262,17 +262,17 @@ PyWrapHandle wconOct_WCONWorms_add(PyWrapError *err,
     if (pErr != NULL) {
       PyErr_Print();
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     } else {
       if (pValue != NULL) {
 	// Do not DECREF stored pValue
-	PyWrapHandle result = wrapInternalStoreReference(pValue);
-	if (result == NULL_HANDLE) {
+	WconOctHandle result = wrapInternalStoreReference(pValue);
+	if (result == WCONOCT_NULL_HANDLE) {
 	  cerr << "ERROR: failed to store object reference in wrapper." 
 	       << endl;
 	  Py_DECREF(pValue);
 	  *err = FAILED;
-	  return NULL_HANDLE;
+	  return WCONOCT_NULL_HANDLE;
 	} else {
 	  *err = SUCCESS;
 	  return result;
@@ -282,22 +282,22 @@ PyWrapHandle wconOct_WCONWorms_add(PyWrapError *err,
 	     << endl;
 	// no need to DECREF a NULL pValue
 	*err = FAILED;
-	return NULL_HANDLE;
+	return WCONOCT_NULL_HANDLE;
       }
     }
   } else {
     cerr << "ERROR: __add__ not a callable python function" << endl;
     Py_XDECREF(pFunc);
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 }
 
 // NOTE: bool functions will always be set false under error conditions.
 //   The onus is on the middleware dev to always check for err values.
-extern "C" bool wconOct_WCONWorms_eq(PyWrapError *err,
-				     const PyWrapHandle selfHandle, 
-				     const PyWrapHandle handle) {
+extern "C" bool wconOct_WCONWorms_eq(WconOctError *err,
+				     const WconOctHandle selfHandle, 
+				     const WconOctHandle handle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *WCONWorms_instance=NULL;
   PyObject *pErr, *pFunc;
@@ -377,15 +377,15 @@ extern "C" bool wconOct_WCONWorms_eq(PyWrapError *err,
 }
 
 extern "C" 
-PyWrapHandle wconOct_WCONWorms_units(PyWrapError *err,
-				     const PyWrapHandle selfHandle) {
+WconOctHandle wconOct_WCONWorms_units(WconOctError *err,
+				     const WconOctHandle selfHandle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *pErr, *pAttr;
   
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
@@ -393,7 +393,7 @@ PyWrapHandle wconOct_WCONWorms_units(PyWrapError *err,
     cerr << "ERROR: Failed to acquire object instance using handle "
 	 << selfHandle << endl;
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   // Attribute is a Python dict (Dictionary) object.
@@ -410,18 +410,18 @@ PyWrapHandle wconOct_WCONWorms_units(PyWrapError *err,
     PyErr_Print();
     Py_XDECREF(pAttr);
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   if (pAttr != NULL) {
     if (PyDict_Check(pAttr)) {
-      PyWrapHandle result = wrapInternalStoreReference(pAttr);
-      if (result == NULL_HANDLE) {
+      WconOctHandle result = wrapInternalStoreReference(pAttr);
+      if (result == WCONOCT_NULL_HANDLE) {
 	cerr << "ERROR: failed to store object reference in wrapper." 
 	     << endl;
 	Py_DECREF(pAttr);
 	*err = FAILED;
-	return NULL_HANDLE;
+	return WCONOCT_NULL_HANDLE;
       } else {
 	*err = SUCCESS;
 	return result;
@@ -430,26 +430,26 @@ PyWrapHandle wconOct_WCONWorms_units(PyWrapError *err,
       cerr << "ERROR: units is not a dict object." << endl;
       Py_DECREF(pAttr);
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     }
   } else {
     cerr << "ERROR: Null handle from units" << endl;
     // No need to DECREF a NULL pAttr
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 }
 
 extern "C" 
-PyWrapHandle wconOct_WCONWorms_metadata(PyWrapError *err,
-					const PyWrapHandle selfHandle) {
+WconOctHandle wconOct_WCONWorms_metadata(WconOctError *err,
+					const WconOctHandle selfHandle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *pErr, *pAttr;
 
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
@@ -457,7 +457,7 @@ PyWrapHandle wconOct_WCONWorms_metadata(PyWrapError *err,
     cerr << "ERROR: Failed to acquire object instance using handle "
 	 << selfHandle << endl;
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   // Attribute is a Python dict (Dictionary) object with complex members
@@ -468,7 +468,7 @@ PyWrapHandle wconOct_WCONWorms_metadata(PyWrapError *err,
     PyErr_Print();
     Py_XDECREF(pAttr);
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   if (pAttr != NULL) {
@@ -483,13 +483,13 @@ PyWrapHandle wconOct_WCONWorms_metadata(PyWrapError *err,
       return WCONOCT_NONE_HANDLE;
     } else if (PyDict_Check(pAttr)) {
       Py_DECREF(Py_None);
-      PyWrapHandle result = wrapInternalStoreReference(pAttr);
+      WconOctHandle result = wrapInternalStoreReference(pAttr);
       Py_DECREF(pAttr);
-      if (result == NULL_HANDLE) {
+      if (result == WCONOCT_NULL_HANDLE) {
 	cerr << "ERROR: failed to store object reference in wrapper." 
 	     << endl;
 	*err = FAILED;
-	return NULL_HANDLE;
+	return WCONOCT_NULL_HANDLE;
       } else {
 	*err = SUCCESS;
 	return result;
@@ -500,26 +500,26 @@ PyWrapHandle wconOct_WCONWorms_metadata(PyWrapError *err,
       Py_DECREF(Py_None);
       Py_DECREF(pAttr);
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     }
   } else {
     cerr << "ERROR: metadata is NULL" << endl;
     // No need to DECREF a NULL pAttr
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 }
 
 extern "C" 
-PyWrapHandle wconOct_WCONWorms_data(PyWrapError *err,
-				    const PyWrapHandle selfHandle) {
+WconOctHandle wconOct_WCONWorms_data(WconOctError *err,
+				    const WconOctHandle selfHandle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *pErr, *pAttr;
 
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
@@ -527,7 +527,7 @@ PyWrapHandle wconOct_WCONWorms_data(PyWrapError *err,
     cerr << "ERROR: Failed to acquire object instance using handle "
 	 << selfHandle << endl;
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   // Attribute is a pandas package DataFrame object.
@@ -540,17 +540,17 @@ PyWrapHandle wconOct_WCONWorms_data(PyWrapError *err,
     PyErr_Print();
     Py_XDECREF(pAttr);
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   if (pAttr != NULL) {
-    PyWrapHandle result = wrapInternalStoreReference(pAttr);
+    WconOctHandle result = wrapInternalStoreReference(pAttr);
     Py_DECREF(pAttr);
-    if (result == NULL_HANDLE) {
+    if (result == WCONOCT_NULL_HANDLE) {
       cerr << "ERROR: failed to store object reference in wrapper." 
 	   << endl;
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     } else {
       *err = SUCCESS;
       return result;
@@ -559,13 +559,13 @@ PyWrapHandle wconOct_WCONWorms_data(PyWrapError *err,
     cerr << "ERROR: Null handle from data" << endl;
     // No need to DECREF a NULL pAttr
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 }
 
 extern "C" 
-long wconOct_WCONWorms_num_worms(PyWrapError *err,
-				 const PyWrapHandle selfHandle) {
+long wconOct_WCONWorms_num_worms(WconOctError *err,
+				 const WconOctHandle selfHandle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *pErr, *pAttr;
 
@@ -616,15 +616,15 @@ long wconOct_WCONWorms_num_worms(PyWrapError *err,
 }
 
 extern "C" 
-PyWrapHandle wconOct_WCONWorms_worm_ids(PyWrapError *err,
-					const PyWrapHandle selfHandle) {
+WconOctHandle wconOct_WCONWorms_worm_ids(WconOctError *err,
+					const WconOctHandle selfHandle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *pErr, *pAttr;
 
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
@@ -632,7 +632,7 @@ PyWrapHandle wconOct_WCONWorms_worm_ids(PyWrapError *err,
     cerr << "ERROR: Failed to acquire object instance using handle "
 	 << selfHandle << endl;
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   // Attribute is a Python list object (of worm ids - of some type)
@@ -645,18 +645,18 @@ PyWrapHandle wconOct_WCONWorms_worm_ids(PyWrapError *err,
     PyErr_Print();
     Py_XDECREF(pAttr);
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   if (pAttr != NULL) {
     if (PyList_Check(pAttr)) {
-      PyWrapHandle result = wrapInternalStoreReference(pAttr);
+      WconOctHandle result = wrapInternalStoreReference(pAttr);
       Py_DECREF(pAttr);
-      if (result == NULL_HANDLE) {
+      if (result == WCONOCT_NULL_HANDLE) {
 	cerr << "ERROR: failed to store object reference in wrapper." 
 	     << endl;
 	*err = FAILED;
-	return NULL_HANDLE;
+	return WCONOCT_NULL_HANDLE;
       } else {
 	*err = SUCCESS;
 	return result;
@@ -665,26 +665,26 @@ PyWrapHandle wconOct_WCONWorms_worm_ids(PyWrapError *err,
       cerr << "ERROR: worm_ids is not a list object." << endl;
       Py_DECREF(pAttr);
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     }
   } else {
     cerr << "ERROR: Null handle from worm_ids" << endl;
     // No need to DECREF a NULL pAttr
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 }
 
 extern "C" 
-PyWrapHandle wconOct_WCONWorms_data_as_odict(PyWrapError *err,
-					     const PyWrapHandle selfHandle){
+WconOctHandle wconOct_WCONWorms_data_as_odict(WconOctError *err,
+					     const WconOctHandle selfHandle){
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *pErr, *pAttr;
 
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
@@ -692,7 +692,7 @@ PyWrapHandle wconOct_WCONWorms_data_as_odict(PyWrapError *err,
     cerr << "ERROR: Failed to acquire object instance using handle "
 	 << selfHandle << endl;
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   // Attribute is an OrderedDict object which is a subclass of Python's
@@ -706,18 +706,18 @@ PyWrapHandle wconOct_WCONWorms_data_as_odict(PyWrapError *err,
     PyErr_Print();
     Py_XDECREF(pAttr);
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   if (pAttr != NULL) {
     if (PyDict_Check(pAttr)) {
-      PyWrapHandle result = wrapInternalStoreReference(pAttr);
+      WconOctHandle result = wrapInternalStoreReference(pAttr);
       Py_DECREF(pAttr);
-      if (result == NULL_HANDLE) {
+      if (result == WCONOCT_NULL_HANDLE) {
 	cerr << "ERROR: failed to store object reference in wrapper." 
 	     << endl;
 	*err = FAILED;
-	return NULL_HANDLE;
+	return WCONOCT_NULL_HANDLE;
       } else {
 	*err = SUCCESS;
 	return result;
@@ -727,13 +727,13 @@ PyWrapHandle wconOct_WCONWorms_data_as_odict(PyWrapError *err,
 	   << endl;
       Py_DECREF(pAttr);
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     }
   } else {
     cerr << "ERROR: Null handle from data_as_odict" << endl;
     // No need to DECREF a NULL pAttr
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 }
 

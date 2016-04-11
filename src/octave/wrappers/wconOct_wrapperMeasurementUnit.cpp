@@ -12,14 +12,14 @@ extern PyObject *wrapperGlobalMeasurementUnitClassObj;
 // *****************************************************************
 // ********************** MeasurementUnit Class
 extern "C" 
-PyWrapHandle wconOct_static_MeasurementUnit_create(PyWrapError *err,
+WconOctHandle wconOct_static_MeasurementUnit_create(WconOctError *err,
 						   const char *unitStr) {
   PyObject *pErr, *pFunc;
 
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 
   pFunc = 
@@ -30,7 +30,7 @@ PyWrapHandle wconOct_static_MeasurementUnit_create(PyWrapError *err,
     PyErr_Print();
     Py_XDECREF(pFunc);
     *err = FAILED;
-    return NULL_HANDLE; // failure condition
+    return WCONOCT_NULL_HANDLE; // failure condition
   }
 
   if (PyCallable_Check(pFunc) == 1) {
@@ -44,19 +44,19 @@ PyWrapHandle wconOct_static_MeasurementUnit_create(PyWrapError *err,
       PyErr_Print();
       Py_XDECREF(pValue);
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     }
 
     if (pValue != NULL) {
       // do not DECREF pValue until it is no longer referenced in the
       //   wrapper sublayer.
-      PyWrapHandle result = wrapInternalStoreReference(pValue);
-      if (result == NULL_HANDLE) {
+      WconOctHandle result = wrapInternalStoreReference(pValue);
+      if (result == WCONOCT_NULL_HANDLE) {
 	cerr << "ERROR: failed to store object reference in wrapper." 
 	     << endl;
 	Py_DECREF(pValue);
 	*err = FAILED;
-	return NULL_HANDLE;
+	return WCONOCT_NULL_HANDLE;
       } else {
 	*err = SUCCESS;
 	return result;
@@ -65,19 +65,19 @@ PyWrapHandle wconOct_static_MeasurementUnit_create(PyWrapError *err,
       cerr << "ERROR: Null handle from create" << endl;
       // No need to DECREF a NULL pValue
       *err = FAILED;
-      return NULL_HANDLE;
+      return WCONOCT_NULL_HANDLE;
     }
   } else {
     cerr << "ERROR: create not a callable python function" << endl;
     Py_XDECREF(pFunc);
     *err = FAILED;
-    return NULL_HANDLE;
+    return WCONOCT_NULL_HANDLE;
   }
 }
 
 extern "C" 
-double wconOct_MeasurementUnit_to_canon(PyWrapError *err,
-					const PyWrapHandle selfHandle,
+double wconOct_MeasurementUnit_to_canon(WconOctError *err,
+					const WconOctHandle selfHandle,
 					const double val) {
   PyObject *MeasurementUnit_instance=NULL;
   PyObject *pErr, *pFunc;
@@ -147,8 +147,8 @@ double wconOct_MeasurementUnit_to_canon(PyWrapError *err,
 }
 
 extern "C" 
-double wconOct_MeasurementUnit_from_canon(PyWrapError *err,
-					  const PyWrapHandle selfHandle,
+double wconOct_MeasurementUnit_from_canon(WconOctError *err,
+					  const WconOctHandle selfHandle,
 					  const double val) {
   PyObject *MeasurementUnit_instance=NULL;
   PyObject *pErr, *pFunc;
@@ -218,8 +218,8 @@ double wconOct_MeasurementUnit_from_canon(PyWrapError *err,
 }
 
 extern "C" 
-const char *wconOct_MeasurementUnit_unit_string(PyWrapError *err,
-						const PyWrapHandle selfHandle) {
+const char *wconOct_MeasurementUnit_unit_string(WconOctError *err,
+						const WconOctHandle selfHandle) {
   PyObject *MeasurementUnit_selfInstance=NULL;
   PyObject *pErr, *pAttr;
 
@@ -265,8 +265,8 @@ const char *wconOct_MeasurementUnit_unit_string(PyWrapError *err,
 }
 
 extern "C" 
-const char *wconOct_MeasurementUnit_canonical_unit_string(PyWrapError *err,
-							  const PyWrapHandle selfHandle) {
+const char *wconOct_MeasurementUnit_canonical_unit_string(WconOctError *err,
+							  const WconOctHandle selfHandle) {
   PyObject *MeasurementUnit_selfInstance=NULL;
   PyObject *pErr, *pAttr;
   
