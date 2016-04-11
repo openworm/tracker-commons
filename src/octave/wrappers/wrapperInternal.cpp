@@ -20,12 +20,19 @@ unsigned int totalActiveRefs = 0;
 //   random key or a sequential key, both of
 //   which have their problems.
 
-int wrapInternalStoreReference(PyObject *pythonRef) {
+PyWrapHandle wrapInternalStoreReference(PyObject *pythonRef) {
+
+  if (pythonRef == NULL) {
+    cerr << "ERROR: NULL reference object supplied" << endl;
+    return NULL_HANDLE;
+  }
+
   if (totalActiveRefs >= INT_MAX) {
     // We're already maxed out. Immediately return error.
-    cout << "ERROR: Out of room for new Python references" << endl;
-    return -1;
+    cerr << "ERROR: Out of room for new Python references" << endl;
+    return NULL_HANDLE;
   }
+
   // get a random number
   unsigned int randkey;
   randkey = rand()%INT_MAX;
@@ -44,15 +51,36 @@ int wrapInternalStoreReference(PyObject *pythonRef) {
     count--;
   }
   // Error condition
-  return -1;
+  return NULL_HANDLE;
 }
 
-PyObject *wrapInternalGetReference(unsigned int key) {
+PyObject *wrapInternalGetReference(PyWrapHandle handle) {
+  unsigned int key = 0;
+
+  if (handle == NULL_HANDLE) {
+    cerr << "ERROR: Trying to access a NULL handle." << endl;
+    return NULL;
+  } else if (handle == WCONOCT_NONE_HANDLE) {
+    cerr << "ERROR: Py_None is not a valid wrapper access object." << endl;
+    return NULL;
+  } else {
+    key = (unsigned int)handle;
+  }
+
   unordered_map<unsigned int,PyObject *>::const_iterator result =
     refHandles.find(key);
   if (result != refHandles.end()) {
     return result->second;
   } else {
     return NULL;
+  }
+}
+
+void wrapInternalCheckErrorVariable(PyWrapError *err) {
+  // passing a NULL value is strictly forbidden. Shut the entire
+  // code down if this is detected.
+  if (err == NULL) {
+    cerr << "ERROR: Error return variable may not be NULL. Shutting Down!"
+	 << endl;
   }
 }

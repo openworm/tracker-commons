@@ -4,81 +4,74 @@
 using namespace std;
 
 int main(int argc, char **argv) {
-  int loadedWCONWormsObjHandle = 0;
-  int canonicalWCONWormsObjHandle = 0;
-  int conflictingWCONWormsObjHandle = 0;
-  int mergeableWCONWormsObjHandle = 0;
+  PyWrapHandle loadedWCONWormsObjHandle = makeNullHandle();
+  PyWrapHandle canonicalWCONWormsObjHandle = makeNullHandle();
+  PyWrapHandle conflictingWCONWormsObjHandle = makeNullHandle();
+  PyWrapHandle mergeableWCONWormsObjHandle = makeNullHandle();
 
-  int mergedHandle=0;
-  int handle=0;
-  int result=0;
+  PyWrapHandle mergedHandle=0;
+  PyWrapHandle handle=0;
 
   bool conflictLoadFailed = false;
   bool mergeableLoadFailed = false;
 
-  handle = static_WCONWorms_load_from_file("../../../tests/minimax.wcon");
-  if (handle < 0) {
-    cerr << "Error: Bad handle value " << handle << endl;
-    // if we cannot even load the most basic data, punt.
-    return -1; 
-  }
+  PyWrapError err;
+
+  // It is quite unclear if the convenience macros really help
+  //   or hurt code readability. It is just in for the fun of it.
+  RunRetCheckAndRespond(err, handle, return -1,
+			static_WCONWorms_load_from_file,
+			"../../../tests/minimax.wcon");
   loadedWCONWormsObjHandle = handle;
 
-  // test with pretty_print
-  result = WCONWorms_save_to_file((unsigned int)loadedWCONWormsObjHandle,
-				  "wrappertest.wcon",true);
-  if (result < 0) {
-    // ok to fail
-    cerr << "Error: save_to_file failed on object handle " << handle << endl;
-  }
+  RunVoidCheckAndRespond(err, cout << "Failed to save" << endl,
+			 WCONWorms_save_to_file,
+			 loadedWCONWormsObjHandle,       
+			 "wrappertest.wcon", true);
 
-  // test to_canon
-  handle = WCONWorms_to_canon((unsigned int)loadedWCONWormsObjHandle);
-  if (handle < 0) {
-    // Failure to load canonical data should result in a punt as well
-    cerr << "Error: Bad handle value " << handle << endl;
-    return -1;
-  }
+  RunRetCheckAndRespond(err, handle, return -1,
+			WCONWorms_to_canon,
+			loadedWCONWormsObjHandle);
   canonicalWCONWormsObjHandle = handle;
 
   // TODO: Not the best way to test to_canon worked since save_to_file
   //   automatically writes in canonical form. Access an internal data
   //   value instead (e.g. in the minimax file, non-canonical fields
   //   included hours instead of seconds and meters instead of millimeters.
-  result = WCONWorms_save_to_file((unsigned int)canonicalWCONWormsObjHandle,
-				  "wrapperCanonical.wcon",true);
-  if (result < 0) {
-    // ok to fail
-    cerr << "Error: save_to_file failed on object handle " << handle << endl;
-  }
+  RunVoidCheckAndRespond(err, cout << "Failed to save" << endl,
+			 WCONWorms_save_to_file,
+			 canonicalWCONWormsObjHandle,
+			 "wrapperCanonical.wcon",true);
 
-  // Load data for subsequent tests
-  handle = 
-    static_WCONWorms_load_from_file("extra-test-data/minimax-conflict.wcon");
-  if (handle < 0) {
-    // Failure is considered conditional and turns off subsequent
-    //   dependent tests
-    cerr << "Error: Bad handle value " << handle << endl;
-    conflictLoadFailed = true;
-  }
+  RunRetCheckAndRespond(err, handle, 
+			cerr << "Error: Bad conflict load."; conflictLoadFailed = true,
+			static_WCONWorms_load_from_file,
+			"extra-test-data/minimax-conflict.wcon");
   conflictingWCONWormsObjHandle = handle;
   cout << "||| Conflicting WCON Data loaded as handle " << handle << endl;
   
-  handle = 
-    static_WCONWorms_load_from_file("extra-test-data/minimax-mergeable.wcon");
-  if (handle < 0) {
-    // Failure is considered conditional and turns off subsequent
-    //   dependent tests
-    cerr << "Error: Bad handle value " << handle << endl;
-    mergeableLoadFailed = true;
-  }
+  RunRetCheckAndRespond(err, handle, 
+			cerr << "Error: Bad Mergeable load."; mergeableLoadFailed = true,
+			static_WCONWorms_load_from_file,
+			"extra-test-data/minimax-mergeable.wcon");
   mergeableWCONWormsObjHandle = handle;
   cout << "||| Mergeable WCON Data loaded as handle " << handle << endl;
 
   // Test that the canonical versions are compatible with the loaded ones
+  //
+  // A use-case Note: I'm unhappy with the need to check for errors here.
+  //   I'd prefer to directly apply the results of "eq" to a conditional,
+  //   but I cannot think of any way to get around this in a C interface.
+  //   In a C++ interface, the solution is exception catching.
+  //
+  // Perhaps the other approach is to semantically treat errors as false.
+  //   The error is reported in the wrapper code, but a false value is
+  //   always returned. I'm tentatively taking this approach just because
+  //   the error check for __eq__ is annoying.
   cout << "||| Compare Equivalent Canonical and Loaded Data" << endl;
   cout << "***** Yes Please *****" << endl;
-  if (WCONWorms_eq(loadedWCONWormsObjHandle,
+  if (WCONWorms_eq(&err,
+		   loadedWCONWormsObjHandle,
 		   canonicalWCONWormsObjHandle) == 1) {
     cout << "Yes, handle " << loadedWCONWormsObjHandle
 	 << " is equivalent to handle " << canonicalWCONWormsObjHandle << endl;
@@ -87,13 +80,23 @@ int main(int argc, char **argv) {
 	 << " is NOT equivalent to handle " 
 	 << canonicalWCONWormsObjHandle << endl;
   }
+  if (err == FAILED) {
+    cerr << "Prior comparison operation failed. Please ignore." << endl;
+  }
 
   // Merging two equivalent copies of the same data 
   //   should yield the same exact copy
+  //
+  // Use-case Note:
+  //   Failures are expected ... should this be considered
+  //   "success"? Currently they are treated as failures,
+  //   which I think is the right way to go.
   bool mergeOpFailed = false;
-  result = WCONWorms_add(loadedWCONWormsObjHandle,
+  PyWrapHandle result;
+  result = WCONWorms_add(&err,
+			 loadedWCONWormsObjHandle,
 			 canonicalWCONWormsObjHandle);
-  if (result == -1) {
+  if (err == FAILED) {
     cerr << "Error: Handle " << loadedWCONWormsObjHandle
 	 << " could not be added with handle " 
 	 << canonicalWCONWormsObjHandle << endl;
@@ -106,7 +109,8 @@ int main(int argc, char **argv) {
   cout << "||| Compare Merged Results of Canonical and Loaded Data" << endl;
   if (!mergeOpFailed) {
     cout << "***** Yes Please *****" << endl;
-    if (WCONWorms_eq(loadedWCONWormsObjHandle,
+    if (WCONWorms_eq(&err,
+		     loadedWCONWormsObjHandle,
 		     mergedHandle) == 1) {
       cout << "Yes, handle " << loadedWCONWormsObjHandle
 	   << " is equivalent to handle " 
@@ -116,15 +120,19 @@ int main(int argc, char **argv) {
 	   << " is NOT equivalent to handle " 
 	   << mergedHandle << endl;
     }
+    if (err == FAILED) {
+      cerr << "Prior comparison operation failed. Please ignore." << endl;
+    }
   } else {
     cout << "No Equivalence tests for failed merge operations" << endl;
   }
 
   // Subsequent merge should fail because of single modified element
   if (!conflictLoadFailed) {
-    result = WCONWorms_add(loadedWCONWormsObjHandle,
+    result = WCONWorms_add(&err,
+			   loadedWCONWormsObjHandle,
 			   conflictingWCONWormsObjHandle);
-    if (result == -1) {
+    if (err == FAILED) {
       cerr << "Error: Handle " << loadedWCONWormsObjHandle
 	   << " could not be added with handle " 
 	   << conflictingWCONWormsObjHandle << endl;
@@ -137,22 +145,28 @@ int main(int argc, char **argv) {
   // Subsequent merge should succeed because offending line is removed
   if (!mergeableLoadFailed) {
     mergeOpFailed = false;
-    result = WCONWorms_add(loadedWCONWormsObjHandle,
+    result = WCONWorms_add(&err,
+			   loadedWCONWormsObjHandle,
 			   mergeableWCONWormsObjHandle);
-    if (result == -1) {
+    if (err == FAILED) {
       cerr << "Error: Handle " << loadedWCONWormsObjHandle
 	   << " could not be added with handle " 
 	   << mergeableWCONWormsObjHandle << endl;
       mergeOpFailed = true;
     } else {
       mergedHandle = result;
-      WCONWorms_save_to_file(mergedHandle,"mergeResult.wcon",true);
+      // This is the alternative to the convenience macro
+      WCONWorms_save_to_file(&err,mergedHandle,"mergeResult.wcon",true);
+      if (err == FAILED) {
+	cerr << "Failed to save file mergedResult.wcon" << endl;
+      }
     }
 
     // Now they should not be the same
     if (!mergeOpFailed) {
       cout << "***** No Please *****" << endl;
-      if (WCONWorms_eq(loadedWCONWormsObjHandle,
+      if (WCONWorms_eq(&err,
+		       loadedWCONWormsObjHandle,
 		       mergedHandle) == 1) {
 	cout << "Yes, handle " << loadedWCONWormsObjHandle
 	     << " is equivalent to handle " 
@@ -161,6 +175,9 @@ int main(int argc, char **argv) {
 	cout << "No, handle " << loadedWCONWormsObjHandle
 	     << " is NOT equivalent to handle " 
 	     << mergedHandle << endl;
+      }
+      if (err == FAILED) {
+	cerr << "Prior comparison operation failed. Please ignore." << endl;
       }
     } else {
       cout << "No Equivalence comparison since merge operation failed." 
@@ -173,8 +190,9 @@ int main(int argc, char **argv) {
 
   // For now we will just test whether we can get our hands on
   //   the WCONWorms attribute entities
-  handle = WCONWorms_units((unsigned int)loadedWCONWormsObjHandle);
-  if (handle == -1) {
+  handle = WCONWorms_units(&err,
+			   loadedWCONWormsObjHandle);
+  if (err == FAILED) {
     cerr << "Error: Failed to acquire units from handle " 
 	 << loadedWCONWormsObjHandle << endl;
   } else {
@@ -182,11 +200,12 @@ int main(int argc, char **argv) {
 	 << " from object handle " << loadedWCONWormsObjHandle << endl;
   }
 
-  handle = WCONWorms_metadata((unsigned int)loadedWCONWormsObjHandle);
-  if (handle == -1) {
+  handle = WCONWorms_metadata(&err,
+			      loadedWCONWormsObjHandle);
+  if (err == FAILED) {
     cerr << "Error: Failed to acquire metadata from handle " 
 	 << loadedWCONWormsObjHandle << endl;
-  } else if (handle == -1337) {
+  } else if (isNoneHandle(handle)) {
     cout << "Got None value for metadata from handle "
 	 << loadedWCONWormsObjHandle << endl;
   } else {
@@ -197,18 +216,19 @@ int main(int argc, char **argv) {
   int tempHandle;
   // deliberately load a file with NO metadata to test that the None
   //   tag is respected.
-  handle = static_WCONWorms_load_from_file("../../../tests/minimal.wcon");
-  if (handle < 0) {
+  handle = static_WCONWorms_load_from_file(&err,
+					   "../../../tests/minimal.wcon");
+  if (err == FAILED) {
     cerr << "Error: Bad handle value " << handle << endl;
     cerr << "Skipping test for None metadata value" << endl;
     // skip the test if we cannot load the file, it's ok
   } else {
     tempHandle = handle;
-    handle = WCONWorms_metadata((unsigned int)tempHandle);
-    if (handle == -1) {
+    handle = WCONWorms_metadata(&err, tempHandle);
+    if (err == FAILED) {
       cerr << "Error: Failed to acquire metadata from handle " 
 	   << loadedWCONWormsObjHandle << endl;
-    } else if (handle == -1337) {
+    } else if (isNoneHandle(handle)) {
       cout << "Got None value for metadata from handle "
 	   << loadedWCONWormsObjHandle << endl;
     } else {
@@ -217,8 +237,8 @@ int main(int argc, char **argv) {
     }
   }
 
-  handle = WCONWorms_data((unsigned int)loadedWCONWormsObjHandle);
-  if (handle == -1) {
+  handle = WCONWorms_data(&err, loadedWCONWormsObjHandle);
+  if (err == FAILED) {
     cerr << "Error: Failed to acquire data from handle " 
 	 << loadedWCONWormsObjHandle << endl;
   } else {
@@ -227,8 +247,8 @@ int main(int argc, char **argv) {
   }
 
   long numValue;
-  numValue = WCONWorms_num_worms((unsigned int)loadedWCONWormsObjHandle);
-  if (handle == -1) {
+  numValue = WCONWorms_num_worms(&err,loadedWCONWormsObjHandle);
+  if (err == FAILED) {
     cerr << "Error: Failed to acquire num_worms from handle " 
 	 << loadedWCONWormsObjHandle << endl;
   } else {
@@ -237,8 +257,8 @@ int main(int argc, char **argv) {
 	 << " in handle " << loadedWCONWormsObjHandle << endl;
   }
 
-  handle = WCONWorms_worm_ids((unsigned int)loadedWCONWormsObjHandle);
-  if (handle == -1) {
+  handle = WCONWorms_worm_ids(&err, loadedWCONWormsObjHandle);
+  if (err == FAILED) {
     cerr << "Error: Failed to acquire worm_ids from handle " 
 	 << loadedWCONWormsObjHandle << endl;
   } else {
@@ -246,8 +266,8 @@ int main(int argc, char **argv) {
 	 << " from object handle " << loadedWCONWormsObjHandle << endl;
   }
 
-  handle = WCONWorms_data_as_odict((unsigned int)loadedWCONWormsObjHandle);
-  if (handle == -1) {
+  handle = WCONWorms_data_as_odict(&err, loadedWCONWormsObjHandle);
+  if (err == FAILED) {
     cerr << "Error: Failed to acquire data_as_odict from handle " 
 	 << loadedWCONWormsObjHandle << endl;
   } else {
@@ -260,8 +280,8 @@ int main(int argc, char **argv) {
   // Testing MeasurementUnits now
   int hoursUnitHandle = 0; // easy to check against canonical (s)
 
-  hoursUnitHandle = static_MeasurementUnit_create("h");
-  if (hoursUnitHandle != -1) {
+  hoursUnitHandle = static_MeasurementUnit_create(&err, "h");
+  if (err == SUCCESS) {
     cout << "Hours Unit object with handle " << hoursUnitHandle << endl;
   } else {
     cerr << "Error: Failed to create a MeasurementUnit instance" << endl;
@@ -269,15 +289,28 @@ int main(int argc, char **argv) {
   double testHourVal = 1.0;
   double testSecondVal = 3600.0;
   cout << testHourVal << " hour(s) is " 
-       << MeasurementUnit_to_canon(hoursUnitHandle,testHourVal)
+       << MeasurementUnit_to_canon(&err, hoursUnitHandle,testHourVal)
        << " second(s)" << endl;
+  if (err == FAILED) {
+    cerr << "Error: Prior to_canon call failed. Ignore the result." << endl;
+  }
   cout << testSecondVal << " second(s) is "
-       << MeasurementUnit_from_canon(hoursUnitHandle,testSecondVal)
+       << MeasurementUnit_from_canon(&err, hoursUnitHandle,testSecondVal)
        << " hour(s)" << endl;
+  if (err == FAILED) {
+    cerr << "Error: Prior to_canon call failed. Ignore the result." << endl;
+  }
 
   cout << "Hours Unit String [" 
-       << MeasurementUnit_unit_string(hoursUnitHandle) << "]" << endl;
+       << MeasurementUnit_unit_string(&err, hoursUnitHandle) << "]" << endl;
+  if (err == FAILED) {
+    cerr << "Error: Prior to_canon call failed. Ignore the result." << endl;
+  }
+
   cout << "Hours Canonical Unit String [" 
-       << MeasurementUnit_canonical_unit_string(hoursUnitHandle) 
+       << MeasurementUnit_canonical_unit_string(&err, hoursUnitHandle) 
        << "]" << endl;
+  if (err == FAILED) {
+    cerr << "Error: Prior to_canon call failed. Ignore the result." << endl;
+  }
 }

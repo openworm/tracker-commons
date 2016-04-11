@@ -3,7 +3,16 @@
 // For internal (non-API) wrapper functionality
 #include <Python.h>
 
+#include "wrapperTypes.h"
+
+// Special handle return values
+#define NULL_HANDLE -1337
+#define WCONOCT_NONE_HANDLE -42
+
 // Internal functions
-int wrapInternalStoreReference(PyObject *pythonRef);
-PyObject *wrapInternalGetReference(unsigned int key);
+PyWrapHandle wrapInternalStoreReference(PyObject *pythonRef);
+PyObject *wrapInternalGetReference(PyWrapHandle key);
+
+// Internal Checks
+void wrapInternalCheckErrorVariable(PyWrapError *err);
 #endif /* __WRAPPER_INTERNAL_H_ */

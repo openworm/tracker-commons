@@ -12,6 +12,7 @@ PYTHON_CFLAGS=$(shell ${PYTHON_CONFIG} --cflags)
 PYTHON_LDFLAGS=$(shell ${PYTHON_CONFIG} --ldflags)
 
 WRAPPER_OBJS=octaveWconPythonWrapper.o wrapperInternal.o
+COMMON_HEADERS=wrapperTypes.h
 
 all: driver
 
@@ -21,7 +22,7 @@ driver: ${WRAPPER_OBJS} driver.o
 driver.o: driver.cpp
 	$(CPP) $(CFLAGS) -c driver.cpp
 
-%.o: %.cpp %.h
+%.o: %.cpp %.h ${COMMON_HEADERS}
 	$(CPP) $(CFLAGS) -c $< ${PYTHON_CFLAGS}
 
 clean:
