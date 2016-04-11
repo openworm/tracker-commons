@@ -1,0 +1,9 @@
+%module SWIG_MOD_NAME
+%{
+#include "octaveWconPythonWrapper.h"
+#include "swigWrapper.h"
+%}
+void initWrapper(void);
+int isNullHandle(int handle);
+int isNoneHandle(int handle);
+
