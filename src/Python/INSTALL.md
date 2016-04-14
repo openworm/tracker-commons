@@ -26,12 +26,19 @@ chmod +x miniconda.sh
 export PATH=$MINICONDA_DIR/bin:$PATH
 conda install --yes python=$PYTHON_VERSION numpy scipy pandas jsonschema psutil
 
-# GET WCON FROM SOURCE
+# INSTALL wcon.  Two options:
+
+# 1. GET WCON FROM PYPI
+pip install wcon
+
+# 2. ALTERNATIVELY: GET WCON FROM SOURCE
+sudo apt-get install -y git
 cd ~
 mkdir github
-git clone git@github.com:OpenWorm/tracker-commons
-cd github/tracker-commons/src/Python
-python tests/tests.py
+cd github
+git clone https://github.com/openworm/tracker-commons.git
+cd tracker-commons/src/Python/tests
+python tests.py
 ```
 
 For Python 2, these steps will differ slightly (e.g. change to `PYTHON_VERSION=2.7` and `MINICONDA_DIR=~/miniconda`)
