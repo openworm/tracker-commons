@@ -1,22 +1,24 @@
 package org.openworm.trackercommons
 
-case class DataSet(meta: Metadata, unitmap: UnitMap, data: Array[Either[Datum, Data]], files: FileSet, custom: json.ObjJ)
-extends json.Jsonable {
+import kse.jsonal._
+import kse.jsonal.JsonConverters._
+
+case class DataSet(meta: Metadata, unitmap: UnitMap, data: Array[Either[Datum, Data]], files: FileSet, custom: Json.Obj)
+extends AsJson {
   var sourceFile: Option[java.io.File] = None
   def withSourceFile(f: java.io.File) = { sourceFile = Some(f); this }
   def withNoSource: this.type = { sourceFile = None; this }
-  def toObjJ = unitmap.unfix(json.ObjJ({
-    var m = Map(
-      "units" -> (unitmap.toObjJ :: Nil),
-      "data" -> (json.ArrJ(data.map{ case Left(dm) => dm.toObjJ; case Right(da) => da.toObjJ }) :: Nil)
-    )
-    if (meta != Metadata.empty) m = m + ("metadata" -> (meta.toObjJ :: Nil))
-    if (files != FileSet.empty) m = m + ("files" -> (files.toObjJ :: Nil))
-    m ++ custom.keyvals
-  }))
+  def json = unitmap.unfix(
+    Json
+    ~ ("units", unitmap)
+    ~ ("data", data.map(e => Json either e))
+    ~? ("metadata", if (meta == Metadata.empty) None else Some(meta))
+    ~? ("files", if (files == FileSet.empty) None else Some(files))
+    ~~ custom ~ Json
+  )
 
   def combined(
-    combiner: collection.Map[String, (Array[List[json.JSON]], Array[Array[Double]]) => Option[List[json.JSON]]] = Map.empty
+    combiner: collection.Map[String, (Array[List[Json]], Array[Array[Double]]) => Option[List[Json]]] = Map.empty
   ): Either[String, Array[Data]] = {
     Right(data.
       map{ case Right(x) => x; case Left(x) => x.toData }.
@@ -42,24 +44,11 @@ extends json.Jsonable {
             i += data.ts.length
           }
           val labels = collection.mutable.Set.empty[String]
-          for { data <- datas; (k,_) <- data.custom.keyvals } labels += k
+          for { data <- datas } data.custom.foreach{ (k,_) => labels += k }
           labels.toArray.foreach{ key => if (!(combiner contains key)) labels -= key }
           val custom =
-            if (labels.isEmpty) json.ObjJ.empty
-            else {
-              val tss = datas.map(_.ts)
-              json.ObjJ(
-                labels.map{ label =>
-                  val combo = combiner(label)
-                  val values = datas.map(_.custom.keyvals.getOrElse(label, Nil))
-                  val merged = combo(values, tss) match {
-                    case None => return Left(s"Failed to merge ${tss.length} custom keys of type $label for animal ${datas.head.idJSON}")
-                    case Some(x) => x
-                  }
-                  label -> merged
-                }.toMap
-              )
-            }
+            if (labels.isEmpty) Json.Obj.empty
+            else throw new UnsupportedOperationException("Cannot merge custom labels.")
           val ic = datas.forall(_.independentC)
           val so = datas.exists(_.specifiedO)
           Data(datas(0).nid, datas(0).sid, ts, xs, ys, cxs, cys, custom).setCO(ic, so)
@@ -68,28 +57,39 @@ extends json.Jsonable {
     )
   }
 }
-object DataSet {
-  def apply(meta: Metadata, unitmap: UnitMap, data: Array[Data], files: FileSet = FileSet.empty, custom: json.ObjJ = json.ObjJ.empty): DataSet =
+object DataSet extends FromJson[DataSet] {
+  def apply(meta: Metadata, unitmap: UnitMap, data: Array[Data], files: FileSet = FileSet.empty, custom: Json.Obj = Json.Obj.empty): DataSet =
     new DataSet(meta, unitmap, data.map(x => Right(x)), files, custom)
 
-  def dataEntry(ob: json.ObjJ): Either[String, Either[Datum, Data]] = {
-    Datum.from(ob) match {
-      case Right(x) => Right(Left(x))
-      case Left(e) => if (e.endsWith("!")) Left(e) else Data.from(ob) match {
-        case Right(x) => Right(Right(x))
-        case Left(e) => Left(e)
-      }
-    }
-  }
+  def parse(j: Json): Either[JastError, DataSet] = {
+    implicit val parseUnitMap: FromJson[UnitMap] = UnitMap
+    implicit val parseDatum: FromJson[Datum] = Datum
+    implicit val parseData: FromJson[Data] = Data
+    implicit val parseMetadata: FromJson[Metadata] = Metadata
+    implicit val parseFileSet: FromJson[FileSet] = FileSet
 
-  def from(s: String): Either[String, DataSet] = Parser(s)
-
-  def from(f: java.io.File): Either[String, DataSet] = {
-    try {
-      val src = scala.io.Source.fromFile(f)
-      try { from(src.mkString) }
-      finally { src.close }
+    val o = j match { 
+      case jo: Json.Obj => jo
+      case _ => return Left(JastError("Not a JSON object so not a WCON data set"))
     }
-    catch { case scala.util.control.NonFatal(t) => Left("File IO error on "+f.getPath+"\n"+t.toString) }
+    val u = o("units").to[UnitMap] match {
+      case Right(x) => x
+      case Left(e) => return Left(JastError("Error parsing units in WCON data set", because = e))
+    }
+    val d = o("data").to[Array[Either[Datum, Data]]] match {
+      case Right(x) => x
+      case Left(e) => return Left(JastError("Error parsing data in WCON data set", because = e))
+    }
+    val f = o.get("files").map(_.to[FileSet]) match {
+      case None => FileSet.empty
+      case Some(Right(x)) => x
+      case Some(Left(e)) => return Left(JastError("Error parsing file information in WCON data set", because = e))
+    }
+    val m = o.get("metadata").map(_.to[Metadata]) match {
+      case None => Metadata.empty
+      case Some(Right(x)) => x
+      case Some(Left(e)) => return Left(JastError("Error parsing metadata in WCON data set", because = e))
+    }
+    Right(new DataSet(m, u, d, f, o.filter((k,_) => k.startsWith("@"))))
   }
 }

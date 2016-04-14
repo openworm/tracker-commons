@@ -1,10 +1,13 @@
 package org.openworm.trackercommons
 
+import kse.jsonal._
+import kse.jsonal.JsonConverters._
+
 trait HasId extends math.Ordered[HasId] {
   def nid: Double
   def sid: String
   def idEither: Either[Double, String] = if (nid.isNaN) Right(sid) else Left(nid)
-  def idJSON: json.JSON = if (nid.isNaN) { if (sid == null) json.NullJ else json.StrJ(sid) } else json.NumJ(nid)
+  def idJSON: Json = if (nid.isNaN) { if (sid == null) Json.Null else Json.Str(sid) } else Json.Num(nid)
   def compare(them: HasId) =
     if (nid.isNaN)
       if (them.nid.isNaN)
@@ -28,92 +31,62 @@ case class IdOnly(nid: Double, sid: String) extends HasId {}
   * Note that x and y are relative to cx and cy.
   * If the file did not specify a cx and cy, they are calculated, but `derivedCx` and `derivedCy` are set to true.
   */
-case class Datum(nid: Double, sid: String, t: Double, x: Array[Float], y: Array[Float], cx: Double, cy: Double, custom: json.ObjJ)
-extends HasId with json.Jsonable {
+case class Datum(nid: Double, sid: String, t: Double, x: Array[Float], y: Array[Float], cx: Double, cy: Double, custom: Json.Obj)
+extends HasId with AsJson {
   var independentC = false
   var specifiedO = false
   def setCO(ic: Boolean, so: Boolean): this.type = { independentC = ic; specifiedO = so; this }
-  def toObjJ = json.ObjJ(
-    Map[String, List[json.JSON]](
-      "id" -> (idJSON :: Nil),
-      "t" -> (json.NumJ(t) :: Nil),
-      "x" -> (json.ANumJ(Data.doubly(x)) :: Nil),
-      "y" -> (json.ANumJ(Data.doubly(y)) :: Nil),
-      (if (specifiedO && !independentC) "ox" else "cx") -> (json.NumJ(cx) :: Nil),
-      (if (specifiedO && !independentC) "oy" else "cy") -> (json.NumJ(cy) :: Nil)
-    ) ++ custom.keyvals
-  )
+  def json = (Json 
+      ~ ("id", idJSON) ~ ("t", t) ~ ("x", Data.doubly(x)) ~ ("y", Data.doubly(y))
+      ~ (if (specifiedO && !independentC) "ox" else "cx", cx)
+      ~ (if (specifiedO && !independentC) "oy" else "cy", cy)
+      ~~ custom ~ Json)
   def toData: Data = (new Data(nid, sid, Array(t), Array(x), Array(y), Array(cx), Array(cy), custom)).setCO(independentC, specifiedO)
 }
-object Datum extends json.Jsonic[Datum] {
-  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid data entry: " + msg)
-  private def MYBAD(nid: Double, sid: String, t: Double, msg: String): Either[String, Nothing] =
-    BAD("Data point for " + IdOnly(nid,sid).idJSON.toJson + " at time " + t + " has " + msg)
-  def from(ob: json.ObjJ): Either[String, Datum] = {
+object Datum extends FromJson[Datum] {
+  private val someSingles = Option(Set("id", "t", "x", "y", "cx", "cy", "ox", "oy"))
+  private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid data entry: " + msg))
+  private def MYBAD(nid: Double, sid: String, t: Double, msg: String): Either[JastError, Nothing] =
+    BAD("Data point for " + IdOnly(nid,sid).idJSON.toString + " at time " + t + " has " + msg)
+  def parse(j: Json): Either[JastError, Datum] = {
+    val o = j match {
+      case jo: Json.Obj => jo
+      case _ => return BAD("not a JSON object")
+    }
+    o.countKeys(someSingles).foreach{ case (key, n) => if (n > 1) return BAD("duplicate entries for " + key) }
     var numO = 0
     var numC = 0
-    val (nid, sid) = ob.keyvals.get("id") match {
+    val (nid, sid) = o.get("id") match {
       case None => return BAD("no ID!")
-      case Some(j :: Nil) => j match {
-        case json.NullJ => (Double.NaN, null: String)
-        case json.NumJ(x) => (x, null: String)
-        case json.StrJ(s) => (Double.NaN, s)
+      case Some(j) => j match {
+        case Json.Null => (Double.NaN, null: String)
+        case n: Json.Num => (n.double, null: String)
+        case Json.Str(s) => (Double.NaN, s)
         case _ => return BAD("ID neither numeric nor text!")
       }
-      case _ => return BAD("more than one ID!")
     }
-    val t = ob.keyvals.get("t") match {
-      case Some(json.NumJ(x) :: Nil) => x
-      case _ => return BAD("no (unique) time")
+    val t = o("t") match {
+      case n: Json.Num => n.double
+      case _ => return BAD("no valid timepoint")
     }
-    val ox = ob.keyvals.get("ox") match {
-      case Some(json.NumJ(x) :: Nil) =>
-        numO += 1
-        x
+    val List(ox, oy) = List("ox", "oy").map(key => o.get(key) match {
+      case Some(n: Json.Num) => numO += 1; n.double
       case None => Double.NaN
-      case _ => return MYBAD(nid, sid, t, "more than one entry for ox")
-    }
-    val oy = ob.keyvals.get("oy") match {
-      case Some(json.NumJ(y) :: Nil) => 
-        numO += 1
-        y
+      case _ => return BAD(f"$key is not numeric")
+    })
+    val List(cx0, cy0) = List("cx", "cy") map(key => o.get(key) match {
+      case Some(n: Json.Num) => numC += 1; n.double
       case None => Double.NaN
-      case _ => return MYBAD(nid, sid, t, "more than one entry for oy")
-    }
-    var cx = ob.keyvals.get("cx") match {
-      case Some(json.NumJ(x) :: Nil) =>
-        numC += 1
-        x
-      case None => Double.NaN
-      case _ => return MYBAD(nid, sid, t, "more than one entry for cx")
-    }
-    var cy = ob.keyvals.get("cy") match {
-      case Some(json.NumJ(y) :: Nil) => 
-        numC += 1
-        y
-      case None => Double.NaN
-      case _ => return MYBAD(nid, sid, t, "more than one entry for cy")
-    }
-    val x = ob.keyvals.get("x") match {
-      case None => return MYBAD(nid, sid, t, "no x!")
-      case Some(j :: Nil) => j match {
-        case json.NullJ => if (cx.isNaN) return MYBAD(nid, sid, t, "no x!") else Array(cx)
-        case json.NumJ(xi) => Array(xi)
-        case json.ANumJ(xi) => xi
-        case _ => return MYBAD(nid, sid, t, "non-numeric or improperly shaped x")
-      }
-      case _ => return MYBAD(nid, sid, t, "more than one entry for x!")
-    }
-    val y = ob.keyvals.get("y") match {
-      case None => return MYBAD(nid, sid, t, "no y!")
-      case Some(j :: Nil) => j match {
-        case json.NullJ => if (cy.isNaN) return MYBAD(nid, sid, t, "no y!") else Array(cy)
-        case json.NumJ(yi) => Array(yi)
-        case json.ANumJ(yi) => yi
-        case _ => return MYBAD(nid, sid, t, "non-numeric or improperly shaped y")
-      }
-      case _ => return MYBAD(nid, sid, t, "more than one entry for y!")
-    }
+      case _ => return BAD(f"$key is not numeric")
+    })
+    var cx = cx0
+    var cy = cy0
+    val List(x,y) = List(("x", cx), ("y", cy)).map{ case (key, c) => o(key) match {
+      case Json.Null => if (c.isNaN) return MYBAD(nid, sid, t, f"no $key!") else Array(c)
+      case n: Json.Num => Array(n.double)
+      case ns: Json.Arr.Dbl => ns.doubles
+      case _ => return MYBAD(nid, sid, t, f"no valid $key!")
+    }}
     if (y.length != x.length) return MYBAD(nid, sid, t, "mismatch in x and y sizes!")
     if (!ox.isNaN) { cx += ox }
     if (!oy.isNaN) { cy += oy }
@@ -139,7 +112,7 @@ object Datum extends json.Jsonic[Datum] {
     ry -= cy
     if (rx.isNaN || math.abs(rx) < 1e-9) rx = 0
     if (ry.isNaN || math.abs(ry) < 1e-9) ry = 0
-    Right((new Datum(nid, sid, t, Data.singly(x, rx), Data.singly(y, ry), cx, cy, Metadata.getCustom(ob))).setCO(numC > 0, numO > 0))
+    Right((new Datum(nid, sid, t, Data.singly(x, rx), Data.singly(y, ry), cx, cy, o.filter((k,_) => k.startsWith("@")))).setCO(numC > 0, numO > 0))
   }
 }
 
@@ -152,25 +125,20 @@ case class Data(
   ts: Array[Double],
   xs: Array[Array[Float]], ys: Array[Array[Float]],
   cxs: Array[Double], cys: Array[Double],
-  custom: json.ObjJ
+  custom: Json.Obj
 )
-extends HasId with json.Jsonable {
+extends HasId with AsJson {
   var independentC = false
   var specifiedO = false
   def setCO(ic: Boolean, so: Boolean): this.type = { independentC = ic; specifiedO = so; this }
-  def toObjJ = json.ObjJ(
-    Map[String, List[json.JSON]](
-      "id" -> (idJSON :: Nil),
-      "t" -> (json.ANumJ(ts.clone) :: Nil),
-      "x" -> (json.AANumJ(Data.doubly(xs)) :: Nil),
-      "y" -> (json.AANumJ(Data.doubly(ys)) :: Nil),
-      (if (specifiedO && !independentC) "ox" else "cx") -> (json.ANumJ(cxs.clone) :: Nil),
-      (if (specifiedO && !independentC) "oy" else "cy") -> (json.ANumJ(cys.clone) :: Nil)
-    ) ++ custom.keyvals
-  )
-  override def toString = toObjJ.toJson
+  def json = (Json
+    ~ ("id", idJSON) ~ ("t", Json(ts)) ~ ("x", Json(xs.map(Data.doubly))) ~ ("y", Json(ys.map(Data.doubly)))
+    ~ (if (specifiedO && !independentC) "ox" else "cx", cxs)
+    ~ (if (specifiedO && !independentC) "oy" else "cy", cys)
+    ~~ custom ~ Json)
+  override def toString = json.toString
 }
-object Data extends json.Jsonic[Data] {
+object Data extends FromJson[Data] {
   def doubly(xs: Array[Float]): Array[Double] = {
     var qs = new Array[Double](xs.length)
     var i = 0
@@ -208,122 +176,85 @@ object Data extends json.Jsonic[Data] {
     qss
   }
 
-  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid data entries: " + msg)
-  private def IBAD(nid: Double, sid: String, msg: String): Either[String, Nothing] =
-    BAD("Data points for " + IdOnly(nid,sid).idJSON.toJson + " have " + msg)
-  private def MYBAD(nid: Double, sid: String, t: Double, msg: String): Either[String, Nothing] =
-    BAD("Data point for " + IdOnly(nid,sid).idJSON.toJson + " at time " + t + " has " + msg)
+  private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid data entries: " + msg))
+  private def IBAD(nid: Double, sid: String, msg: String): Either[JastError, Nothing] =
+    BAD("Data points for " + IdOnly(nid,sid).idJSON.json + " have " + msg)
+  private def MYBAD(nid: Double, sid: String, t: Double, msg: String): Either[JastError, Nothing] =
+    BAD("Data point for " + IdOnly(nid,sid).idJSON.json + " at time " + t + " has " + msg)
 
   private val emptyD = new Array[Double](0)
   private val zeroD = Array(0.0)
   private val emptyDD = new Array[Array[Double]](0)
 
-  def from(ob: json.ObjJ): Either[String, Data] = {
+  private val someSingles = Option(Set("id", "t", "x", "y", "cx", "cy", "ox", "oy"))
+
+  def parse(j: Json): Either[JastError, Data] = {
+    val o = j match {
+      case jo: Json.Obj => jo
+      case _ => return BAD("not a JSON object")
+    }
+    o.countKeys(someSingles).foreach{ case (key, n) => if (n > 1) return BAD("duplicate entries for " + key) }
+
     var numO = 0
     var numC = 0
-    val (nid, sid) = ob.keyvals.get("id") match {
-      case None => return BAD("no ID!")
-      case Some(j :: Nil) => j match {
-        case json.NullJ => (Double.NaN, null: String)
-        case json.NumJ(x) => (x, null: String)
-        case json.StrJ(s) => (Double.NaN, s)
-        case _ => return BAD("ID neither numeric nor text!")
+    val (nid, sid) = o("id") match {
+      case Json.Null => (Double.NaN, null: String)
+      case n: Json.Num => (n.double, null: String)
+      case Json.Str(s) => (Double.NaN, s)
+      case _ => return BAD("no valid ID!")
+    }
+    val t: Array[Double] = o("t") match {
+      case ja: Json.Arr.Dbl => ja.doubles
+      case _ => return BAD("no time array!")
+    }
+    val List(ox, oy) = List("ox", "oy").map(key => o.get(key) match {
+      case None => emptyD
+      case Some(j) => j match {
+        case n: Json.Num => Array(n.double)
+        case ja: Json.Arr.Dbl => 
+          if (ja.size != 1 && ja.size != t.length)
+             return IBAD(nid, sid, f"$key array size does not match time series size!") 
+          numO += 1
+          ja.doubles
+        case _ => return IBAD(nid, sid, f"non-numeric $key origin")
       }
-      case _ => return BAD("more than one ID!")
-    }
-    val t: Array[Double] = ob.keyvals.get("t") match {
-      case Some(json.ANumJ(x) :: Nil) => x
-      case _ => return BAD("no (unique) time array!")
-    }
-    val ox: Array[Double] = ob.keyvals.get("ox") match {
+    })
+    val List(cx0, cy0) = List("cx", "cy").map(key => o.get(key) match {
       case None => emptyD
-      case Some(j :: Nil) => 
-        numO += 1
-        j match {
-          case json.NumJ(x) => Array(x)
-          case json.ANumJ(x) =>
-            if (x.length != t.length) return IBAD(nid, sid, "origin x array size does not match time series size!")
-            x
-          case _ => return IBAD(nid, sid, "non-numeric x origin")
-        }
-      case _ => return IBAD(nid, sid, "more than one entry for ox!")
-    }
-    val oy: Array[Double] = ob.keyvals.get("oy") match {
-      case None => emptyD
-      case Some(j :: Nil) => 
-        numO += 1
-        j match {
-          case json.NumJ(x) => Array(x)
-          case json.ANumJ(x) =>
-            if (x.length != t.length) return IBAD(nid, sid, "origin y array size does not match time series size!")
-            x
-          case _ => return IBAD(nid, sid, "non-numeric y origin")
-        }
-      case _ => return IBAD(nid, sid, "more than one entry for oy!")
-    }
-    var cx: Array[Double] = ob.keyvals.get("cx") match {
-      case Some(j :: Nil) => 
-        numC += 1
-        j match {
-          case json.ANumJ(x) =>
-            if (x.length != t.length) return IBAD(nid, sid, "centroid x array size does not match time series size!")
-            else x
-          case _ => return IBAD(nid, sid, "non-numeric or improperly shaped cx")
-        }
-      case None => emptyD
-      case _ => return IBAD(nid, sid, "more than one entry for cx")
-    }
-    var cy: Array[Double] = ob.keyvals.get("cy") match {
-      case Some(j :: Nil) => 
-        numC += 1
-        j match {
-          case json.ANumJ(x) =>
-            if (x.length != t.length) return IBAD(nid, sid, "centroid x array size does not match time series size!")
-            else x
-          case _ => return IBAD(nid, sid, "non-numeric or improperly shaped cx")
-        }
-      case None => emptyD
-      case _ => return IBAD(nid, sid, "more than one entry for cx")
-    }
+      case Some(j) => j match {
+        case ja: Json.Arr.Dbl =>
+          if (ja.size != t.length) return IBAD(nid, sid, f"$key array size does not match time series size!")
+          numC += 1
+          ja.doubles
+        case _=> return IBAD(nid, sid, f"non-numeric or improperly shaped $key")
+      }
+    })
+    var cx = cx0
+    var cy = cy0
     if (numO == 1) return IBAD(nid, sid, "only one of ox, oy: include both or neither!")
     if (numC == 1) return IBAD(nid, sid, "only one of cx, cy: include both or neither!")
-    val x: Array[Array[Double]] = ob.keyvals.get("x") match {
-      case None => return IBAD(nid, sid, "no x!")
-      case Some(j :: Nil) => j match {
-        case json.NullJ =>
-          if (cx.length == 0) return IBAD(nid, sid, "no x!")
-          else if (ox.length == 0) Array.fill(cx.length)(zeroD)
-          else cx.map(x => Array(x))
-        case json.NumJ(xi) => if (t.length == 1) Array(Array(xi)) else return IBAD(nid, sid, "x size does not match time series size!")
-        case json.ANumJ(xi) => 
-          if (t.length == 1) Array(xi)
-          else if (t.length == xi.length) xi.map(x => Array(x))
-          else return IBAD(nid, sid, "x size does not match time series size!")
-        case json.AANumJ(xi) =>
-          if (xi.length == t.length) xi
-          else return IBAD(nid, sid, "x size does not match time series size!")
-        case _ => return IBAD(nid, sid, "non-numeric or improperly shaped x")
+    val List(x, y) = List(("x", cx, ox), ("y", cy, oy)).map{ case (key, c, ori) => o(key) match {
+        case Json.Null =>
+          if (c.length == 0) return IBAD(nid, sid, f"no $key!")
+          else if (ori.length == 0) Array.fill(c.length)(zeroD)
+          else c.map(x => Array(x))
+        case n: Json.Num =>
+          if (t.length != 1) return IBAD(nid, sid, f"$key size does not match time series size!")
+          Array(Array(n.double))
+        case ja: Json.Arr.Dbl => 
+          if (t.length == 1) Array(ja.doubles)
+          else if (t.length == ja.size) ja.doubles.map(x => Array(x))
+          else return IBAD(nid, sid, f"$key size does not match time series size!")
+        case jall: Json.Arr.All =>
+          if (jall.size != t.length) return IBAD(nid, sid, f"$key size does not match time series size!")
+          jall.values.map(_ match {
+            case Json.Null => emptyD
+            case n: Json.Num => Array(n.double)
+            case ja: Json.Arr.Dbl => ja.doubles
+            case _ => return IBAD(nid, sid, f"$key has non-numeric data elements!")
+          }) 
+        case _ => return IBAD(nid, sid, f"non-numeric or improperly shaped $key")
       }
-      case _ => return IBAD(nid, sid, "more than one entry for x!")
-    }
-    val y: Array[Array[Double]] = ob.keyvals.get("y") match {
-      case None => return IBAD(nid, sid, "no y!")
-      case Some(j :: Nil) => j match {
-        case json.NullJ => 
-          if (cy.length == 0) return IBAD(nid, sid, "no y!")
-          else if (oy.length == 0) Array.fill(cy.length)(zeroD)
-          else cy.map(y => Array(y))
-        case json.NumJ(yi) => if (t.length == 1) Array(Array(yi)) else return IBAD(nid, sid, "y size does not match time series size!")
-        case json.ANumJ(yi) => 
-          if (t.length == 1) Array(yi)
-          else if (t.length == yi.length) yi.map(y => Array(y))
-          else return IBAD(nid, sid, "y size does not match time series size!")
-        case json.AANumJ(yi) =>
-          if (yi.length == t.length) yi
-          else return IBAD(nid, sid, "y size does not match time series size!")
-        case _ => return IBAD(nid, sid, "non-numeric or improperly shaped y")
-      }
-      case _ => return IBAD(nid, sid, "more than one entry for y!")
     }
     var i = 0
     while (i < x.length) {
@@ -368,7 +299,7 @@ object Data extends json.Jsonic[Data] {
     }
     Right(
       (
-        new Data(nid, sid, t, Data.singly(x), Data.singly(y), if (kx.length > 0) kx else cx, if (ky.length > 0) ky else cy, Metadata.getCustom(ob))
+        new Data(nid, sid, t, Data.singly(x), Data.singly(y), if (kx.length > 0) kx else cx, if (ky.length > 0) ky else cy, o.filter((k,_) => k.startsWith("@")))
       ).setCO(numC > 0, numO > 0)
     )
   }
