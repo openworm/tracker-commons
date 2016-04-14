@@ -62,17 +62,14 @@ object DataSet extends FromJson[DataSet] {
     new DataSet(meta, unitmap, data.map(x => Right(x)), files, custom)
 
   def parse(j: Json): Either[JastError, DataSet] = {
-    implicit val parseUnitMap: FromJson[UnitMap] = UnitMap
     implicit val parseDatum: FromJson[Datum] = Datum
     implicit val parseData: FromJson[Data] = Data
-    implicit val parseMetadata: FromJson[Metadata] = Metadata
-    implicit val parseFileSet: FromJson[FileSet] = FileSet
 
     val o = j match { 
       case jo: Json.Obj => jo
       case _ => return Left(JastError("Not a JSON object so not a WCON data set"))
     }
-    val u = o("units").to[UnitMap] match {
+    val u = o("units").to(UnitMap) match {
       case Right(x) => x
       case Left(e) => return Left(JastError("Error parsing units in WCON data set", because = e))
     }
@@ -80,12 +77,12 @@ object DataSet extends FromJson[DataSet] {
       case Right(x) => x
       case Left(e) => return Left(JastError("Error parsing data in WCON data set", because = e))
     }
-    val f = o.get("files").map(_.to[FileSet]) match {
+    val f = o.get("files").map(_.to(FileSet)) match {
       case None => FileSet.empty
       case Some(Right(x)) => x
       case Some(Left(e)) => return Left(JastError("Error parsing file information in WCON data set", because = e))
     }
-    val m = o.get("metadata").map(_.to[Metadata]) match {
+    val m = o.get("metadata").map(_.to(Metadata)) match {
       case None => Metadata.empty
       case Some(Right(x)) => x
       case Some(Left(e)) => return Left(JastError("Error parsing metadata in WCON data set", because = e))
