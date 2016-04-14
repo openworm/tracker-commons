@@ -491,6 +491,23 @@ class TestWCONParser(unittest.TestCase):
         w4 = w2 + w3
         self.assertEqual(w4.data.loc[1.3, (1, 'x', 0)], 4000)
 
+    def test_merge_commutativity(self):
+        worm1 = WCONWorms.load(
+            StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
+                     '"data":[{"id":3, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
+        worm2 = WCONWorms.load(
+            StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, '
+                     '"data":[{"id":4, "t":1.5, "x":[5,2], "y":[1.4,6]}]}'))
+
+        merged = worm1 + worm2
+        merged.save_to_file('pythonMerged.wcon', pretty_print=True)
+
+        merged2 = worm2 + worm1
+        merged2.save_to_file('pythonMerged2.wcon', pretty_print=True)
+
+        self.assertNotEqual(worm1, worm2)
+        self.assertEqual(merged, merged2)
+
     def test_data2(self):
         WCON_string = \
             """

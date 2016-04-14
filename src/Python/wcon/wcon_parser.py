@@ -303,8 +303,15 @@ class WCONWorms():
             d2 = w2._data
 
         for worm_id in w1.worm_ids:
-            df1 = d1[worm_id]
-            df2 = d2[worm_id]
+            try:
+                df1 = d1[worm_id]
+            except KeyError:
+                df1 = None
+            try:
+                df2 = d2[worm_id]
+            except KeyError:
+                df2 = None
+
             if (df1 is None) ^ (df2 is None):
                 # If one is None but the other is not (XOR), data is not equal
                 return False
@@ -451,7 +458,14 @@ class WCONWorms():
         # Sort w1c's list of worms
         w1c._data = sort_odict(w1c._data)
 
-        return w1c
+        # Create a fresh WCONWorms object to reset all the lazily-evaluated
+        # properties that may change, such as num_worms, in the merged worm
+        merged_worm = WCONWorms()
+        merged_worm._data = w1c._data
+        merged_worm.metadata = w2c.metadata
+        merged_worm.units = w1c.units
+
+        return merged_worm
 
     """
     ================================================================
