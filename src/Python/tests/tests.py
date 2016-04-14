@@ -151,13 +151,6 @@ class TestWCONParser(unittest.TestCase):
             # Now that the schema has been loaded, we can try again
             self._validate_from_schema(wcon_string)
 
-    def test_schemas_same(self):
-        # Schema had to be saved in two places, since it's common to the repo
-        # but also needs to be found by the PyPi packager for pip.
-        # Here we confirm that the files are identical.
-        self.assertTrue(filecmp.cmp('../wcon/wcon_schema.json',
-                                    '../../../wcon_schema.json'))
-
     def test_schema(self):
         basic_wcon = '{"units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'
 
