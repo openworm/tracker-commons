@@ -474,19 +474,39 @@ class WCONWorms():
     """
 
     @classmethod
-    def validate_filename(cls, JSON_path):
+    def validate_filename(cls, JSON_path, is_zipped):
         """
         Perform simple checks on the file path
+
+        JSON_path: str
+            The path to the file to be evaluated
+
+        is_zipped: bool
+            Whether or not the path is for a zip archive
 
         """
         assert(isinstance(JSON_path, six.string_types))
         assert(len(JSON_path) > 0)
 
+        if is_zipped:
+            if JSON_path[-4:].upper() != '.ZIP':
+                raise Exception("A zip archive like %s must have an "
+                                "extension ending in '.zip'" % JSON_path)
+            else:
+                # delete the '.zip' part so the rest can be validated
+                JSON_path = JSON_path[:-4]
+
+        warning_message = (' is either less than 5 characters,'
+                           'consists of only the extension ".WCON", or '
+                           'does not end in ".WCON", the recommended'
+                           'file extension.')
+
         if len(JSON_path) <= 5 or JSON_path[-5:].upper() != '.WCON':
-            warnings.warn('The file name is either less than 5 characters,'
-                          'consists of only the extension ".WCON", or '
-                          'does not end in ".WCON", the recommended'
-                          'file extension.')
+            if is_zipped:
+                warnings.warn('Zip file ends properly in .zip, but the '
+                              'prefix' + warning_message)
+            else:
+                warnings.warn('The file name ' + warning_message)
 
     def save_to_file(self, JSON_path, pretty_print=False,
                      compress_file=False, num_chunks=1):
@@ -517,20 +537,20 @@ class WCONWorms():
             raise NotImplementedError("Saving a worm to more than one chunk "
                                       "has not yet been implemented")
 
-        self.validate_filename(JSON_path)
+        self.validate_filename(JSON_path, compress_file)
 
         with open(JSON_path, 'w') as outfile:
             json.dump(self.as_ordered_dict, outfile,
                       indent=4 if pretty_print else None)
 
         if compress_file:
-            # Zip the file and overwrite the just-saved WCON file
-            archive_name = JSON_path + '.zip'  # Only temporary
+            # Zip the file and delete the just-saved WCON file
+            # the saved file should end in .wcon.zip
+            archive_name = JSON_path + '.zip'
             zf = zipfile.ZipFile(archive_name, 'w', zipfile.ZIP_DEFLATED)
             zf.write(JSON_path)
             zf.close()
             os.remove(JSON_path)
-            os.rename(archive_name, JSON_path)
 
     @classmethod
     def load_from_file(cls, JSON_path,
@@ -564,10 +584,12 @@ class WCONWorms():
         """
         print("Loading file: " + JSON_path)
 
-        cls.validate_filename(JSON_path)
+        is_zipped = zipfile.is_zipfile(JSON_path)
+
+        cls.validate_filename(JSON_path, is_zipped)
 
         # Check if the specified file is compressed
-        if zipfile.is_zipfile(JSON_path):
+        if is_zipped:
             zf = zipfile.ZipFile(JSON_path, 'r')
 
             zf_namelist = zf.namelist()
