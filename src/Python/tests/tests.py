@@ -13,10 +13,22 @@ import unittest
 import filecmp
 import glob
 import collections
+import shutil
 
 sys.path.append('..')
 from wcon import WCONWorms, MeasurementUnit
 from wcon.measurement_unit import MeasurementUnitAtom
+
+
+def setUpModule():
+    # If the wcon module is installed via pip, wcon_schema.json is included
+    # in the proper place.  In the git repo it is not, however, so to test
+    # we must copy it over temporarily, then remove it once tests are done.
+    shutil.copyfile('../../../wcon_schema.json', '../wcon/wcon_schema.json')
+
+
+def tearDownModule():
+    os.remove('../wcon/wcon_schema.json')
 
 
 def flatten(list_of_lists):
