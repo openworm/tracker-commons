@@ -493,10 +493,10 @@ class TestWCONParser(unittest.TestCase):
                      '"data":[{"id":4, "t":1.5, "x":[5,2], "y":[1.4,6]}]}'))
 
         merged = worm1 + worm2
-        merged.save_to_file('pythonMerged.wcon', pretty_print=True)
+        # merged.save_to_file('pythonMerged.wcon', pretty_print=True)
 
         merged2 = worm2 + worm1
-        merged2.save_to_file('pythonMerged2.wcon', pretty_print=True)
+        # merged2.save_to_file('pythonMerged2.wcon', pretty_print=True)
 
         self.assertNotEqual(worm1, worm2)
         self.assertEqual(merged, merged2)
