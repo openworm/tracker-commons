@@ -544,13 +544,13 @@ class WCONWorms():
                       indent=4 if pretty_print else None)
 
         if compress_file:
-            # Zip the file and delete the just-saved WCON file
-            # the saved file should end in .wcon.zip
-            archive_name = JSON_path + '.zip'
-            zf = zipfile.ZipFile(archive_name, 'w', zipfile.ZIP_DEFLATED)
+            # Zip the file to a TEMP file, then rename to the original,
+            # overwriting it with the zipped archive.
+            zf = zipfile.ZipFile(JSON_path+'.TEMP',
+                                 'w', zipfile.ZIP_DEFLATED)
             zf.write(JSON_path)
             zf.close()
-            os.remove(JSON_path)
+            os.rename(JSON_path+'.TEMP', JSON_path)
 
     @classmethod
     def load_from_file(cls, JSON_path,
