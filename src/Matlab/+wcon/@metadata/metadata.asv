@@ -1,0 +1,86 @@
+classdef metadata < dynamicprops
+    %
+    %   Class:
+    %   wcon.metadata
+    %
+    %   https://github.com/openworm/tracker-commons/blob/master/WCON_format.md#metadata-fields-in-detail
+    
+    %All entries in this object are optional
+    
+    properties
+        lab = wcon.NULL;
+        who = wcon.NULL;
+        timestamp
+        temperature
+        humidity
+        arena
+        food
+        media
+        sex
+        stage
+        age
+        strain
+        protocol
+        software
+    end
+    
+    methods
+    end
+    
+    methods (Static)
+        function obj = fromFile(m)
+            obj = wcon.metadata;
+            attribute_names = m.attribute_names;
+            n_names = length(attribute_names);
+            for iName = 1:n_names
+                switch attribute_names{iName}
+                    case 'lab'
+                        obj.lab = wcon.meta.lab.fromFile(m.getToken('lab'));
+                    case 'who'
+                        temp = m.getToken('who');
+                        keyboard
+                    case 'timestamp'
+                        temp = m.getToken('timestamp');
+                        keyboard
+                    case 'temperature'
+                        temp = m.getToken('timestamp');
+                        keyboard
+                    case 'humidity'
+                                                temp = m.getToken('timestamp');
+                        keyboard
+                    case 'arena'
+                                                temp = m.getToken('timestamp');
+                        keyboard
+                    case 'food'
+                                                temp = m.getToken('timestamp');
+                        keyboard
+                    case 'media'
+                                                temp = m.getToken('timestamp');
+                        keyboard
+                    case 'sex'
+                                                temp = m.getToken('timestamp');
+                        keyboard
+                    case 'stage'
+                                                temp = m.getToken('timestamp');
+                        keyboard
+                    case 'age'
+                                                temp = m.getToken('timestamp');
+                        keyboard
+                    case 'strain'
+                                                temp = m.getToken('timestamp');
+                        keyboard
+                    case 'protocol'
+                                                temp = m.getToken('timestamp');
+                        keyboard
+                    case 'software'
+                    otherwise
+                        %TODO: Check and handle custom ...
+                        cur_name = attribute_names{iName};
+                        
+                end
+           keyboard 
+        end
+    end
+    
+end
+
