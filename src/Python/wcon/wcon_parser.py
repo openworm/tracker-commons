@@ -498,7 +498,7 @@ class WCONWorms():
 
         warning_message = (' is either less than 5 characters,'
                            'consists of only the extension ".WCON", or '
-                           'does not end in ".WCON", the recommended'
+                           'does not end in ".WCON", the recommended '
                            'file extension.')
 
         if len(JSON_path) <= 5 or JSON_path[-5:].upper() != '.WCON':
@@ -546,11 +546,11 @@ class WCONWorms():
         if compress_file:
             # Zip the file to a TEMP file, then rename to the original,
             # overwriting it with the zipped archive.
-            zf = zipfile.ZipFile(JSON_path+'.TEMP',
+            zf = zipfile.ZipFile(JSON_path + '.TEMP',
                                  'w', zipfile.ZIP_DEFLATED)
             zf.write(JSON_path)
             zf.close()
-            os.rename(JSON_path+'.TEMP', JSON_path)
+            os.rename(JSON_path + '.TEMP', JSON_path)
 
     @classmethod
     def load_from_file(cls, JSON_path,
