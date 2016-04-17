@@ -303,8 +303,15 @@ class WCONWorms():
             d2 = w2._data
 
         for worm_id in w1.worm_ids:
-            df1 = d1[worm_id]
-            df2 = d2[worm_id]
+            try:
+                df1 = d1[worm_id]
+            except KeyError:
+                df1 = None
+            try:
+                df2 = d2[worm_id]
+            except KeyError:
+                df2 = None
+
             if (df1 is None) ^ (df2 is None):
                 # If one is None but the other is not (XOR), data is not equal
                 return False
@@ -451,7 +458,14 @@ class WCONWorms():
         # Sort w1c's list of worms
         w1c._data = sort_odict(w1c._data)
 
-        return w1c
+        # Create a fresh WCONWorms object to reset all the lazily-evaluated
+        # properties that may change, such as num_worms, in the merged worm
+        merged_worm = WCONWorms()
+        merged_worm._data = w1c._data
+        merged_worm.metadata = w2c.metadata
+        merged_worm.units = w1c.units
+
+        return merged_worm
 
     """
     ================================================================
@@ -460,19 +474,39 @@ class WCONWorms():
     """
 
     @classmethod
-    def validate_filename(cls, JSON_path):
+    def validate_filename(cls, JSON_path, is_zipped):
         """
         Perform simple checks on the file path
+
+        JSON_path: str
+            The path to the file to be evaluated
+
+        is_zipped: bool
+            Whether or not the path is for a zip archive
 
         """
         assert(isinstance(JSON_path, six.string_types))
         assert(len(JSON_path) > 0)
 
+        if is_zipped:
+            if JSON_path[-4:].upper() != '.ZIP':
+                raise Exception("A zip archive like %s must have an "
+                                "extension ending in '.zip'" % JSON_path)
+            else:
+                # delete the '.zip' part so the rest can be validated
+                JSON_path = JSON_path[:-4]
+
+        warning_message = (' is either less than 5 characters,'
+                           'consists of only the extension ".WCON", or '
+                           'does not end in ".WCON", the recommended '
+                           'file extension.')
+
         if len(JSON_path) <= 5 or JSON_path[-5:].upper() != '.WCON':
-            warnings.warn('The file name is either less than 5 characters,'
-                          'consists of only the extension ".WCON", or '
-                          'does not end in ".WCON", the recommended'
-                          'file extension.')
+            if is_zipped:
+                warnings.warn('Zip file ends properly in .zip, but the '
+                              'prefix' + warning_message)
+            else:
+                warnings.warn('The file name ' + warning_message)
 
     def save_to_file(self, JSON_path, pretty_print=False,
                      compress_file=False, num_chunks=1):
@@ -503,20 +537,20 @@ class WCONWorms():
             raise NotImplementedError("Saving a worm to more than one chunk "
                                       "has not yet been implemented")
 
-        self.validate_filename(JSON_path)
+        self.validate_filename(JSON_path, compress_file)
 
         with open(JSON_path, 'w') as outfile:
             json.dump(self.as_ordered_dict, outfile,
                       indent=4 if pretty_print else None)
 
         if compress_file:
-            # Zip the file and overwrite the just-saved WCON file
-            archive_name = JSON_path + '.zip'  # Only temporary
-            zf = zipfile.ZipFile(archive_name, 'w', zipfile.ZIP_DEFLATED)
+            # Zip the file to a TEMP file, then rename to the original,
+            # overwriting it with the zipped archive.
+            zf = zipfile.ZipFile(JSON_path + '.TEMP',
+                                 'w', zipfile.ZIP_DEFLATED)
             zf.write(JSON_path)
             zf.close()
-            os.remove(JSON_path)
-            os.rename(archive_name, JSON_path)
+            os.rename(JSON_path + '.TEMP', JSON_path)
 
     @classmethod
     def load_from_file(cls, JSON_path,
@@ -550,10 +584,12 @@ class WCONWorms():
         """
         print("Loading file: " + JSON_path)
 
-        cls.validate_filename(JSON_path)
+        is_zipped = zipfile.is_zipfile(JSON_path)
+
+        cls.validate_filename(JSON_path, is_zipped)
 
         # Check if the specified file is compressed
-        if zipfile.is_zipfile(JSON_path):
+        if is_zipped:
             zf = zipfile.ZipFile(JSON_path, 'r')
 
             zf_namelist = zf.namelist()

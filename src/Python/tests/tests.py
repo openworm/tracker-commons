@@ -13,10 +13,22 @@ import unittest
 import filecmp
 import glob
 import collections
+import shutil
 
 sys.path.append('..')
 from wcon import WCONWorms, MeasurementUnit
 from wcon.measurement_unit import MeasurementUnitAtom
+
+
+def setUpModule():
+    # If the wcon module is installed via pip, wcon_schema.json is included
+    # in the proper place.  In the git repo it is not, however, so to test
+    # we must copy it over temporarily, then remove it once tests are done.
+    shutil.copyfile('../../../wcon_schema.json', '../wcon/wcon_schema.json')
+
+
+def tearDownModule():
+    os.remove('../wcon/wcon_schema.json')
 
 
 def flatten(list_of_lists):
@@ -150,13 +162,6 @@ class TestWCONParser(unittest.TestCase):
 
             # Now that the schema has been loaded, we can try again
             self._validate_from_schema(wcon_string)
-
-    def test_schemas_same(self):
-        # Schema had to be saved in two places, since it's common to the repo
-        # but also needs to be found by the PyPi packager for pip.
-        # Here we confirm that the files are identical.
-        self.assertTrue(filecmp.cmp('../wcon/wcon_schema.json',
-                                    '../../../wcon_schema.json'))
 
     def test_schema(self):
         basic_wcon = '{"units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'
@@ -490,6 +495,23 @@ class TestWCONParser(unittest.TestCase):
         w3._data[1].drop(1.3, axis=0, inplace=True)
         w4 = w2 + w3
         self.assertEqual(w4.data.loc[1.3, (1, 'x', 0)], 4000)
+
+    def test_merge_commutativity(self):
+        worm1 = WCONWorms.load(
+            StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
+                     '"data":[{"id":3, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
+        worm2 = WCONWorms.load(
+            StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, '
+                     '"data":[{"id":4, "t":1.5, "x":[5,2], "y":[1.4,6]}]}'))
+
+        merged = worm1 + worm2
+        # merged.save_to_file('pythonMerged.wcon', pretty_print=True)
+
+        merged2 = worm2 + worm1
+        # merged2.save_to_file('pythonMerged2.wcon', pretty_print=True)
+
+        self.assertNotEqual(worm1, worm2)
+        self.assertEqual(merged, merged2)
 
     def test_data2(self):
         WCON_string = \

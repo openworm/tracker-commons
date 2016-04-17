@@ -9,26 +9,36 @@ pip install wcon
 Here are the complete installation instructions to get from a freshly provisioned Ubuntu Amazon Web Services (AWS) Machine Instance (AMI) to a machine with WCON installed:
 
 ```
-# PYTHON 2 STEPS FROM CLEAN UBUNTU AMI:
-sudo apt-get update
-sudo apt-get -y install python-pip
+# PYTHON 3 STEPS FROM CLEAN UBUNTU AMI
 
-# cython will fail if you don't install this:
-# (see http://stackoverflow.com/questions/11094718/)
-sudo apt-get -y install python-dev
+# UPDATE SYSTEM
+sudo apt-get -y update
+sudo apt-get -y upgrade
+sudo apt-get -y dist-upgrade
+sudo reboot
 
-# Because 0.22 the latest version is no good because of kivy/buildozer#150
-# https://github.com/kivy/buildozer/issues/150
-sudo -H pip install cython==0.21
-sudo -H pip install numpy
+# INSTALL PYTHON AND LIBRARIES NEEDED BY WCON
+PYTHON_VERSION=3.5
+MINICONDA_DIR=~/miniconda3
+wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+chmod +x miniconda.sh
+./miniconda.sh -b
+export PATH=$MINICONDA_DIR/bin:$PATH
+conda install --yes python=$PYTHON_VERSION numpy scipy pandas jsonschema psutil
 
-# Install scipy sudo -H pip install scipy doesn't work ("no lapack/blas resources found"), so instead, from 
-# http://www.scipy.org/install.html:
-sudo apt-get install python-numpy python-scipy python-matplotlib ipython ipython-notebook python-pandas python-sympy python-nose
-# The previous command also installed pandas, matplotlib, IPython, and nose!  Nice!
+# INSTALL wcon.  Two options:
 
-# Install wcon (for Python 2):
-sudo pip install wcon
+# 1. GET WCON FROM PYPI
+pip install wcon
+
+# 2. ALTERNATIVELY: GET WCON FROM SOURCE
+sudo apt-get install -y git
+cd ~
+mkdir github
+cd github
+git clone https://github.com/openworm/tracker-commons.git
+cd tracker-commons/src/Python/tests
+python tests.py
 ```
 
-For Python 3, these steps will differ slightly (e.g. use `pip3` instead of `pip`.)
+For Python 2, these steps will differ slightly (e.g. change to `PYTHON_VERSION=2.7` and `MINICONDA_DIR=~/miniconda`)

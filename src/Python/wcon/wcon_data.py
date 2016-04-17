@@ -915,15 +915,16 @@ def data_as_array(df):
     return arr
 
 
-def get_sorted_ordered_dict(d):
+def get_sorted_ordered_dict(v):
     """
-    Recursively sort all levels of a potentially nested dict.
+    Recursively sort all levels of a potentially nested dict,
+    list, or value.
 
     From http://stackoverflow.com/questions/22721579/
 
     Parameters
     -----------
-    d: a potentially nested dict
+    v: a potentially nested dict, list, or value
 
     Returns
     -----------
@@ -931,13 +932,27 @@ def get_sorted_ordered_dict(d):
         All keys at each nesting level are sorted alphabetically
 
     """
-    od = OrderedDict()
-    for k, v in sorted(d.items()):
-        if isinstance(v, dict):
-            od[k] = get_sorted_ordered_dict(v)
-        else:
-            od[k] = v
-    return od
+    if isinstance(v, dict):
+        # If it's a dict, order it
+        ov = OrderedDict()
+        for k, k_v in sorted(v.items()):
+            ov[k] = get_sorted_ordered_dict(k_v)
+
+    elif isinstance(v, list):
+        # If it's an array, retain original order, but
+        # also recursively order each element
+        # in case later nestings contain dicts
+
+        ov = list(v)  # Copy
+        for i in range(len(ov)):
+            ov[i] = get_sorted_ordered_dict(ov[i])
+
+    else:
+        # Otherwise it's a "leaf" and no further ordering is
+        # required
+        ov = v
+
+    return ov
 
 
 def sort_odict(odict, sort_as_strings=True):

@@ -397,3 +397,14 @@ In this example, we imagine a directory containing files labelled `filename_0.wc
     ]
 }
 ```
+
+# Zipped files
+
+Compressing JSON files typically space savings of an order of magnitude or more.  For this reason it is recommended that implementations allow files to be loaded and saved as [Zip archives](https://en.wikipedia.org/wiki/Zip_(file_format)).  If so, files must end in `".zip"`.  It is further recommended (but not required) that they end in `".wcon.zip"`.
+
+A Zip archive can contain one or more WCON files:
+
+- If an archive is loaded containing zero files, an error is raised.
+- If an archive contains exactly one file, this file is loaded.
+- If an archive contains more than one file, one file (not necessarily the first) is selected for loading.  If this file contains links via the "files" object in the specification (see above), then all linked files in the archive will be loaded.  For this reason chunks may be archived together into one `.wcon.zip` file for convenience.
+
