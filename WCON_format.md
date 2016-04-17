@@ -406,4 +406,5 @@ A Zip archive can contain one or more WCON files:
 
 - If an archive is loaded containing zero files, an error is raised.
 - If an archive contains exactly one file, this file is loaded.
-- If an archive contains more than one file, one file (not necessarily the first) is selected for loading.  If this file contains links via the "files" object in the specification (see above), then the other files in the archive may also end up loaded as well.  For this reason chunks may be archived together into one `.wcon.zip` file for convenience.
+- If an archive contains more than one file, one file (not necessarily the first) is selected for loading.  If this file contains links via the "files" object in the specification (see above), then all linked files in the archive will be loaded.  For this reason chunks may be archived together into one `.wcon.zip` file for convenience.
+
