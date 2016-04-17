@@ -35,7 +35,9 @@ classdef WCONWorms
     end
 
     function ret = is_equal(obj, obj2)
-      if (isequal(obj.wcondata,obj2.wcondata))
+      canon_obj = to_canon(obj);
+      canon_obj2 = to_canon(obj2);
+      if (isequal(canon_obj.wcondata,canon_obj2.wcondata))
 	ret = 1
       else
         ret = 0

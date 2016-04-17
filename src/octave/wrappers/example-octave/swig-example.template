@@ -1,0 +1,7 @@
+%module SWIG_MOD_NAME
+%{
+#include "example.h"
+%}
+int gcd(int x, int y);
+void incGlobal(int x);
+extern int Foo;

@@ -1,0 +1,47 @@
+{
+    "metadata":{
+        "lab":{"location":"CRB, room 5020", "name":"Behavioural Genomics" },
+        "who":"Firstname Lastname",
+        "timestamp":"2012-04-23T18:25:43.511Z",
+        "temperature":22,
+        "humidity":40.2,
+        "dish":{ "type":"petri", "size":35, "units":"mm" },
+        "food":"none",
+        "media":"agarose",
+        "sex":"hermaphrodite",
+        "stage":"adult",
+        "age":18.511,
+        "strain":"CB4856",
+        "image_orientation":"imaged onto agar",
+        "protocol":"text description of protocol",
+        "software":{
+            "tracker":{ "name":"Software Name", "version":"1.3.0"},
+            "featureID":"@OMG"
+        },
+        "settings":"Any valid JSON entry with hardware and software configuration can go here"
+    },
+    "units":{
+        "t":"s", 
+        "x":"mm", 
+        "y":"m",
+        "ox":"mm",
+	"oy":"mm",
+        "speed":"mm/s",
+        "curvature":"1/mm",
+        "width":"mm",
+        "humidity":"%",
+        "temperature":"C",
+        "age":"h"
+    },
+    "data":[
+        { "id":4, "t":1.4, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08] },
+        { "id":1, "t":[1.3,1.5], "x":[[1,1,1],[null, 1216.14, 1217.12]], 
+                                 "y":[[2,2,2],[234.89, 265.23, 235.08]], "ox":[5000,5001], "oy":0, "head":"R" },
+        { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12], "y":[23.3, 22.23, 21135.08] },
+        { "id":1, "t":1.4, "x":[4000.00, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08]},
+        { "id":1, "t":1.3, "x":[1, 1, 1], "y":[2, 2, 2], "head":"R", "@OMG":{"speed":[55,55,55]}},
+        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12], "y":[234.89, 265.23, 235.08], "head":"L", "ventral":"CW" },
+        { "id":1, "t":2.5, "x":[1215.11, 1216.14, 1217.12, 1234.3, 3423.2, 3423.1], "y":[234.89, 265.23, 235.08,342.1,-323.2,23] }
+    ],
+    "@OMG": 5
+}
