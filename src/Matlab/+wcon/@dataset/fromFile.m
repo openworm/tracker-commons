@@ -46,7 +46,9 @@ obj.data = wcon.data.fromFile(root.getToken('data'),options);
 
 obj.files = {file_path};
 
-if any(custom_prop_names)
+%@fields => should be parsed
+%non-@fields => general parsing ...?
+if ~isempty(custom_prop_names)
    error('Custom code not yet supported') 
 end
 
