@@ -1,5 +1,7 @@
 #include "swigWrapper.h"
 
+#include <stdlib.h>
+
 void initWrapper() {
   printf("In initWrapper\n");
 }
