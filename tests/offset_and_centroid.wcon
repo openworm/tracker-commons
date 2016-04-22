@@ -1,0 +1,17 @@
+{
+    "units":{"t":"s","x":"mm","y":"mm","cx":"mm","cy":"mm","ox":"mm","oy":"mm"},
+    "data":[
+        {
+            "id":1, "t":0, "cx":5, "cy":4, "ox":2, "oy":4,
+            "x":[-0.5, 0, 0.5], "y":[0.3, 0, -0.4]
+	},
+        {
+            "id":2, "t":[0, 0.1],
+            "cx":[3, 3.1], "cy":[3, 2.9], "ox":[4, 4], "oy":[3, 3],
+            "x":[[-0.5, 0.5], [-0.5, 0.4]],
+            "y":[[0.4, -0.3], [0.3, -0.4]]
+        }
+    ],
+    "comment":"All four .wcon test files starting with 'offset_' should represent the same spine points.  Additionally, if there are centroids they should match.",
+    "note":"Neither 'comment' nor 'note' are understood by WCON.  They, and other unspecified tags, should be ignored by readers."
+}
