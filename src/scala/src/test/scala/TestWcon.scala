@@ -227,8 +227,8 @@ class TestWcon {
   def same(a: UnitMap, b: UnitMap): String = same(a.json, b.json, "unitmap")
 
   def same(a: Datum, b: Datum, where: String): String = same(
-    Data(a.nid, a.sid, Array(a.t), Array(a.x), Array(a.y), Array(a.cx), Array(a.cy), a.custom),
-    Data(b.nid, b.sid, Array(b.t), Array(b.x), Array(b.y), Array(b.cx), Array(b.cy), b.custom),
+    Data(a.nid, a.sid, Array(a.t), Array(a.x), Array(a.y), Array(a.cx), Array(a.cy), Array(a.ox), Array(a.oy), a.custom),
+    Data(b.nid, b.sid, Array(b.t), Array(b.x), Array(b.y), Array(b.cx), Array(b.cy), Array(a.ox), Array(a.oy), b.custom),
     where
   )
 
@@ -236,17 +236,17 @@ class TestWcon {
     same(a.idJSON, b.idJSON, where + ".id") +
     same(Json.Arr.Dbl(a.ts), Json.Arr.Dbl(b.ts), where + ".ts") +
     same(
-      Json.Arr.All(Data.doubly(a.xs).map(x => Json.Arr.Dbl(x))), 
-      Json.Arr.All(Data.doubly(b.xs).map(x => Json.Arr.Dbl(x))),
+      Json.Arr.All((0 until a.xs.length).map(i => Json.Arr.Dbl(a.gxs(i))).toArray), 
+      Json.Arr.All((0 until b.xs.length).map(i => Json.Arr.Dbl(b.gxs(i))).toArray), 
       where + ".xs"
     ) +
     same(
-      Json.Arr.All(Data.doubly(a.ys).map(x => Json.Arr.Dbl(x))), 
-      Json.Arr.All(Data.doubly(b.ys).map(x => Json.Arr.Dbl(x))),
+      Json.Arr.All((0 until a.ys.length).map(i => Json.Arr.Dbl(a.gys(i))).toArray), 
+      Json.Arr.All((0 until b.ys.length).map(i => Json.Arr.Dbl(b.gys(i))).toArray), 
       where + ".ys"
     ) +
     same(Json.Arr.Dbl(a.cxs), Json.Arr.Dbl(b.cxs), where + ".cxs") +
-    same(Json.Arr.Dbl(a.cys), Json.Arr.Dbl(b.cys), where + ".cys") +
+    same(Json.Arr.Dbl(a.cys), Json.Arr.Dbl(b.cys), where + ".cys") +   
     same(a.custom, b.custom, where + ".custom")
 
   def same(a: Array[Either[Datum, Data]], b: Array[Either[Datum, Data]]): String = {
@@ -256,8 +256,32 @@ class TestWcon {
         val w = " data["+i+"]"
         val s = (a(i), b(i)) match {
           case (Left(am), Left(bm)) => same(am, bm, w)
-          case (Left(am), Right(ba)) if ba.ts.length == 1 => same(am, Datum(ba.nid, ba.sid, ba.ts(0), ba.xs(0), ba.ys(0), ba.cxs(0), ba.cys(0), ba.custom), w)
-          case (Right(aa), Left(bm)) if aa.ts.length == 1 => same(Datum(aa.nid, aa.sid, aa.ts(0), aa.xs(0), aa.ys(0), aa.cxs(0), aa.cys(0), aa.custom), bm, w)
+          case (Left(am), Right(ba)) if ba.ts.length == 1 =>
+            same(
+              am,
+              Datum(
+                ba.nid, ba.sid, ba.ts(0), ba.xs(0), ba.ys(0),
+                if (ba.cxs.length > 0) ba.cxs(0) else Double.NaN,
+                if (ba.cys.length > 0) ba.cys(0) else Double.NaN,
+                if (ba.oxs.length > 0) ba.oxs(0) else Double.NaN,
+                if (ba.oys.length > 0) ba.oys(0) else Double.NaN,
+                ba.custom
+              ),
+              w
+            )
+          case (Right(aa), Left(bm)) if aa.ts.length == 1 => 
+            same(
+              Datum(
+                aa.nid, aa.sid, aa.ts(0), aa.xs(0), aa.ys(0),
+                if (aa.cxs.length > 0) aa.cxs(0) else Double.NaN,
+                if (aa.cys.length > 0) aa.cys(0) else Double.NaN,
+                if (aa.oxs.length > 0) aa.oxs(0) else Double.NaN,
+                if (aa.oys.length > 0) aa.oys(0) else Double.NaN,
+                aa.custom
+              ),
+              bm,
+              w
+            )
           case (Right(aa), Right(ba)) => same(aa, ba, w)
         }
         if (s.nonEmpty) return s
@@ -430,7 +454,7 @@ class TestWcon {
   }
 
   def genDatum(r: R): Datum = genData(r) match {
-    case Data(nid, sid, ts, xs, ys, cxs, cys, custom) => Datum(nid, sid, ts(0), xs(0), ys(0), cxs(0), cys(0), custom)
+    case Data(nid, sid, ts, xs, ys, cxs, cys, oxs, oys, custom) => Datum(nid, sid, ts(0), xs(0), ys(0), cxs.headOption.getOrElse(Double.NaN), cys.headOption.getOrElse(Double.NaN), oxs.headOption.getOrElse(Double.NaN), cys.headOption.getOrElse(Double.NaN), custom)
   }
 
   def genData(r: R): Data = {
@@ -440,7 +464,17 @@ class TestWcon {
       case _ => (Double.NaN, "worm-"+r.nextInt(1000))
     }
     val ts = Array.fill(r.nextInt(10)+1)(0.1 + 0.9*r.nextDouble) match { case x => var i = 1; while (i < x.length) { x(i) = x(i) + x(i-1); i += 1 }; x }
-    val cxs, cys = Array.fill(ts.length)(r.nextDouble - 0.5) match { case x => var i = 1; while (i < x.length) { x(i) = x(i) + x(i-1); i += 1 }; x }
+    val (cxs, cys) = 
+      if (r.nextInt(5) == 0) (Data.emptyD, Data.emptyD)
+      else {
+        val a, b = Array.fill(ts.length)(r.nextDouble - 0.5) match { case x => var i = 1; while (i < x.length) { x(i) = x(i) + x(i-1); i += 1 }; x }
+        (a, b)
+      }
+    val (oxs, oys) = r.nextInt(5) match {
+      case 0 => (Data.emptyD, Data.emptyD)
+      case 1 => val a, b = Array(100*(r.nextDouble - 0.5)); (a, b)
+      case _ => val a, b = Array.fill(ts.length)(100*(r.nextDouble - 0.5)); (a, b)
+    }
     val xsb, ysb = Array.newBuilder[Array[Float]]
     (0 until ts.length).foreach{ _ =>
       val n = r.nextInt(11)+1
@@ -448,7 +482,7 @@ class TestWcon {
       xsb += x
       ysb += y
     }
-    Data(nid, sid, ts, xsb.result, ysb.result, cxs, cys, genCustom(r))
+    Data(nid, sid, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, genCustom(r))
   }
 
   def genDataA(r: R): Array[Either[Datum, Data]] = {

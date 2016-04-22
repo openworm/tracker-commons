@@ -21,7 +21,7 @@ object Laboratory extends FromJson[Laboratory] {
     val count = o.countKeys(someKeyNames)
     count.foreach{ case (key, n) => if (n > 1) return BAD("multiple entries for "+key) }
     if (count.isEmpty) return BAD("None of "+listKeyNames.mkString(", ") + " found")
-    val List(pi, name, location) = listKeyNames.map(key => o getOrNull key match {
+    val List(pi, name, location) = listKeyNames.map(key => o get_or_java_null key match {
       case null => ""
       case Json.Str(text) => text
       case _ => return BAD(key + " is not text") 
@@ -93,12 +93,12 @@ object Software extends FromJson[Software] {
     val count = o.countKeys(someKeyNames)
     count.foreach{ case (key, n) => if (n > 1) return BAD("multiple entries for "+key) }
     if (count.size == 0) BAD("no name, version, or features")
-    val List(name, version) = shortListKeyNames.map(key => o getOrNull key match {
+    val List(name, version) = shortListKeyNames.map(key => o get_or_java_null key match {
       case null => ""
       case s: Json.Str => s.text
       case _ => return BAD(key + " is not text")
     })
-    val features = o getOrNull "featureID" match {
+    val features = o get_or_java_null "featureID" match {
       case null => Set.empty[String]
       case ja: Json.Arr.All => 
         val xs = ja.values.map{ case s: Json.Str => s.text; case x => return BAD("featureID contains non-string value "+x) }
@@ -175,7 +175,7 @@ object Metadata extends FromJson[Metadata] {
     val count = o.countKeys(someSingles)
     count.foreach{ case (key, n) => if (n > 1) return BAD("duplicate entries in metadata for " + key) }
     val vcount = o.countKeys(someVectors)
-    val List(food, media, sex, stage, strain) = listKeyStrings.map{ key => o getOrNull key match {
+    val List(food, media, sex, stage, strain) = listKeyStrings.map{ key => o get_or_java_null key match {
       case null => None
       case s: Json.Str => Some(s.text)
       case _ => return BAD("non-string entry in metadata for " + key)
