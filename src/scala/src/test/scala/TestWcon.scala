@@ -1,6 +1,7 @@
 package org.openworm.trackercommons.test
 
 import org.openworm.trackercommons._
+import WconImplicits._
 
 import kse.jsonal._
 
@@ -561,5 +562,37 @@ class TestWcon {
         case _ =>
       }
     }
+  }
+
+  @Test
+  def test_all_offsets() {
+    val paths = (new java.io.File("../../tests").getCanonicalFile).
+      listFiles.
+      filter(f => (f.getName startsWith "offset_") && (f.getName endsWith ".wcon"))
+
+    val jsons: Array[Json] = (paths.map(Jast parse _) zip paths).map{
+      case (je: JastError, p) => println(je); println(p); fail("Error reading JSON"); throw new Exception("Never here")
+      case (j: Json, _) => j
+    }
+
+    val wcons: Array[DataSet] = (jsons.map(_.to(DataSet)) zip paths).map{
+      case (Left(je), p) => println(je); println(p); fail("Error reading WCON data from JSON"); throw new Exception("Never here")
+      case (Right(j), _) => j
+    }
+
+    assertTrue("All coordinates not the same", {
+      wcons.forall(w => wcons.forall(v => {
+        assertEquals("Number of data entries", w.data.length, v.data.length)
+        w.data.indices.forall{ i =>
+          val wi = w.data(i)
+          val vi = v.data(i)
+          (wi, vi) match {
+            case (Left(wd), Left(vd)) => wd.similarTo(vd, 1e-4, wd.cx.finite && vd.cx.finite)
+            case (Right(wd), Right(vd)) => wd.similarTo(vd, 1e-4, wd.cxs.length > 0 && vd.cxs.length > 0)
+            case _ => fail("Data/datum mismatch"); false
+          }
+        }
+      }))
+    })
   }
 }

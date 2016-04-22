@@ -48,8 +48,8 @@ case class Datum(
   var originPolicy: Data.OriginPolicy = Data.OriginPolicy.Needed
   private[this] val hasO = !(ox.isNaN || oy.isNaN || ox.isInfinite || oy.isInfinite || (ox == 0 && oy == 0))
   private[this] val hasC = !(cx.isNaN || cy.isNaN || cx.isInfinite || cy.isInfinite)
-  private[this] val gxFix = (if (hasC) cx else if (hasO) ox else 0)
-  private[this] val gyFix = (if (hasC) cx else if (hasO) ox else 0)
+  private val gxFix = (if (hasC) cx else if (hasO) ox else 0)
+  private val gyFix = (if (hasC) cx else if (hasO) ox else 0)
 
   /** x coordinate, global coordinates */
   def gx(i: Int): Double = x(i) + gxFix
@@ -107,6 +107,22 @@ case class Datum(
     d.originPolicy = originPolicy
     d
   }
+  def similarTo(d: Datum, tol: Double, checkCentroids: Boolean): Boolean =
+    math.abs(t - d.t) <= tol &&
+    (!checkCentroids || (cx.finite == d.cx.finite && cy.finite == d.cy.finite)) &&
+    (if (checkCentroids && (cx.finite || cy.finite)) math.abs(cx - d.cx) + math.abs(cy - d.cy) <= 2*tol else true) &&
+    (x.length == d.x.length) &&
+    { var i = 0;
+      var close = true;
+      while (i < x.length && close) {
+        close = (x(i) + gxFix - d.x(i) - d.gxFix) <= tol
+        i += 1
+      }
+      close
+    }
+  def similarTo(d: Datum, tol: Double): Boolean = similarTo(d, tol, true)
+  def similarTo(d: Data, tol: Double, checkCentroids: Boolean): Boolean = toData.similarTo(d, tol, checkCentroids)
+  def similarTo(d: Data, tol: Double): Boolean = toData.similarTo(d, tol, true)
 }
 object Datum extends FromJson[Datum] {
   private val someSingles = Option(Set("id", "t", "x", "y", "cx", "cy", "ox", "oy"))
@@ -208,11 +224,10 @@ extends HasId with AsJson {
     }
   )
 
-  private[this] val isEachOffset = cxs.length > 0 || oxs.length > 0
-  private[this] val isGlobalOffset = cxs.length == 0 && oxs.length == 1 && oxs(0).finite && oys(0).finite
-  private[this] val isAnyOffset = isEachOffset || isGlobalOffset
-  private[this] val globalOffsetX = if (oxs.length == 1) oxs(0) else 0.0
-  private[this] val globalOffsetY = if (oys.length == 1) oys(0) else 0.0
+  private val isGlobalOffset = cxs.length == 0 && oxs.length == 1 && oxs(0).finite && oys(0).finite
+  private[this] val isAnyOffset = cxs.length > 0 || oxs.length > 0 || isGlobalOffset
+  private val globalOffsetX = if (oxs.length == 1) oxs(0) else 0.0
+  private val globalOffsetY = if (oys.length == 1) oys(0) else 0.0
 
   var originPolicy: Data.OriginPolicy = Data.OriginPolicy.Needed
 
@@ -358,6 +373,52 @@ extends HasId with AsJson {
   }
 
   override def toString = json.toString
+
+  def similarTo(d: Datum, tol: Double, checkCentroids: Boolean): Boolean = similarTo(d.toData, tol, checkCentroids)
+
+  def similarTo(d: Datum, tol: Double): Boolean = similarTo(d.toData, tol, true)
+
+  def similarTo(d: Data, tol: Double): Boolean = similarTo(d, tol, true)
+
+  def similarTo(d: Data, tol: Double, checkCentroids: Boolean): Boolean =
+    (ts.length == d.ts.length) &&
+    { var i = 0
+      var close = true
+      while (i < ts.length && close) {
+        close = math.abs(ts(i) - d.ts(i)) <= tol
+        i += 1
+      }
+      close
+    } &&
+    (cxs.length == d.cxs.length || !checkCentroids) &&
+    { var i = 0
+      var close = true
+      if (checkCentroids) while (i < cxs.length && close) {
+        close = math.abs(cxs(i) - d.cxs(i)) + math.abs(cys(i) - d.cys(i)) <= 2*tol
+        i += 1
+      }
+      close
+    } &&
+    (xs.length == d.xs.length) &&
+    { var i = 0
+      var close = true
+      while (i < xs.length && close) {
+        close = xs(i).length == d.xs(i).length
+        val dX =
+          (if (cxs.length > 0) cxs(i) else if (oxs.length > 1) oxs(i) else globalOffsetX) -
+          (if (d.cxs.length > 0) d.cxs(i) else if (d.oxs.length > 1) d.oxs(i) else d.globalOffsetX)
+        val dY =
+          (if (cys.length > 0) cys(i) else if (oys.length > 1) oys(i) else globalOffsetY) -
+          (if (d.cys.length > 0) d.cys(i) else if (d.oys.length > 1) d.oys(i) else d.globalOffsetY)
+        var j = 0
+        while (j < xs(i).length && close) {
+          close = math.abs(xs(i)(j) - d.xs(i)(j) + dX) + math.abs(ys(i)(j) - d.ys(i)(j) + dY) <= 2*tol
+          j += 1
+        }
+        i += 1
+      }
+      close
+    }
 }
 object Data extends FromJson[Data] {
   def doubly(xs: Array[Float]): Array[Double] = {
