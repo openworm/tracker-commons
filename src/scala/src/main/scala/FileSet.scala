@@ -5,8 +5,11 @@ import java.io.File
 import scala.util._
 import scala.util.control.NonFatal
 
-case class FileSet(names: Vector[String], index: Int, custom: json.ObjJ)
-extends json.Jsonable {
+import kse.jsonal._
+import kse.jsonal.JsonConverters._
+
+case class FileSet(names: Vector[String], index: Int, custom: Json.Obj)
+extends AsJson {
   if (index < 0 || index >= math.max(1,names.length)) throw new NoSuchElementException("FileSet index out of range")
 
   val files = collection.mutable.LongMap.empty[File]
@@ -80,23 +83,18 @@ extends json.Jsonable {
       }
       else return Left(s"Internal error: cannot index into $j / $k during FileSet.join")
     }
-    val fs = new FileSet(v, index + (indices.head - i0), json.ObjJ.empty)
+    val fs = new FileSet(v, index + (indices.head - i0), Json.Obj.empty)
     files.foreach{ case (key, value) => fs.files += ((key + (indices.head - i0), value)) }
     that.files.foreach{ case (key, value) => fs.files += ((key + (that.indices.head + delta - i0), value)) }
     Right(fs)
   }
 
-  def toObjJ = {
-    var m = Map("this" -> ((json.StrJ(me): json.JSON) :: Nil))
-    if (index > 0) m = m + ("prev" -> (json.ArrJ(names.take(index).map(x => json.StrJ(x): json.JSON).toArray.reverse) :: Nil))
-    if (names.length - 1 > index) m = m + ("next" -> (json.ArrJ(names.drop(index+1).map(x => json.StrJ(x): json.JSON).toArray) :: Nil))
-    json.ObjJ(m ++ custom.keyvals)
-  }
+  def json = Json ~ ("this", me) ~? ("prev", names.take(index).reverse) ~? ("next", names.drop(index+1)) ~~ custom ~~ Json
 
   def size = names.size
 }
-object FileSet extends json.Jsonic[FileSet] {
-  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid files specification: " + msg)
+object FileSet extends FromJson[FileSet] {
+  private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid files specification: " + msg))
 
   // Find the index of a name inside a path.  Assume it might be Windows with wonky capitalization and slash-vs-backslash
   private[trackercommons]
@@ -122,27 +120,23 @@ object FileSet extends json.Jsonic[FileSet] {
     else Right(new File(path.take(i) ++ you ++ path.drop(i + me.length)))
   }
 
-  def empty = new FileSet(Vector.empty, 0, json.ObjJ.empty)
+  def empty = new FileSet(Vector.empty, 0, Json.Obj.empty)
 
-  def from(ob: json.ObjJ): Either[String, FileSet] = {
-    val me = ob.keyvals.get("this") match {
-      case None => return BAD("extension for this file not specifed")
-      case Some(json.StrJ(x) :: Nil) => x
-      case _ => return BAD("file extension must be exactly one string")
+  def parse(j: Json): Either[JastError, FileSet] = {
+    val o = j match { 
+      case jo: Json.Obj => jo
+      case _ => return Left(JastError("Not a file specification because not a JSON object"))
     }
-    val List(pv, nx) = List("prev", "next").map(ident => ob.keyvals.get(ident) match {
-      case None => Nil
-      case Some(js) => js.flatMap{
-        case json.NullJ => Nil
-        case json.StrJ(x) => x :: Nil
-        case json.ArrJ(xs) => xs.map{
-          case json.StrJ(x) => x
-          case _ => return BAD("non-text file name in " + ident)
-        }
-        case _ => return BAD("non-text file name in " + ident)
-      }
-    })
-    val pvl = pv.length
-    Right(new FileSet((pv.reverse.toVector :+ me) ++ nx, pvl, Metadata.getCustom(ob)))
+    val me = o("this") match {
+      case Json.Str(text) => text
+      case _ => return Left(JastError("'this' entry not found or not a string"))
+    }
+    val List(prev, next) = List("prev", "next").map{ key => o.get(key).map(_.to[Either[Array[String], String]]) match {
+      case None => Array.empty[String]
+      case Some(Right(Right(x))) => Array(x)
+      case Some(Right(Left(x))) => x
+      case Some(Left(e)) => return Left(JastError(f"Did not find strings of file names for $key key in file information", because = e))
+    }}
+    Right(new FileSet((prev.reverse.toVector :+ me) ++ next, prev.length, o.filter((k, _) => k.startsWith("@"))))
   }
 }

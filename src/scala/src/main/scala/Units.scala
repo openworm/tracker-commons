@@ -1,10 +1,15 @@
 package org.openworm.trackercommons
 
+import kse.jsonal._
+import kse.jsonal.JsonConverters._
+
 package units {
-  trait Convert {
+  trait Convert extends AsJson {
     def name: String
     def toInternal(x: Double): Double
     def toExternal(x: Double): Double
+
+    def json = Json.Str(name)
 
     def changeToInternal(ds: Array[Double]) { var i = 0; while (i < ds.length) { ds(i) = toInternal(ds(i)); i +=1 } }
     def changeToInternal(fs: Array[Float]) { var i = 0; while (i < fs.length) { fs(i) = toInternal(fs(i)).toFloat; i += 1 } }
@@ -64,6 +69,14 @@ package units {
     import Standard._
     import fastparse.all._
     val W = P(CharsWhile(_.isWhitespace).?)
+    val D = CharIn("0123456789")
+    val Dp = CharIn("123456789")
+    val PositiveDouble = P(
+      ( P("0." ~ "0".rep ~ Dp ~ D.rep) | 
+        P(Dp ~ D.rep ~ ("." ~ D.rep(1)).?)
+      ) ~ 
+      (CharIn("eE") ~ CharIn("+-").? ~ D.rep(1)).?
+    ).!.map(_.toDouble)
     // Be SURE to put the longer version first or it will not be matched!
     val LongLinBase = 
       P("meters" | "meter" | "metres" | "metre").map(_ => meter) |
@@ -107,7 +120,7 @@ package units {
       (ShortPrefix ~ ShortLinBase).map{ case (a,b) => b e a } |
       ShortLinBase
     type PLC = Parser[LinearConvert]
-    val OneLin: PLC = P(org.openworm.trackercommons.Parser.PositiveDouble.map(x => if (x==1) one else scalar(x)) | LongLin | ShortLin)
+    val OneLin: PLC = P(PositiveDouble.map(x => if (x==1) one else scalar(x)) | LongLin | ShortLin)
     val ExpLin: PLC = P((ParLin ~ W ~ "^" ~ W ~ P("-".? ~ CharsWhile(_.isDigit)).!.map(_.toDouble.toInt)).map{ case (a,b) => a ^ b })
     val PrecA: PLC  = P(ExpLin | ParLin)
     val MulLin: PLC = P(((PrecA ~ W ~ PrecB) | (PrecA ~ W ~ "*" ~ W ~ PrecB)).map{ case (a,b) => a * b })
@@ -132,6 +145,16 @@ package object units {
   def parseUnit(s: String): Option[Convert] = ConvertParser(s) match {
     case Some(lc: LinearConvert) => Some(lc.copy(name = s))
     case x                       => x
+  }
+
+  implicit val parseConvertFromJson = new FromJson[Convert] {
+    def parse(j: Json): Either[JastError, Convert] = j match {
+      case Json.Str(text) => parseUnit(text) match {
+        case Some(c) => Right(c)
+        case None => Left(JastError("Could not parse unit "+text))
+      }
+      case _ => Left(JastError("No unit conversion: value is not a string"))
+    }
   }
 
   implicit class FloatIntoUnits(private val underlying: Float) extends AnyVal {
