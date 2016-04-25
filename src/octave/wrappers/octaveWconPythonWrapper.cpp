@@ -73,11 +73,11 @@ extern "C" void wconOct_initWrapper(WconOctError *err) {
   return;
 }
 
-extern "C" bool wconOct_isNullHandle(WconOctHandle handle) {
+extern "C" int wconOct_isNullHandle(WconOctHandle handle) {
   if (handle == WCONOCT_NULL_HANDLE) {
-    return true;
+    return 1;
   } else {
-    return false;
+    return 0;
   }
 }
 
@@ -85,11 +85,11 @@ extern "C" WconOctHandle wconOct_makeNullHandle() {
   return WCONOCT_NULL_HANDLE;
 }
 
-extern "C" bool wconOct_isNoneHandle(WconOctHandle handle) {
+extern "C" int wconOct_isNoneHandle(WconOctHandle handle) {
   if (handle == WCONOCT_NONE_HANDLE) {
-    return true;
+    return 1;
   } else {
-    return false;
+    return 0;
   }
 }
 
