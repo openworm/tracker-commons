@@ -145,9 +145,15 @@ If possible, the best solution is to simply leave out non-finite numbers.  Howev
 
 Even seemingly primitive features such as speed can have many variants (centroid vs. midbody vs. head; calculated over a window vs. frame-by-frame; etc.).  Therefore, having a standard feature called "speed" is not sufficiently flexible for wide use, and in any case it is impractical to specify in advance all quantities that may be of interest to all researchers.  Instead, WCON files allow custom features by using group-specific tags that are easily identifiable by `@` followed by a unique identifier.
 
-For software developed in worm labs, use the lab's strain designation as a unique identifier.  A current list of lab strain designations (the first code in capital letters) is available from the CGC (http://cbs.umn.edu/cgc/lab-code) or WormBase (https://www.wormbase.org/resources/laboratory).  If a single group has multiple incompatible feature sets, the strain designation can be followed by a suffix separated from the lab code by a non-letter character (e.g. `"@CF Vikram"` or `"@OMG_1.5"`).  For groups without a strain designation, choose an identifier that is clearly not a lab strain identifier (i.e. avoid an identifier which is two or three capital letters).
+For software developed in worm labs, use the lab's strain designation as a unique identifier.  A current list of lab strain designations (the first code in capital letters) is available from the [CGC](http://cbs.umn.edu/cgc/lab-code) or [WormBase](https://www.wormbase.org/resources/laboratory).  If a single group has multiple incompatible feature sets, the strain designation can be followed by a suffix separated from the lab code by a non-letter character (e.g. `"@CF Rex"` or `"@OMG_1.5"`).  For groups without a strain designation, choose an identifier that is clearly not a lab strain identifier (i.e. avoid an identifier which is two or three capital letters).
 
-Here is an example of a WCON file with three custom features:
+If a feature could be interpreted by other programs and has units that are supported,
+it is preferable to list the feature by name and let the WCON reader convert the units
+if needed.  However, it is also possible to store features in other less-accessible
+forms, such as an array; this may be more compact or faster to read if one does not
+anticipate that any other software could make use of the feature.
+
+Here is an example of a WCON file with three custom features with units:
 
 ```JSON
 {
@@ -157,13 +163,31 @@ Here is an example of a WCON file with three custom features:
         "curvature":"1/mm",
         "width":"mm"
     },
+    "data":[
+        { "id":1,
+          "t":1.3,
+          "x":[12.11, 11.87],
+          "y":[5.72, 5.01],
+          "@OMG":{ "speed":0.34, "curvature":1.5, "width":0.103 }
+        }
+    ]
+}
+```
+
+Here is the same file but with an unconverted feature vector instead:
+
+```JSON
+{
+    "units":{
+        "t":"s", "x":"mm", "y":"mm"
+    },
     "@OMG": { "feature_order":["speed", "curvature", "width"] },
     "data":[
         { "id":1,
           "t":1.3,
           "x":[12.11, 11.87],
           "y":[5.72, 5.01],
-          "@OMG":{ "feature_values":[0.34, 1.5, 0.873] }
+          "@OMG":[0.34, 1.5, 0.103]
         }
     ]
 }
@@ -184,7 +208,6 @@ For features that describe an entire plate rather than properties of individual 
       "aggregate number":"1"
   },
   "@OMG": {
-      "feature_order":["speed", "curvature", "width"],
       "plate_features":{
         "density":0.035,
         "aggregate number":8
@@ -195,13 +218,13 @@ For features that describe an entire plate rather than properties of individual 
         "t":1.3,
         "x":[12.11, 11.87],
         "y":[5.72, 5.01],
-        "@OMG":{ "feature_values":[0.34, 1.5, 0.873] }
+        "@OMG":{ "speed":0.34, "curvature":1.5, "width":0.103 }
       }
   ]
 }
 ```
 
-This example presents only a small number of possibilities for how a custom reader could store information within a WCOM file.  The driving principle is that the custom readers and writers can do whatever they need to, so long as it is valid JSON, and any units that ought to be automatically converted are specified in the `"units"` block.
+This example presents only a small number of possibilities for how a custom reader could store information within a WCON file.  The driving principle is that the custom readers and writers can do whatever they need to, so long as it is valid JSON, and any units that ought to be automatically converted are specified in the `"units"` block.
 
 ## Common additions handled in accompanying code
 
@@ -407,4 +430,3 @@ A Zip archive can contain one or more WCON files:
 - If an archive is loaded containing zero files, an error is raised.
 - If an archive contains exactly one file, this file is loaded.
 - If an archive contains more than one file, one file (not necessarily the first) is selected for loading.  If this file contains links via the "files" object in the specification (see above), then all linked files in the archive will be loaded.  For this reason chunks may be archived together into one `.wcon.zip` file for convenience.
-
