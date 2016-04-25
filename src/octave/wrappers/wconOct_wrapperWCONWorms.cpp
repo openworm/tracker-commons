@@ -80,8 +80,8 @@ extern "C"
 void wconOct_WCONWorms_save_to_file(WconOctError *err,
 				    const WconOctHandle selfHandle,
 				    const char *output_path,
-				    bool pretty_print,
-				    bool compressed) {
+				    int pretty_print,
+				    int compressed) {
   PyObject *WCONWorms_instance=NULL;
   PyObject *pErr, *pFunc;
   
@@ -214,8 +214,8 @@ WconOctHandle wconOct_WCONWorms_to_canon(WconOctError *err,
 //   operator overloading.
 extern "C" 
 WconOctHandle wconOct_WCONWorms_add(WconOctError *err,
-				   const WconOctHandle selfHandle, 
-				   const WconOctHandle handle) {
+				    const WconOctHandle selfHandle, 
+				    const WconOctHandle handle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *WCONWorms_instance=NULL;
   PyObject *pErr, *pFunc;
@@ -295,9 +295,9 @@ WconOctHandle wconOct_WCONWorms_add(WconOctError *err,
 
 // NOTE: bool functions will always be set false under error conditions.
 //   The onus is on the middleware dev to always check for err values.
-extern "C" bool wconOct_WCONWorms_eq(WconOctError *err,
-				     const WconOctHandle selfHandle, 
-				     const WconOctHandle handle) {
+extern "C" int wconOct_WCONWorms_eq(WconOctError *err,
+				    const WconOctHandle selfHandle, 
+				    const WconOctHandle handle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *WCONWorms_instance=NULL;
   PyObject *pErr, *pFunc;
@@ -305,7 +305,7 @@ extern "C" bool wconOct_WCONWorms_eq(WconOctError *err,
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return false;
+    return 0;
   }
 
   WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
@@ -313,7 +313,7 @@ extern "C" bool wconOct_WCONWorms_eq(WconOctError *err,
     cerr << "ERROR: No valid object instance using handle "
 	 << selfHandle << endl;
     *err = FAILED;
-    return false;
+    return 0;
   }
 
   WCONWorms_instance = wrapInternalGetReference(handle);
@@ -321,7 +321,7 @@ extern "C" bool wconOct_WCONWorms_eq(WconOctError *err,
     cerr << "ERROR: No valid object instance using handle "
 	 << handle << endl;
     *err = FAILED;
-    return false;
+    return 0;
   }
 
   pFunc = 
@@ -331,7 +331,7 @@ extern "C" bool wconOct_WCONWorms_eq(WconOctError *err,
     PyErr_Print();
     Py_XDECREF(pFunc);
     *err = FAILED;
-    return false; // failure condition
+    return 0; // failure condition
   }
 
   if (PyCallable_Check(pFunc) == 1) {
@@ -345,7 +345,7 @@ extern "C" bool wconOct_WCONWorms_eq(WconOctError *err,
       Py_XDECREF(pValue);
       PyErr_Print();
       *err = FAILED;
-      return false;
+      return 0;
     } else {
       int retValue = PyObject_IsTrue(pValue);
       Py_DECREF(pValue);
@@ -353,18 +353,18 @@ extern "C" bool wconOct_WCONWorms_eq(WconOctError *err,
       if (pErr != NULL) {
 	PyErr_Print();
 	*err = FAILED;
-	return false;
+	return 0;
       } else {
 	*err = SUCCESS;
 	if (retValue == 0) {
-	  return false;
+	  return 0;
 	} else if (retValue == 1) {
-	  return true;
+	  return 1;
 	} else { // really -1 according to specs.
 	  // This is the annoying thing when dealing with
 	  //   the mapping from true/false and 1,0,-1
 	  *err = FAILED;
-	  return false;
+	  return 0;
 	}
       }
     }
@@ -372,7 +372,7 @@ extern "C" bool wconOct_WCONWorms_eq(WconOctError *err,
     cout << "ERROR: __eq__ not a callable python function" << endl;
     Py_XDECREF(pFunc);
     *err = FAILED;
-    return false;
+    return 0;
   }
 }
 

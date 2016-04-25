@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
 
   wconOct_WCONWorms_save_to_file(&err, 
 				 loadedWCONWormsObjHandle,
-				 "wrappertest.wcon", true);
+				 "wrappertest.wcon", 1, 0);
   if (err == FAILED) {
     cout << "Failed to save" << endl;
     // ok to continue with test
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     // don't test if canonical form failed to load
     wconOct_WCONWorms_save_to_file(&err,
 				   canonicalWCONWormsObjHandle,
-				   "wrapperCanonical.wcon",true);
+				   "wrapperCanonical.wcon", 1, 0);
     if (err == FAILED) {
       cout << "Failed to save" << endl;
       // ok to fail
@@ -181,7 +181,8 @@ int main(int argc, char **argv) {
       mergedHandle = result;
       // This is the alternative to the convenience macro
       wconOct_WCONWorms_save_to_file(&err,
-				     mergedHandle,"mergeResult.wcon",true);
+				     mergedHandle,"mergeResult.wcon",
+				     1, 0);
       if (err == FAILED) {
 	cerr << "Failed to save file mergedResult.wcon" << endl;
       }
