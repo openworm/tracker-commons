@@ -1,133 +1,122 @@
 package org.openworm.trackercommons
 
-case class Laboratory(pi: String, name: String, location: String, custom: json.ObjJ) extends json.Jsonable {
-  def toObjJ = {
-    var m = Map.empty[String, List[json.JSON]]
-    if (pi.length > 0) m = m + ("PI" -> (json.StrJ(pi) :: Nil))
-    if (name.length > 0) m = m + ("name" -> (json.StrJ(name) :: Nil))
-    if (location.length > 0) m = m + ("location" -> (json.StrJ(location) :: Nil))
-    json.ObjJ(m ++ custom.keyvals)
-  }
-}
-object Laboratory extends json.Jsonic[Laboratory] {
-  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid laboratory: " + msg)
-  def empty = new Laboratory("", "", "", json.ObjJ.empty)
-  def from(ob: json.ObjJ): Either[String, Laboratory] = {
-    val pi = ob.keyvals.get("PI").
-      flatMap(x => if (x.length > 1) return BAD("multiple entries for head investigator (PI)") else x.headOption).
-      map{
-        case json.StrJ(s) => s
-        case _ => return BAD("head investigator entry is not text")
-      }
-    val name = ob.keyvals.get("name").
-      flatMap(x => if (x.length > 1) return BAD("multiple entries for lab name") else x.headOption).
-      map{
-        case json.StrJ(s) => s
-        case _ => return BAD("lab name is not text")
-      }
-    val loc = ob.keyvals.get("location").
-      flatMap(x => if (x.length > 1) return BAD("multiple entries for location") else x.headOption).
-      map{
-        case json.StrJ(s) => s
-        case _ => return BAD("lab location is not text")
-      }
-    val custom = Metadata.getCustom(ob)
-    if (pi.isEmpty && name.isEmpty && loc.isEmpty && custom.isEmpty) BAD("no PI, name, location, or custom fields")
-    else Right(new Laboratory(pi getOrElse "", name getOrElse "", loc getOrElse "", custom))
-  }
-}
+import kse.jsonal._
+import kse.jsonal.JsonConverters._
 
-case class Arena(kind: String, diameter: Either[(Double, Double), Double], orient: String, custom: json.ObjJ) extends json.Jsonable {
-  def toObjJ = {
-    var m = Map.empty[String, List[json.JSON]]
-    if (kind.length > 0) m = m + ("type" -> (json.StrJ(kind) :: Nil))
-    diameter match {
-      case Left((d1, d2)) => m = m + ("diameter" -> (json.ANumJ(Array(d1, d2)) :: Nil))
-      case Right(d) if !d.isNaN => m = m + ("diameter" -> (json.NumJ(d) :: Nil))
-      case _ =>
+case class Laboratory(pi: String, name: String, location: String, custom: Json.Obj) extends AsJson {
+  def json = Json ~? ("PI", pi) ~? ("name", name) ~? ("location", location) ~~ custom ~ Json
+}
+object Laboratory extends FromJson[Laboratory] {
+  private val listKeyNames = List("PI", "name", "location")
+  private val someKeyNames = Option(listKeyNames.toSet)
+  private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid laboratory: " + msg))
+  def empty = new Laboratory("", "", "", Json.Obj.empty)
+  def parse(j: Json): Either[JastError, Laboratory] = {
+    // If we didn't need detailed error messages this would be a one-liner!
+    // j("PI").stringOr("") etc. would do the trick.
+    val o = j match {
+      case jo: Json.Obj => jo
+      case _ => return BAD("not a JSON object")
     }
-    if (orient.length > 0) m = m + ("orientation" -> (json.StrJ(orient) :: Nil))
-    json.ObjJ(m ++ custom.keyvals)
-  }
-}
-object Arena extends json.Jsonic[Arena] {
-  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid arena: " + msg)
-  def from(ob: json.ObjJ): Either[String, Arena] = {
-    val kind = ob.keyvals.get("type").
-      flatMap(x => if (x.length > 1) return BAD("multiple type entries") else x.headOption).
-      map{
-        case json.StrJ(s) => s
-        case _ => return BAD("type is not expressed as text")
-      }
-    val diam = ob.keyvals.get("diameter").
-      flatMap(x => if (x.length > 1) return BAD("multiple diameter entries (two entries should be in an array)") else x.headOption).
-      map {
-        case json.Dbl(d) => Right(d)
-        case json.ANumJ(ds) if ds.length == 2 => Left((ds(0), ds(1)))
-        case _ => return BAD("diameter is not numeric")
-      }
-    val orient = ob.keyvals.get("orientation").
-      flatMap(x => if (x.length > 1) return BAD("multiple orientation entries") else x.headOption).
-      map{
-        case json.StrJ(s) => s
-        case _ => return BAD("orientation is not expressed as text")
-      }
-    val custom = Metadata.getCustom(ob)
-    if (kind.isEmpty && diam.isEmpty && custom.isEmpty) BAD("no type or diameter or custom fields")
-    else Right(new Arena(kind getOrElse "", diam getOrElse Right(Double.NaN), "", custom))
+    val count = o.countKeys(someKeyNames)
+    count.foreach{ case (key, n) => if (n > 1) return BAD("multiple entries for "+key) }
+    if (count.isEmpty) return BAD("None of "+listKeyNames.mkString(", ") + " found")
+    val List(pi, name, location) = listKeyNames.map(key => o get_or_java_null key match {
+      case null => ""
+      case Json.Str(text) => text
+      case _ => return BAD(key + " is not text") 
+    })
+    Right(new Laboratory(pi, name, location, o.filter((k,_) => k.startsWith("@"))))
   }
 }
 
-case class Software(name: String, version: String, featureID: Set[String], custom: json.ObjJ) extends json.Jsonable {
-  def toObjJ = {
-    var m = Map[String, List[json.JSON]]("name" -> (json.StrJ(name) :: Nil))
-    if (version.length > 0) m = m + ("version" -> (json.StrJ(version) :: Nil))
-    if (featureID.size > 0) m = m + ("featureID" -> (
-      if (featureID.size == 1) json.StrJ(featureID.head) :: Nil
-      else json.ArrJ(featureID.toArray.sorted.map(x => json.StrJ(x): json.JSON)) :: Nil
-    ))
-    json.ObjJ(m ++ custom.keyvals)
+case class Arena(kind: String, diameter: Either[(Double, Double), Double], orient: String, custom: Json.Obj) extends AsJson {
+  import Arena.jsonizeDoublePair
+  def json = (Json
+    ~? ("type", kind)
+    ~ ("diameter", Json either diameter)
+    ~? ("orient", orient)
+    ~~ custom ~ Json)
+}
+object Arena extends FromJson[Arena] {
+  private[trackercommons] implicit val jsonizeDoublePair: Jsonize[(Double, Double)] = new Jsonize[(Double, Double)] {
+    def jsonize(dd: (Double, Double)): Json = Json.Arr.Dbl(Array(dd._1, dd._2))
+  }
+  private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid arena: " + msg))
+  def empty = new Arena("", Right(Double.NaN), "", Json.Obj.empty)
+  def parse(j: Json): Either[JastError, Arena] = {
+    val o = j match {
+      case jo: Json. Obj => jo
+      case _ => return BAD("not a JSON object")
+    }
+    var kind, orient: String = null
+    var diam: Either[(Double, Double), Double] = null
+    o.foreach{ case (k,v) =>
+      if (k == "type") {
+        if (kind ne null) return BAD("multiple type entries")
+        kind = v stringOr { return BAD("type is not expressed as text") }
+      }
+      else if (k == "diameter") {
+        if (diam ne null) return BAD("multiple diameter entries (two entries should be in an array)")
+        diam = v.to[Either[Array[Double], Double]] match {
+          case Right(Right(x)) => Right(x)
+          case Right(Left(xs)) => if (xs.length == 1) Right(xs(0))
+            else if (xs.length == 2) Left((xs(0), xs(1)))
+            else return BAD("wrong number of diameter entries: " + xs.length)
+          case _ => return BAD("diameter is neither a number nor an array of two numbers")
+        }
+      }
+      else if (k == "orient") {
+        if (orient ne null) return BAD("multiple orientation entries")
+        orient = v stringOr { return BAD("orientation is not expressed as text") }
+      }
+    }
+    if ((kind eq null) && (orient eq null) && (diam eq null)) return BAD("No aspects of Arena are specified (type, diameter, orient)")
+    Right(new Arena(if (kind eq null) "" else kind, diam, if (orient eq null) "" else orient, o.filter((k, _) => k.startsWith("@"))))
   }
 }
-object Software extends json.Jsonic[Software] {
-  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid software metadata: " + msg)
-  def default = new Software("Tracker Commons", "1.0-scala", Set.empty, json.ObjJ.empty)
-  def from(ob: json.ObjJ): Either[String, Software] = {
-    val name = ob.keyvals.get("name").
-      flatMap(x => if (x.length > 1) return BAD("multiple name entries") else x.headOption).
-      map{
-        case json.StrJ(s) => s
-        case _ => return BAD("name is not text")
-      }
-    val ver = ob.keyvals.get("version").
-      flatMap(x => if (x.length > 1) return BAD("multiple version entries") else x.headOption).
-      flatMap{
-        case json.NullJ => None
-        case json.StrJ(s) => Some(s)
-        case json.Dbl(d) => if (d.isInfinite || d.isNaN) None else Some("%.4f".format(d))
-        case _ => return BAD("name is not text")
-      }
-    val feat = ob.keyvals.get("featureID").
-      flatMap{ vs =>
-        val labels = vs.flatMap{
-          case json.StrJ(s) => s :: Nil
-          case json.ArrJ(ss) => ss.map{ case json.StrJ(s) => s; case _ => return BAD("non-text featureID") }
-          case _ => return BAD("non-text featureID")
-        }
-        labels.foreach{ l => if (!(l startsWith "@")) return BAD("featureID '" + l + "' does not start with @") }
-        if (labels.isEmpty) None
-        else Some(labels.toSet)
-      }
-    val custom = Metadata.getCustom(ob)
-    if (name.isEmpty && ver.isEmpty && feat.isEmpty && custom.isEmpty) BAD("no name, version, features, or custom fields")
-    else Right(new Software(name getOrElse "", ver getOrElse "", feat getOrElse Set.empty, custom))
+
+case class Software(name: String, version: String, featureID: Set[String], custom: Json.Obj) extends AsJson {
+  def json = Json ~? ("name", name) ~? ("version", version) ~? ("featureID", featureID.toArray) ~~ custom ~ Json
+}
+object Software extends FromJson[Software] {
+  private val listKeyNames = List("name", "version", "featureID")
+  private val shortListKeyNames = List("name", "version")
+  private val someKeyNames = Option(listKeyNames.toSet)
+  private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid software metadata: " + msg))
+  def default = new Software("Tracker Commons", "1.0-scala", Set.empty, Json.Obj.empty)
+  def parse(j: Json): Either[JastError, Software] = {
+    val o = j match {
+      case jo: Json.Obj => jo
+      case _ => return BAD("not a JSON object")
+    }
+    val count = o.countKeys(someKeyNames)
+    count.foreach{ case (key, n) => if (n > 1) return BAD("multiple entries for "+key) }
+    if (count.size == 0) BAD("no name, version, or features")
+    val List(name, version) = shortListKeyNames.map(key => o get_or_java_null key match {
+      case null => ""
+      case s: Json.Str => s.text
+      case _ => return BAD(key + " is not text")
+    })
+    val features = o get_or_java_null "featureID" match {
+      case null => Set.empty[String]
+      case ja: Json.Arr.All => 
+        val xs = ja.values.map{ case s: Json.Str => s.text; case x => return BAD("featureID contains non-string value "+x) }
+        val ss = xs.toSet
+        if (xs.length != ss.size)
+          return BAD("duplicate keys in featureID list: " + xs.groupBy(identity).filter(_._2.length > 1).map(_._1).mkString(", "))
+        ss
+      case s: Json.Str => Set(s.text)
+      case _ => return BAD("featureID is not an array of strings")
+    }
+    Right(new Software(name, version, features, o.filter{ (k,_) => k.startsWith("@") }))
   }
 }
 
 case class Metadata(
   lab: Vector[Laboratory],
   who: Vector[String],
-  timestamp: Option[(java.time.LocalDateTime, String)],
+  timestamp: Option[Either[java.time.OffsetDateTime, java.time.LocalDateTime]],
   temperature: Option[Double],
   humidity: Option[Double],
   arena: Option[Arena],
@@ -139,104 +128,102 @@ case class Metadata(
   strain: Option[String],
   protocol: Vector[String],
   software: Vector[Software],
-  settings: Option[json.JSON],
-  custom: json.ObjJ
-) extends json.Jsonable {
-  def toObjJ = {
-    val m = collection.mutable.AnyRefMap.empty[String, List[json.JSON]]
-    if (lab.nonEmpty) m += ("lab", (if (lab.length == 1) lab.head.toObjJ else json.ArrJ(lab.toArray.map(l => l.toObjJ: json.JSON))) :: Nil)
-    if (who.nonEmpty) m += ("who", (if (who.length == 1) json.StrJ(who.head) else json.ArrJ(who.toArray.map(w => json.StrJ(w): json.JSON))) :: Nil)
-    timestamp match { case Some((ldt,s)) => m += ("timestamp", json.StrJ(ldt.toString + s) :: Nil); case _ => }
-    temperature match { case Some(t) => m += ("temperature", json.NumJ(t) :: Nil); case _ => }
-    humidity match { case Some(h) if !h.isNaN => m += ("humidity", json.NumJ(h) :: Nil); case _ => }
-    arena match { case Some(a) => m += ("arena", a.toObjJ :: Nil); case _ => }
-    food match { case Some(s) if s.length > 0 => m += ("food", json.StrJ(s) :: Nil); case _ => }
-    media match { case Some(s) if s.length > 0 => m += ("media", json.StrJ(s) :: Nil); case _ => }
-    sex match { case Some(s) if s.length > 0 => m += ("sex", json.StrJ(s) :: Nil); case _ => }
-    stage match { case Some(s) if s.length > 0 => m += ("stage", json.StrJ(s) :: Nil); case _ => }
-    age match { case Some(t) if !t.isNaN => m += ("age", json.NumJ(t) :: Nil ); case _ => }
-    strain match { case Some(s) if s.length > 0 => m += ("strain", json.StrJ(s) :: Nil); case _ => }
-    if (protocol.nonEmpty) 
-      m += (
-        "protocol",
-        (if (protocol.length == 1) json.StrJ(protocol.head) else json.ArrJ(protocol.toArray.map(p => json.StrJ(p): json.JSON))) :: Nil
-      )
-    if (software.nonEmpty)
-      m += (
-        "software",
-        (if (software.length == 1) software.head.toObjJ else json.ArrJ(software.toArray.map(_.toObjJ))) :: Nil
-      )
-    settings match { case Some(s) => m += ("settings", s :: Nil); case _ => }
-    custom.keyvals.foreach{ case (k,vs) => m += (k, vs) }
-    json.ObjJ(m.toMap)
-  }
+  settings: Option[Json],
+  custom: Json.Obj
+) extends AsJson {
+  def json = (Json
+    ~? ("lab", if (lab.length == 1) lab.head.json else Json(lab))
+    ~? ("who", if (who.length == 1) Json(who.head) else Json(who))
+    ~? ("timestamp", timestamp.map(e => Json either e))
+    ~? ("temperature", temperature)
+    ~? ("humidity", humidity)
+    ~? ("arena", arena)
+    ~? ("food", food getOrElse "")
+    ~? ("media", media getOrElse "")
+    ~? ("sex", sex getOrElse "")
+    ~? ("stage", stage getOrElse "")
+    ~? ("age", age)
+    ~? ("strain", strain getOrElse "")
+    ~? ("protocol", if (protocol.length == 1) Json(protocol.head) else Json(protocol))
+    ~? ("software", if (software.length == 1) Json(software.head) else Json(software))
+    ~? ("settings", settings)
+    ~~ custom ~ Json)
 }
-object Metadata extends json.Jsonic[Metadata] {
-  private def BAD(msg: String): Either[String, Nothing] = Left("Invalid metadata: " + msg) 
-  def getCustom(ob: json.ObjJ) =
-    if (!ob.keyvals.exists{ case (k,vs) => vs.nonEmpty && (k startsWith "@") }) json.ObjJ.empty
-    else ob.keyvals.filter{ case (k,vs) => vs.nonEmpty && (k startsWith "@") } match { case x => json.ObjJ(x) }
+object Metadata extends FromJson[Metadata] {
+  private implicit val parseLab: FromJson[Laboratory] = Laboratory
+  private implicit val parseArena: FromJson[Arena] = Arena
+  private implicit val parseSoftware: FromJson[Software] = Software
+
+  val listKeyStrings = List("food", "media", "sex", "stage", "strain")
+  val listKeyNumbers = List("temperature", "humidity", "age")
+  val listKeyOtherSingles = List("timestamp", "arena", "settings")
+  val listKeyStringVectors = List("who", "protocol")
+  val listKeyOtherVectors = List("lab", "software")
+  val someSingles = Option((listKeyStrings ++ listKeyNumbers ++ listKeyOtherSingles).toSet)
+  val someVectors = Option((listKeyStringVectors ++ listKeyOtherVectors).toSet)
+  private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid metadata: " + msg))
+  private def BAD(msg: String, because: JastError): Either[JastError, Nothing] =
+    Left(JastError("Invalid metadata: " + msg, because = because))
   val empty = new Metadata(
-    Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, Vector.empty, None, json.ObjJ.empty
+    Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, Vector.empty, None, Json.Obj.empty
   )
-  def from(ob: json.ObjJ): Either[String, Metadata] = {
-    def allOrBad[A](key: String, extract: json.JSON => Either[String, A]): Either[String, Vector[A]] = ob.keyvals.get(key) match {
-      case None => Right(Vector.empty[A])
-      case Some(vs) => Right(
-        vs.flatMap{
-          case json.ArrJ(js) => js
-          case j => j :: Nil
-        }.map(j => extract(j) match {
-          case Left(l) => return Left(l)
-          case Right(r) => r
-        }).toVector
-      )
+  def parse(j: Json): Either[JastError, Metadata] = {
+    val o = j match {
+      case jo: Json.Obj => jo
+      case _ => return BAD("not a JSON object")
     }
-    def allObjOrBad[A](key: String, extract: json.ObjJ => Either[String, A]) =
-      allOrBad(key, { case ob: json.ObjJ => extract(ob); case _ => Left(key + " should be an object")})
-    def allString(key: String) = allOrBad(key, { case json.StrJ(s) => Right(s); case _ => Left("non-text " + key) })
-
-    def optionOrBad[A](key: String, extract: json.JSON => Either[String, A]): Either[String, Option[A]] = ob.keyvals.get(key) match {
-      case None => Right(None)
-      case Some(Nil) => Right(None)
-      case Some(j :: Nil) => extract(j).right.map(r => Option(r))
-      case _ => Left("more than one entry for " + key)
+    val count = o.countKeys(someSingles)
+    count.foreach{ case (key, n) => if (n > 1) return BAD("duplicate entries in metadata for " + key) }
+    val vcount = o.countKeys(someVectors)
+    val List(food, media, sex, stage, strain) = listKeyStrings.map{ key => o get_or_java_null key match {
+      case null => None
+      case s: Json.Str => Some(s.text)
+      case _ => return BAD("non-string entry in metadata for " + key)
+    }}
+    val List(temperature, humidity, age) = listKeyNumbers.map{ key => o.get(key).map{
+      case _: Json.Null => Double.NaN
+      case n: Json.Num => n.double
+      case _ => return BAD("non-numeric entry in metadata for " + key)
+    }}
+    val timestamp = o.get("timestamp").map{_.to[Either[java.time.OffsetDateTime, java.time.LocalDateTime]] match {
+      case Right(e) => e
+      case _ => return BAD("non-date entry in metadata timestamp")
+    }}
+    val arena = o.get("arena").map{_.to[Arena] match {
+      case Right(a) => a
+      case Left(je: JastError) => return BAD("Could not read metadata for arena.", because = je)
+    }}
+    val settings = o.get("settings")
+    val List(who, protocol) = listKeyStringVectors.map{ key => 
+      val vb = Vector.newBuilder[String]
+      o.foreach((k, v) => if (k == key) {
+        v match {
+          case s: Json.Str => vb += s.text
+          case ss: Json.Arr.All => ss.foreach{
+            case s: Json.Str => vb += s.text
+            case _ => return BAD("non-string entry in metadata for "+ key)
+          }
+          case _ => return BAD("non-string entry in metadata for "+key)
+        }
+      })
+      vb.result
     }
-    def optObjOrBad[A](key: String, extract: json.ObjJ => Either[String, A]) =
-      optionOrBad(key, { case ob: json.ObjJ => extract(ob); case _ => Left(key + " should be an object")})
-    def optString(key: String) = optionOrBad(key, { case json.StrJ(s) => Right(s); case _ => Left("non-text " + key) })
-
-    val lab = allObjOrBad("lab", Laboratory from _) match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val who = allString("who") match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val time = optString("timestamp") match {
-      case Left(msg) => return BAD(msg)
-      case Right(None) => None
-      case Right(Some(str)) => Parser.Date.parse(str) match {
-        case fastparse.core.Result.Success(ltd, _) => Some(ltd)
-        case _ => return BAD("improper format in timestamp")
+    val lab = o.fold(Vector.newBuilder[Laboratory]){ (ls, k, v) =>
+      if (k == "lab") v.to[Either[Array[Laboratory], Laboratory]] match {
+        case Right(Right(l)) => ls += l
+        case Right(Left(ll)) => ls ++= ll
+        case Left(je) => return BAD("error in lab data in metadata", because = je)
       }
-    }
-    val temp =
-      optionOrBad("temperature", { case json.Dbl(d) => Right(d); case _ => Left("non-numeric humidity") }) match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val humidity =
-      optionOrBad("humidity", { case json.Dbl(d) => Right(d); case _ => Left("non-numeric humidity") }) match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val arena = optObjOrBad("arena", Arena from _) match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val food = optString("food") match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val media = optString("media") match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val sex = optString("sex") match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val stage = optString("stage") match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val age =
-      optionOrBad("age", { case json.Dbl(d) => Right(d); case _ => Left("non-numeric age") }) match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val strain = optString("strain") match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val protocol = allString("protocol") match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val software = allObjOrBad("software", Software from _) match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val settings = optionOrBad("settings", {j => Right(j)}) match { case Left(msg) => return BAD(msg); case Right(x) => x }
-    val custom = getCustom(ob)
-    Right(new Metadata(
-      lab, who, time, temp, humidity,
-      arena, food, media, sex, stage,
-      age, strain, protocol, software, settings,
-      custom
-    ))
+      ls
+    }.result
+    val software = o.fold(Vector.newBuilder[Software]){ (ss, k, v) =>
+      if (k == "software") v.to[Either[Array[Software], Software]] match {
+        case Right(Right(s)) => ss += s
+        case Right(Left(s2)) => ss ++= s2
+        case Left(je) => return BAD("error in software data in metadata", because = je)
+      }
+      ss
+    }.result
+    Right(new Metadata(lab, who, timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain, protocol, software, settings, o.filter((k, _) => k.startsWith("@"))))
   }
 }
