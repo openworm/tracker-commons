@@ -3,7 +3,14 @@ package org.openworm.trackercommons
 import kse.jsonal._
 import kse.jsonal.JsonConverters._
 
-case class Laboratory(pi: String, name: String, location: String, custom: Json.Obj) extends AsJson {
+trait MightBeEmpty[A] { self: A =>
+  def isEmpty: Boolean
+  def nonEmptyOption: Option[A] = if (isEmpty) None else Some(this)
+}
+
+case class Laboratory(pi: String, name: String, location: String, custom: Json.Obj)
+extends AsJson with MightBeEmpty[Laboratory] {
+  def isEmpty = pi.isEmpty && name.isEmpty && location.isEmpty && custom.size == 0
   def json = Json ~? ("PI", pi) ~? ("name", name) ~? ("location", location) ~~ custom ~ Json
 }
 object Laboratory extends FromJson[Laboratory] {
@@ -30,7 +37,14 @@ object Laboratory extends FromJson[Laboratory] {
   }
 }
 
-case class Arena(kind: String, diameter: Either[(Double, Double), Double], orient: String, custom: Json.Obj) extends AsJson {
+case class Arena(kind: String, diameter: Either[(Double, Double), Double], orient: String, custom: Json.Obj)
+extends AsJson with MightBeEmpty[Arena] {
+  def isEmpty =
+    kind.isEmpty &&
+    (diameter match { case Right(x) => !x.finite; case Left((x,y)) => !x.finite && !y.finite }) &&
+    orient.isEmpty &&
+    custom.size == 0
+
   import Arena.jsonizeDoublePair
   def json = (Json
     ~? ("type", kind)
@@ -76,7 +90,9 @@ object Arena extends FromJson[Arena] {
   }
 }
 
-case class Software(name: String, version: String, featureID: Set[String], custom: Json.Obj) extends AsJson {
+case class Software(name: String, version: String, featureID: Set[String], custom: Json.Obj)
+extends AsJson with MightBeEmpty[Software] {
+  def isEmpty = name.isEmpty && version.isEmpty && featureID.size == 0 && custom.size == 0
   def json = Json ~? ("name", name) ~? ("version", version) ~? ("featureID", featureID.toArray) ~~ custom ~ Json
 }
 object Software extends FromJson[Software] {
@@ -130,7 +146,25 @@ case class Metadata(
   software: Vector[Software],
   settings: Option[Json],
   custom: Json.Obj
-) extends AsJson {
+) extends AsJson with MightBeEmpty[Metadata] {
+  def isEmpty =
+    (lab.isEmpty || lab.forall(_.isEmpty)) &&
+    (who.isEmpty || who.forall(_.isEmpty)) &&
+    timestamp.isEmpty &&
+    (temperature.isEmpty || temperature.forall(! _.finite)) &&
+    (humidity.isEmpty || humidity.forall(! _.finite)) &&
+    (arena.isEmpty || arena.forall(_.isEmpty)) &&
+    (food.isEmpty || food.forall(_.isEmpty)) &&
+    (media.isEmpty || media.forall(_.isEmpty)) &&
+    (sex.isEmpty || sex.forall(_.isEmpty)) &&
+    (stage.isEmpty || stage.forall(_.isEmpty)) &&
+    (age.isEmpty || age.forall(! _.finite)) &&
+    (strain.isEmpty || strain.forall(_.isEmpty)) &&
+    (protocol.isEmpty || protocol.forall(_.isEmpty)) &&
+    (software.isEmpty || software.forall(_.isEmpty)) &&
+    settings.isEmpty &&
+    custom.size == 0
+    
   def json = (Json
     ~? ("lab", if (lab.length == 1) lab.head.json else Json(lab))
     ~? ("who", if (who.length == 1) Json(who.head) else Json(who))
