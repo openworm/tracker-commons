@@ -1,3 +1,27 @@
+/** A Java/JVM compatibility layer for the Scala implementation of the Tracker Commons WCON format.
+  *
+  * As a multi-paradigm language, Scala makes heavy use of closures and monadic data structures in
+  * addition to inheritance hierarchies and primitive data types.  This facilitates rapid and safe
+  * development in Scala, but can pose a barrier for other JVM-compatible languages that wish to
+  * consume a Scala API.
+  * 
+  * This compatibility layer presents a view into the Scala WCON data structures that adhere to
+  * standard practices in Java, especially those that aid interoperability with other JVM languages.
+  *
+  * In particular, it presents the six core data structures, `Arena`, `Laboratory`, `Software`, 
+  * `Metadata`, `Data`, and `Wcon` as simple classes with fluent setters/getters (that is, to
+  * to get the name field, it's `x.name`, and to set it, it's `x.name(newName)`).  Arrayed data
+  * is all stored in `Array`s.  Factory methods exist to create the core structures using the
+  * most common options.
+  *
+  * (Note that all data structures are immutable, so fluent setters actually return a new copy of
+  * the data structure with the field set as desired.)
+  *
+  * Extended features are not fully supported.  Units are converted to defaults (mm, etc.) but cannot
+  * be changed.  If there are multiple Wcon files, they must be linked and written out manually.
+  * This provides a simple and effective interface to the key features of the WCON data format.
+  */
+
 package org.openworm.trackercommons.compatibility
 
 import kse.jsonal._
