@@ -87,25 +87,25 @@ common to both classes like to_canon.
 The current API is as follows:
 
 ####Support Methods
-initWrapper() - initializes the wrapper library, instantiates Python interpreter.
-isNullHandle(int handle) - given handle, is it NULL?
-isNoneHandle(int handle) - given handle, is it a Python None object?
+* initWrapper() - initializes the wrapper library, instantiates Python interpreter.
+* isNullHandle(int handle) - given handle, is it NULL?
+* isNoneHandle(int handle) - given handle, is it a Python None object?
 
 ####WCONWorms Methods
-int load_from_file(string path)
-save_to_file(int self, string path)
-int to_canon(int self) - returns object instance that is a canonical version of self
-int add(int self, int handle2) - merges the contents of self and handle2 and returns new object instance
-boolean eq(int self, int handle2)
-int units(int self) - returns list instance of units used in self. Note: list instances are not currently implemented. The handle is valid, but unuseable.
-int metadata(int self) - returns metadata instance used in self. Note: metadata instances are not currently implemented. The handle is valid, but unuseable.
-long num_worms(int self)
-int worm_ids(int self) - returns list instance of worm ids. Note: list instances ar not currently implemented. The handle is valid, but unuseable.
-int data_as_odict(int self) - returns pandas DataFrame object instance. Note: The handle is valid, but unuseable.
+* int load_from_file(string path)
+* save_to_file(int self, string path)
+* int to_canon(int self) - returns object instance that is a canonical version of self
+* int add(int self, int handle2) - merges the contents of self and handle2 and returns new object instance
+* boolean eq(int self, int handle2)
+* int units(int self) - returns list instance of units used in self. Note: list instances are not currently implemented. The handle is valid, but unuseable.
+* int metadata(int self) - returns metadata instance used in self. Note: metadata instances are not currently implemented. The handle is valid, but unuseable.
+* long num_worms(int self)
+* int worm_ids(int self) - returns list instance of worm ids. Note: list instances ar not currently implemented. The handle is valid, but unuseable.
+* int data_as_odict(int self) - returns pandas DataFrame object instance. Note: The handle is valid, but unuseable.
 
 ####MeasurementUnit Methods
-int MU_create(string unit_string)
-double MU_to_canon(int self, double value)
-double MU_from_canon(int self, double value)
-string MU_unit_string(int self)
-string MU_canonical_unit_string(int self)
+* int MU_create(string unit_string)
+* double MU_to_canon(int self, double value)
+* double MU_from_canon(int self, double value)
+* string MU_unit_string(int self)
+* string MU_canonical_unit_string(int self)
