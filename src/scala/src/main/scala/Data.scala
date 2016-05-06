@@ -458,6 +458,8 @@ object Data extends FromJson[Data] {
     qss
   }
 
+  def findFloatOffsets(zss: Array[Array[Double]]): Array[Double] = ???
+
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid data entries: " + msg))
   private def IBAD(nid: Double, sid: String, msg: String): Either[JastError, Nothing] =
     BAD("Data points for " + IdOnly(nid,sid).idJSON.json + " have " + msg)

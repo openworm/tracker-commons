@@ -3,6 +3,8 @@ package org.openworm.trackercommons
 import kse.jsonal._
 import kse.jsonal.JsonConverters._
 
+import WconImplicits._
+
 trait MightBeEmpty[A] { self: A =>
   def isEmpty: Boolean
   def nonEmptyOption: Option[A] = if (isEmpty) None else Some(this)
@@ -100,7 +102,10 @@ object Software extends FromJson[Software] {
   private val shortListKeyNames = List("name", "version")
   private val someKeyNames = Option(listKeyNames.toSet)
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid software metadata: " + msg))
-  def default = new Software("Tracker Commons", "1.0-scala", Set.empty, Json.Obj.empty)
+
+  val default = new Software("Tracker Commons", "1.0-scala", Set.empty, Json.Obj.empty)
+  val empty = new Software("", "", Set.empty, Json.Obj.empty)
+
   def parse(j: Json): Either[JastError, Software] = {
     val o = j match {
       case jo: Json.Obj => jo

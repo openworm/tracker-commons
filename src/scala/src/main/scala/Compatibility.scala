@@ -27,8 +27,9 @@ package org.openworm.trackercommons.compatibility
 import kse.jsonal._
 
 import org.openworm.{trackercommons => original}
+import org.openworm.trackercommons.WconImplicits._
 
-trait WrapsScalaWcon[A] { underlying: A }
+trait WrapsScalaWcon[A] { def underlying: A }
 
 class Laboratory(val underlying: original.Laboratory)
 extends WrapsScalaWcon[original.Laboratory] {
@@ -51,7 +52,7 @@ object Laboratory {
 }
 
 class Arena(val underlying: original.Arena)
-extends WrapsScalaWcon[Arena]
+extends WrapsScalaWcon[original.Arena]
 {
   def kind = underlying.kind
   def kind(k: String) = new Arena(underlying.copy(kind = k))
@@ -63,13 +64,13 @@ extends WrapsScalaWcon[Arena]
   def minorDiameter = underlying.diameter match { case Right(_) => Double.NaN; case Left((_, d2))  => d2 }
   def minorDiameter(d: Double) = underlying.diameter match {
     case Right(d1) => 
-      if (d.finite) new Arena(underlying.copy(diameter = Left((d1, d)))
+      if (d.finite) new Arena(underlying.copy(diameter = Left((d1, d))))
       else this
     case Left((d1, d2)) =>
       new Arena(underlying.copy(
         diameter = if (d.finite) Left((d1, d)) else Right(d1)
       ))
-  })
+  }
   def orient = underlying.orient
   def orient(o: String) = new Arena(underlying.copy(orient = o))
   def custom = underlying.custom
@@ -93,7 +94,8 @@ object Arena {
     new Arena(original.Arena(kind, Left((dmajor, dminor)), orient, Json.Obj.empty))
 }
 
-class Software(val underlying: original.Software) extends WrapsScalaWcon[original.Software] {
+class Software(val underlying: original.Software)
+extends WrapsScalaWcon[original.Software] {
   def name = underlying.name
   def name(n: String) = new Software(underlying.copy(name = n))
   def version = underlying.version
@@ -116,20 +118,21 @@ object Software {
 
   def from(name: String, version: String): Software = new Software(original.Software(name, version, Set(), Json.Obj.empty))
 
-  def from(name: String, featureIDs: Array[String]) = new Software(originalSoftware(name, "", featureIDs.toset, Json.Obj.empty))
+  def from(name: String, featureIDs: Array[String]) = new Software(original.Software(name, "", featureIDs.toSet, Json.Obj.empty))
 
   def from(name: String, version: String, featureIDs: Array[String]) =
-    new Software(originalSoftware(name, version, featureIDs.toSet, Json.Obj.empty))
+    new Software(original.Software(name, version, featureIDs.toSet, Json.Obj.empty))
 }
 
-class Metadata(val underlying: original.Metadata) extends WrapsScalaWcon[Metadata] {
-  def labs: Array[Laboratory] = underlying.lab.map(l => new Laboratory(l))
+class Metadata(val underlying: original.Metadata)
+extends WrapsScalaWcon[original.Metadata] {
+  def labs: Array[Laboratory] = underlying.lab.map(l => new Laboratory(l)).toArray
   def labs(ls: Array[Laboratory]): Metadata = new Metadata(underlying.copy(lab = ls.view.map(_.underlying).toVector))
-  def addLab(l: Laboratory) = new Metadata(underlying.copy(lab = lab :+ l.underlying))
+  def addLab(l: Laboratory) = new Metadata(underlying.copy(lab = underlying.lab :+ l.underlying))
 
   def whos: Array[String] = if (underlying.who.length > 0) underlying.who.toArray else Metadata.emptyStringArray
   def whos(ws: Array[String]) = new Metadata(underlying.copy(who = ws.toVector))
-  def addWho(w: String) = new Metadata(underlying.copy(who = who :+ w))
+  def addWho(w: String) = new Metadata(underlying.copy(who = underlying.who :+ w))
 
   def timestamp = ???
 
@@ -140,7 +143,7 @@ class Metadata(val underlying: original.Metadata) extends WrapsScalaWcon[Metadat
   def humidity(h: Double) = new Metadata(underlying.copy(humidity = if (h.finite) Some(h) else None))
 
   def arena = underlying.arena.map(a => new Arena(a)).getOrElse(Arena.empty)
-  def arena(a: Arena) = new Metadata(underlying.copy(arena = if (a.isEmpty) None else Some(a.underlying)))
+  def arena(a: Arena) = new Metadata(underlying.copy(arena = if (a.underlying.isEmpty) None else Some(a.underlying)))
 
   def food = underlying.food.getOrElse("")
   def food(f: String) = new Metadata(underlying.copy(food = if (f.isEmpty) None else Some(f)))
@@ -161,8 +164,8 @@ class Metadata(val underlying: original.Metadata) extends WrapsScalaWcon[Metadat
   def strain(s: String) = new Metadata(underlying.copy(strain = if (s.isEmpty) None else Some(s)))
 
   def protocols = if (underlying.protocol.length > 0) underlying.protocol.toArray else Metadata.emptyStringArray
-  def protocols(ps: Array[Protocol]) = new Metadata(underlying.copy(protocol = ps.view.map(_.underlying).toVector))
-  def addProtocol(p: Protocol) = new Metadata(underlying.copy(protocol = underlying.protocol :+ p.underlying))
+  def protocols(ps: Array[String]) = new Metadata(underlying.copy(protocol = ps.toVector))
+  def addProtocol(p: String) = new Metadata(underlying.copy(protocol = underlying.protocol :+ p))
 
   def softwares = if (underlying.software.length > 0) underlying.software.toArray.map(s => new Software(s)) else Metadata.emptySoftwareArray
   def softwares(ss: Array[Software]) = new Metadata(underlying.copy(software = ss.view.map(_.underlying).toVector))
@@ -172,12 +175,12 @@ class Metadata(val underlying: original.Metadata) extends WrapsScalaWcon[Metadat
   def settings(s: Json) = new Metadata(underlying.copy(settings = Option(s)))
 
   def custom = underlying.custom
-  def custom(c: Json.Obj) = new Metadata(custom = c)
+  def custom(c: Json.Obj) = new Metadata(underlying.copy(custom = c))
 }
 object Metadata {
   val empty = new Metadata(org.openworm.trackercommons.Metadata.empty)
-  val emptyStringArray = new Array[String]()
-  val emptySoftwareArray = new Array[Software]()
+  val emptyStringArray = new Array[String](0)
+  val emptySoftwareArray = new Array[Software](0)
 }
 
 class Data(
@@ -190,19 +193,22 @@ class Data(
   val custom: Json.Obj
 ) {
   val ts: Array[Double] = tsGen()
-  def t(i: Int): Double = underlying.ts(i)
+  def t(i: Int): Double = ts(i)
+
   val cxs: Array[Double] = cxsGen()
   def cx(i: Int) = if (cxs.length > 0) cxs(i) else Double.NaN
+
   val cys: Array[Double] = cysGen()
   def cy(i: Int) = if (cys.length > 0) cys(i) else Double.NaN
+
   lazy val xss: Array[Array[Double]] = xssGen()
   def xs(i: Int) = xss(i)
   def x(i: Int, j: Int) = xss(i)(j)
-  lazy val yss: Array[Array[Double]] = yssGen()
-  def ys(i: Int): yss(i)
-  def y(i: Int, j: Int): yss(i)(j)
 
-  def custom = underlying.custom
+  lazy val yss: Array[Array[Double]] = yssGen()
+  def ys(i: Int) = yss(i)
+  def y(i: Int, j: Int) = yss(i)(j)
+
   def custom(c: Json.Obj) = new Data(id, tsGen, cxsGen, cysGen, xssGen, yssGen, c)
 
   def toUnderlying = {
@@ -213,14 +219,31 @@ class Data(
     new org.openworm.trackercommons.Data(
       nid, sid,
       java.util.Arrays.copyOf(ts, ts.length),
-      xss.map(i => Data.singly(xss(i), if (cxs.length > 0) cxs(i) else if (oxs.length > 1) oxs(i) else if (oxs.length == 1) oxs(0) else 0.0)),
-      yss.map(i => Data.singly(xss(i), if (cxs.length > 0) cxs(i) else if (oxs.length > 1) oxs(i) else if (oxs.length == 1) oxs(0) else 0.0)),
+      xss.indices.toArray.map(i =>
+        original.Data.singly(
+          xss(i),
+          if (cxs.length > 0) cxs(i)
+          else if (oxs.length > 1) oxs(i)
+          else if (oxs.length == 1) oxs(0)
+          else 0.0
+        )
+      ),
+      yss.indices.toArray.map(i => 
+        original.Data.singly(
+          yss(i),
+          if (cys.length > 0) cys(i)
+          else if (oys.length > 1) oys(i)
+          else if (oys.length == 1) oys(0)
+          else 0.0
+        )
+      ),
       java.util.Arrays.copyOf(cxs, cxs.length),
       java.util.Arrays.copyOf(cys, cys.length),
       oxs,
-      oys
+      oys,
+      custom
     )
-  )
+  }
 }
 object Data {
   class MemoizedGenerator[A](a: => A) extends Function0[A] {
@@ -230,7 +253,9 @@ object Data {
 
   val emptyDoubleArray = new Array[Double](0)
   val emptyDoublesGen = () => emptyDoubleArray
-  def empty = new Data(org.openworm.trackercommons.Data.empty)
+  val emptyDoubleArrayArray = new Array[Array[Double]](0)
+  val emptyDoublessGen = () => emptyDoubleArrayArray
+  def empty = new Data("", emptyDoublesGen, emptyDoublesGen, emptyDoublesGen, emptyDoublessGen, emptyDoublessGen, Json.Obj.empty)
 
   def from(id: String, ts: Array[Double], xss: Array[Array[Double]], yss: Array[Array[Double]]): Data =
     new Data(id, () => ts, emptyDoublesGen, emptyDoublesGen, () => xss, () => yss, Json.Obj.empty)
@@ -241,20 +266,21 @@ object Data {
   def from(underlying: org.openworm.trackercommons.Data): Data =
     new Data(
       if (underlying.nid.isNaN) underlying.sid else underlying.nid.toString,
-      new MemoizedGenerator(java.lang.Arrays.copyOf(underlying.ts, underlying.ts.length)),
-      new MemoizedGenerator(java.lang.Arrays.copyOf(underlying.cxs, underlying.cxs.length)),
-      new MemoizedGenerator(java.lang.Arrays.copyOf(underlying.cys, underlying.cys.length)),
-      new MemoizedGenerator(underlying.xss.map(i =>
+      new MemoizedGenerator(java.util.Arrays.copyOf(underlying.ts, underlying.ts.length)),
+      new MemoizedGenerator(java.util.Arrays.copyOf(underlying.cxs, underlying.cxs.length)),
+      new MemoizedGenerator(java.util.Arrays.copyOf(underlying.cys, underlying.cys.length)),
+      new MemoizedGenerator(underlying.xs.indices.toArray.map(i =>
         org.openworm.trackercommons.Data.doubly(
-          xss(i),
+          underlying.xs(i),
           if (underlying.cxs.length > 0 && underlying.cxs(i).finite) underlying.cxs(i) else 0.0
         )
       )),
-      new MemoizedGenerator(underlying.yss.map(i =>
+      new MemoizedGenerator(underlying.ys.indices.toArray.map(i =>
         org.openworm.trackercommons.Data.doubly(
-          yss(i),
+          underlying.ys(i),
           if (underlying.cys.length > 0 && underlying.cys(i).finite) underlying.cys(i) else 0.0
         )
-      ))
+      )),
+      underlying.custom
     )
 }
