@@ -181,6 +181,8 @@ object Metadata {
   val empty = new Metadata(org.openworm.trackercommons.Metadata.empty)
   val emptyStringArray = new Array[String](0)
   val emptySoftwareArray = new Array[Software](0)
+
+  def from(underlying: original.Metadata) = new Metadata(underlying)
 }
 
 class Data(
@@ -190,7 +192,7 @@ class Data(
   cysGen: () => Array[Double],
   xssGen: () => Array[Array[Double]],
   yssGen: () => Array[Array[Double]],
-  val custom: Json.Obj
+  myCustom: Json.Obj
 ) {
   val ts: Array[Double] = tsGen()
   def t(i: Int): Double = ts(i)
@@ -209,7 +211,8 @@ class Data(
   def ys(i: Int) = yss(i)
   def y(i: Int, j: Int) = yss(i)(j)
 
-  def custom(c: Json.Obj) = new Data(id, tsGen, cxsGen, cysGen, xssGen, yssGen, c)
+  def custom: Json.Obj = myCustom
+  def custom(c: Json.Obj): Data = new Data(id, tsGen, cxsGen, cysGen, xssGen, yssGen, c)
 
   def toUnderlying = {
     val nid = Jast.parse(id).double
@@ -283,4 +286,54 @@ object Data {
       )),
       underlying.custom
     )
+}
+
+class Wcon(
+  myMeta: Metadata,
+  myDatas: Array[Data],
+  val units: original.UnitMap,
+  myPreviousFiles: Array[String],
+  myNextFiles: Array[String],
+  myOwnFile: String,
+  myCustom: Json.Obj
+) {
+  def meta: Metadata = myMeta
+  def meta(m: Metadata): Wcon = new Wcon(m, myDatas, units, myPreviousFiles, myNextFiles, myOwnFile, myCustom)
+
+  def datas: Array[Data] = myDatas
+  def datas(ds: Array[Data]): Wcon = new Wcon(myMeta, ds, units, myPreviousFiles, myNextFiles, myOwnFile, myCustom)
+  def addData(d: Data): Wcon = new Wcon(myMeta, myDatas :+ d, units, myPreviousFiles, myNextFiles, myOwnFile, myCustom)
+
+  def previousFiles = myPreviousFiles
+  def previousFiles(pf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, pf, myNextFiles, myOwnFile, myCustom)
+  def addPreviousFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles :+ f, myNextFiles, myOwnFile, myCustom)
+
+  def nextFiles = myNextFiles
+  def nextFiles(nf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, nf, myOwnFile, myCustom)
+  def addNextFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles :+ f, myOwnFile, myCustom)
+
+  def myFile: String = myOwnFile
+  def myFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles, f, myCustom)
+
+  def custom = myCustom
+  def custom(c: Json.Obj) = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles, myOwnFile, c)
+}
+object Wcon {
+  val emptyDataArray = new Array[Data](0)
+  val emptyStringArray = new Array[String](0)
+
+  def empty = new Wcon(Metadata.empty, emptyDataArray, original.UnitMap.default, emptyStringArray, emptyStringArray, "", Json.Obj.empty)
+
+  def from(underlying: original.DataSet) = {
+    val u = underlying // Just too long of a name!
+    new Wcon(
+      Metadata from u.meta,
+      u.data.map{ case Left(dm) => Data from dm.toData; case Right(da) => Data from da },
+      u.unitmap,
+      if (u.files.names.length > 0) u.files.names.take(u.files.index-1).reverse.toArray else emptyStringArray,
+      if (u.files.names.length > 0) u.files.names.drop(u.files.index).toArray else emptyStringArray,
+      u.files.me,
+      u.custom
+    )
+  }
 }
