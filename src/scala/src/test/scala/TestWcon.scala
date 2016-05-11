@@ -159,7 +159,7 @@ class TestWcon {
     if (a.isNaN && b.isNaN) ""
     else if (a.isInfinite && b.isNaN) ""
     else if (a.isNaN && b.isInfinite) ""
-    else if (math.abs(a-b) < Accuracy) ""
+    else if (a == b || math.abs(a-b) < Accuracy) ""
     else " "+where+":unequal-numbers(" + a + ", " + b + ") "
   }
 
@@ -527,6 +527,33 @@ class TestWcon {
           x
         case x => x
       })      
+    }
+  }
+
+  @Test
+  def test_Compatibility() {
+    val r = new scala.util.Random(88512)
+    for (i <- 1 to 1000) {
+      val ds = genDataSet(r)
+      val wc = compatibility.Wcon from ds
+      val dss = wc.toUnderlying
+      val Seq(dsnd, dssnd) =
+        Seq(ds, dss).map(dx => dx.copy(data = dx.data.map{ d => 
+          val c = d.fold(_.custom, _.custom); Right[Datum, Data](Data.empty.copy(custom = c)) 
+        }))
+      assertEquals(
+        "", 
+        same(dsnd, dssnd).tap{ x => if (x.length > 0) {
+          println(dsnd)
+          println("###############################")
+          println(dssnd)
+          println(x)
+        }} +
+        (ds.data.map(_.fold(_.toData, x=>x)) zip dss.data.map(_.fold(_.toData, x=>x))).map{ case (da, db) =>
+          if (da.similarTo(db, 1e-6)) ""
+          else "%s\nISN'T\n%s\n\n".format(da.json.toString, db.json.toString)
+        }.mkString
+      )      
     }
   }
 

@@ -52,6 +52,24 @@ case class UnitMap(lookup: Map[String, units.Convert], custom: Json.Obj) extends
 }
 object UnitMap extends FromJson[UnitMap] {
   import units._
+
+  val default = {
+    import Standard._
+    new UnitMap(
+      Map(
+        "t" -> second,
+        "x" -> millimeter, "y" -> millimeter,
+        "cx" -> millimeter, "cy" -> millimeter,
+        "ox" -> millimeter, "oy" -> millimeter,
+        "age" -> hour,
+        "temperature" -> celsius,
+        "humidity" -> percent,
+        "diameter" -> millimeter
+      ),
+      Json.Obj.empty
+    )
+  }
+
   def parse(j: Json): Either[JastError, UnitMap] = j match {
     case o: Json.Obj =>
       o.filter((k,_) => !k.startsWith("@")).to[Map[String, Convert]] match {
