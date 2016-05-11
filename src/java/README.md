@@ -10,7 +10,7 @@ You need to have Java 8 running on your machine.  Additionally, you need to be a
 
 Since you already need to have SBT running on your machine to build the Scala version, SBT is also used to build the Java version (instead of more traditional tools like Ant or Maven).  Again, you already have it, so you shouldn't have to worry about it any more than you already did.
 
-### Building the Java Implementation
+### Building the Java implementation
 
 In the `src/java` directory, enter
 
@@ -35,7 +35,7 @@ public class ReadWconExample {
     System.out.println("There are " + w.datas().length + " records");
     System.out.println("The first record has ID " + w.datas()[0].id());
     System.out.println("The first timepoint for that ID is " + w.datas()[0].t(0));
-    System.out.println("The first x coordinate for that timepoint is " + w.datas()[0].x(0, 0));    
+    System.out.println("The third x coordinate for that timepoint is " + w.datas()[0].x(0, 2));
   }
 }
 ```
