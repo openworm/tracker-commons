@@ -12,15 +12,13 @@ Since you already need to have SBT running on your machine to build the Scala ve
 
 ### Building the Java Implementation
 
-First, make sure the Scala implementation is up to date.  In the directory for the Scala implementation (at `"../scala"` from the Java directory), enter `sbt package`.
-
-Then, in the `src/java` directory, enter
+In the `src/java` directory, enter
 
 ```bash
 sbt assembly
 ```
 
-at the command-line.  This will produce a single `.jar` file that contains the Scala runtime, the class files from the Scala implementation, any additional class files needed, and the routines in this package.  You can then include this single jar on your classpath.
+at the command-line.  This will compile the Scala project if it needs to, then compile the files for this project.  It produces a single `.jar` file that contains the Scala runtime, the class files from the Scala implementation, any additional class files needed, and the routines in this package.  You can then include this single jar on your classpath.
 
 ### Example usage
 
@@ -43,3 +41,7 @@ public class ReadWconExample {
 ```
 
 You can compile this with `javac -cp path/to/JavaWcon-0.1.jar ReadWconExample.java` and run it with `java -cp path/to/JavaWcon-0.1.jar ReadWconExample`.
+
+### Documentation
+
+You mostly want to view the Scaladocs for the `org.openworm.trackercommons.compatibility` library to see what you can do with the main classes here (`Wcon`, `Metadata`, `Data`, etc.).  Run `sbt doc` inside the Scala project to generate documentation and point your browser there (at `target/scala-2.11/api`).
