@@ -458,7 +458,27 @@ object Data extends FromJson[Data] {
     qss
   }
 
-  def findFloatOffsets(zss: Array[Array[Double]]): Array[Double] = new Array[Double](zss.length)
+  def findFloatOffsets(zss: Array[Array[Double]]): Array[Double] = {
+    val ans = new Array[Double](zss.length)
+    var i = 0
+    while (i < ans.length) {
+      var minz, maxz = Double.NaN
+      val zs = zss(i)
+      var j = 0
+      while (j < zs.length) {
+        val z = zs(j)
+        if (z.finite) {
+          if (!(z >= minz)) minz = z
+          if (!(z <= maxz)) maxz = z
+        }
+        j += 1
+      }
+      val oz = (minz + maxz)*0.5;
+      ans(i) = if (oz.finite) oz else 0.0;
+      i += 1
+    }
+    ans
+  }
 
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid data entries: " + msg))
   private def IBAD(nid: Double, sid: String, msg: String): Either[JastError, Nothing] =
