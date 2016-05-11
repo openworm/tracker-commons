@@ -488,7 +488,9 @@ object Data extends FromJson[Data] {
 
   private[trackercommons] val emptyD = new Array[Double](0)
   private[trackercommons] val zeroD = Array(0.0)
-  private[trackercommons] val emptyDD = new Array[Array[Double]](0)
+  private[trackercommons] val emptyFF = new Array[Array[Float]](0)
+
+  val empty = new Data(Double.NaN, "", emptyD, emptyFF, emptyFF, emptyD, emptyD, emptyD, emptyD, Json.Obj.empty)
 
   sealed trait OriginPolicy {}
   object OriginPolicy {

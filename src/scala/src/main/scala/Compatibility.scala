@@ -226,7 +226,7 @@ extends WrapsScalaWcon[original.Metadata] {
   /** Associates a timestamp including a time zone with this experiment (returns a new copy) */
   def timestamp(stamp: OffsetDateTime): Metadata = new Metadata(underlying.copy(timestamp = Some(Left(stamp))))
   
-  /** The temperature in Celcius at which the experiment was performed, or `NaN` if not specified */
+  /** The temperature in Celsius at which the experiment was performed, or `NaN` if not specified */
   def temperature = underlying.temperature.getOrElse(Double.NaN)
   /** Sets the information about the temperature; use `NaN` if it was not known (returns a new copy) */
   def temperature(t: Double) = new Metadata(underlying.copy(temperature = if (t.finite) Some(t) else None))
@@ -528,7 +528,7 @@ class Wcon(
     myDatas.map(d => Right(d.toUnderlying): Either[original.Datum, original.Data]),
     original.FileSet(
       previousFiles.reverse.toVector ++ (if (myFile.isEmpty) Vector() else Vector(myFile)) ++ nextFiles.toVector,
-      if (myFile.isEmpty) previousFiles.length else -1,
+      previousFiles.length,
       myFileCustom
     ),
     myCustom
@@ -553,8 +553,8 @@ object Wcon {
       Metadata from u.meta,
       u.data.map{ case Left(dm) => Data from dm.toData; case Right(da) => Data from da },
       u.unitmap,
-      if (u.files.names.length > 0) u.files.names.take(u.files.index-1).reverse.toArray else emptyStringArray,
-      if (u.files.names.length > 0) u.files.names.drop(u.files.index).toArray else emptyStringArray,
+      if (u.files.names.length > 0) u.files.names.take(u.files.index).reverse.toArray else emptyStringArray,
+      if (u.files.names.length > 0) u.files.names.drop(u.files.index+1).toArray else emptyStringArray,
       u.files.me,
       u.files.custom,
       u.custom

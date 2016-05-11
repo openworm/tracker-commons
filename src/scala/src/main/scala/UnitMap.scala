@@ -56,7 +56,16 @@ object UnitMap extends FromJson[UnitMap] {
   val default = {
     import Standard._
     new UnitMap(
-      Map("t" -> second, "x" -> millimeter, "y" -> millimeter, "cx" -> millimeter, "cy" -> millimeter, "ox" -> millimeter, "oy" -> millimeter),
+      Map(
+        "t" -> second,
+        "x" -> millimeter, "y" -> millimeter,
+        "cx" -> millimeter, "cy" -> millimeter,
+        "ox" -> millimeter, "oy" -> millimeter,
+        "age" -> hour,
+        "temperature" -> celsius,
+        "humidity" -> percent,
+        "diameter" -> millimeter
+      ),
       Json.Obj.empty
     )
   }
