@@ -18,19 +18,19 @@ In the `src/java` directory, enter
 sbt assembly
 ```
 
-at the command-line.  This will compile the Scala project if it needs to, then compile the files for this project.  It produces a single `.jar` file that contains the Scala runtime, the class files from the Scala implementation, any additional class files needed, and the routines in this package.  You can then include this single jar on your classpath.
+at the command-line.  This will compile the Scala project if it needs to, then compile the files for this project.  It produces a single `.jar` file that contains the Scala runtime, the class files from the Scala implementation, any additional class files needed, and the routines in this package.  You can then include this single jar on your classpath.  (It is in the `target` directory.)
 
 ### Example usage
 
 Here is an example of reading WCON data using the Java WCON reader.
 
 ```java
-import org.trackercommons.compatibility.*;
-import org.trackercommons.javawrapper.*;
+import org.openworm.trackercommons.compatibility.*;
+import org.openworm.trackercommons.javawcon.*;
 
 public class ReadWconExample {
-  public static main(String args[]) {
-    java.io.File f = new java.io.File("../tests/intermediate.wcon");
+  public static void main(String args[]) throws java.io.IOException {
+    java.io.File f = new java.io.File("../../tests/intermediate.wcon");
     Wcon w = Wcons.read(f);
     System.out.println("There are " + w.datas().length + " records");
     System.out.println("The first record has ID " + w.datas()[0].id());
@@ -40,7 +40,8 @@ public class ReadWconExample {
 }
 ```
 
-You can compile this with `javac -cp path/to/JavaWcon-0.1.jar ReadWconExample.java` and run it with `java -cp path/to/JavaWcon-0.1.jar ReadWconExample`.
+You can compile this with `javac -cp target/JavaWcon-0.1.jar ReadWconExample.java` and run it with `java -cp target/JavaWcon-0.1.jar ReadWconExample` (if you place this file in the Java Tracker Commons directory, which is probably not a great
+  idea in general).
 
 ### Documentation
 
