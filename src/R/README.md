@@ -1,30 +1,45 @@
-## R implementation of Tracker Commons
+## R implementation of the Tracker Commons WCON File Format
 
-This tool will require at least one of three separate JSON packages, "rjson", "RJSONIO", and "jsonlite".  You can install them by typing
+R can run a Scala interpreter via the `rscala` package.  This gives R access to the Scala implementation of the WCON file format.
 
-```R
-install.packages("RJSONIO")
-install.packages("rjson")
-install.packages("jsonlite")
+This project just contains minimal utility routines needed to get up and running quickly.
+
+### Requirements
+
+You need Java 8 and R installed.
+
+### Installation
+
+First, make sure the Scala installation works properly (you can run `sbt package` successfully).
+
+Then, with R installed, type `install.packages("rscala")`.  If a recent version of Scala is installed, you should be able to run `library(rscala)` and nothing will happen; otherwise it will throw errors.  If you don't have a recent version of Scala installed, either install one or use `rscala::scalaInstall()` to get one automatically.
+
+Finally, enter
+
+```bash
+sbt assembly
 ```
 
-## Impediments
+to build a `.jar` for use with R.  (You'll want to rerun this any time the Scala version changes and you want the updates.)
 
-R's JSON support is idiosyncratic.  This is somewhat understandable as R itself is highly idiosyncratic, but no JSON package allows one to import a JSON file and reproduce it again.  This is particularly problematic for parts of the WCON specification that allow arbitrary JSON (e.g. metadata settings).  Specifically:
+### Example usage
 
-* rjson and RJSONIO cannot tell the difference between `1` and `[1]`.  It's always `1`.
-* jsonlite cannot tell the difference between `1` and `[1]`.  It's always `[1]` (worse).
-* RJSONIO sticks the word Infinity into JSON if numeric data is infinite.
-* Only jsonlite imports numeric lists as numeric (otherwise they're regular lists).
-* Only jsonline can export non-finite numbers (and NA) as `null`.
-* jsonlite cannot tell the difference between `"fish"` and `["fish"]`.  It's always `["fish"]`.  (This is really bad.)
+From within R, start with the `source('wcon-ready.r')`.  This will load a Scala interpreter (called `si`) which you can call using the syntax `si %~% 'scala.code("here")'`.
 
-#### Possible resolutions
+Here is an example of reading WCON data from R:
 
-* Write another JSON parser that actually stores JSON faithfully
-* Splice together the least problematic parts of jsonlite and RJSONIO
-* Have only a reader not a writer for R
+```R
+source('wcon-ready.r')
+si %~% 'val i = ReadWrite.read("../../tests/intermediate.wcon").right.get'
+si %~% 'val w = ct.Wcon from i'
+numrecords = si %~% 'w.datas.length'
+firstid = si %~% 'w.datas(0).id'
+first_time_of_first = si %~% 'w.datas(0).t(0)'
+first_y_points = si %~% 'w.datas(0).ys(0)'
+```
 
-#### Current situation
+### Documentation
 
-It is possible to overcome these issues, but it is a nontrivial amount of work.  Therefore, the R implementation is on hold at this time.
+You mostly want to use the Scala documentation since the R implementation just calls through to the Scala.  You can use either the standard `org.openworm.trackercommons` structures, or the wrapped `org.openworm.trackercommons.compatibility` ones that use simpler data structures.  Either way, the Scaladocs can be built with `sbt doc` in the Scala project directory.
+
+To learn more about how to use rscala to interface between R and Scala, see the [rscala documentation](https://cran.r-project.org/web/packages/rscala/rscala.pdf).
