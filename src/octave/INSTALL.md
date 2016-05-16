@@ -24,11 +24,11 @@ are relative, so the script should be safe to run from any folder.
 PYTHON_VERSION=3.5
 MINICONDA_DIR=~/miniconda3
 
-sudo apt-get install octave
+sudo apt-get install -y octave
 # liboctave-dev is required for mkoctfile
-sudo apt-get install liboctave-dev
-sudo apt-get install swig
-sudo apt-get install g++
+sudo apt-get install -y liboctave-dev
+sudo apt-get install -y swig
+sudo apt-get install -y g++
 export PATH=$MINICONDA_DIR/bin:$PATH
 # Library paths to /lib/x86_64-linux-gnu and /usr/lib/x86_64-linux-gnu
 #   are because the libgfortran.so.3 and libreadline.so.6 files installed
@@ -38,8 +38,8 @@ export LD_LIBRARY_PATH=/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:$MINICOND
 cd ~/github/tracker-commons/src/octave/wrappers
 make
 cat >> ~/.profile <<EOF
-export PATH=$MINICONDA_DIR/bin:$PATH
-export LD_LIBRARY_PATH=/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:$MINICONDA_DIR/lib:$LD_LIBRARY_PATH
+export PATH=$MINICONDA_DIR/bin:\$PATH
+export LD_LIBRARY_PATH=/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:$MINICONDA_DIR/lib:\$LD_LIBRARY_PATH
 EOF
 . ~/.profile
 ```
