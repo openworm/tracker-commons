@@ -27,26 +27,17 @@ SWIG 2.0.11
 
 ####One-time software stack setup
 
-Follow the same instructions as described in the [Python
-implementation](../Python/INSTALL.md).
-
-Install SWIG library wrapper generator
-```bash
-sudo apt-get install swig
-```
-
-Install Octave
-```bash
-sudo apt-get install octave
-```
-
-Build the wconoct wrapper library interface
-```bash
-cd wrappers
-make
-```
+Please see our [installation instructions](./INSTALL.md).
 
 ### Running the Prototype
+
+As of this implementation, it is currently necessary to copy
+
+tracker-commons/wcon_schema.json
+
+to
+
+tracker-commons/src/Python/wcon/wcon_schema.json
 
 With a load invocation as an example
 
