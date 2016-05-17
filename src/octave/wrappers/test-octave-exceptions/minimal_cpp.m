@@ -1,4 +1,4 @@
-exception_order
+minimal_exception
 
 function check_lasterror(expected)
   if (!strcmp(lasterror.message, expected))
@@ -23,20 +23,6 @@ catch
   check_lasterror("C++ side threw an exception of type E2")
 end_try_catch
 
-try
-  a.foobar()
-catch
-  check_lasterror("postcatch unknown (SWIG_RuntimeError)")
-end_try_catch
-
-try
-  a.barfoo(1)
-catch
-  check_lasterror("C++ side threw an exception of type E1")
-end_try_catch
-
-try
-  a.barfoo(2)
-catch
-  check_lasterror("C++ side threw an exception of type E2 *")
-end_try_catch
+elite = a.foobar()
+a.bar()
+hitchhiker = a.barfoo()
