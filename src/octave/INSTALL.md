@@ -2,6 +2,7 @@
 
 ###Tested Platforms
 Ubuntu LTS 14.04 - run as a VirtualBox OS image on Mac OS X.
+Ubuntu LTS 14.04 AWS image
 
 ###Pre-requisites:
 
@@ -24,11 +25,15 @@ are relative, so the script should be safe to run from any folder.
 PYTHON_VERSION=3.5
 MINICONDA_DIR=~/miniconda3
 
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+
 sudo apt-get install -y octave
 # liboctave-dev is required for mkoctfile
 sudo apt-get install -y liboctave-dev
 sudo apt-get install -y swig
 sudo apt-get install -y g++
+sudo apt-get install -y make
 export PATH=$MINICONDA_DIR/bin:$PATH
 # Library paths to /lib/x86_64-linux-gnu and /usr/lib/x86_64-linux-gnu
 #   are because the libgfortran.so.3 and libreadline.so.6 files installed
@@ -40,6 +45,11 @@ make
 cat >> ~/.profile <<EOF
 export PATH=$MINICONDA_DIR/bin:\$PATH
 export LD_LIBRARY_PATH=/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu:$MINICONDA_DIR/lib:\$LD_LIBRARY_PATH
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
 EOF
-. ~/.profile
+# For now the schema file needs to be copied
+cp ~/github/tracker-commons/wcon_schema.json ~/github/tracker-commons/src/Python/wcon
+octave driver.m
+echo "Please run '. ~/.profile' before testing."
 ```
