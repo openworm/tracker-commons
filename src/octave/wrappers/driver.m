@@ -27,7 +27,25 @@ if (wconoct.eq(loaded_worm,added_worm) == 1)
  else
    disp('Not Equal');
 endif
+
 units_data = wconoct.units(loaded_worm);
+num_units = wconoct.unitsDict_numElements(units_data);
+t_mu = wconoct.unitsDict_valueFromKey(units_data,"'t'");
+t_unitStr = wconoct.MU_unit_string(t_mu);
+disp("units for 't' is:");
+disp(t_unitStr);
+width_mu = wconoct.unitsDict_valueFromKey(units_data,"'width'");
+width_unitStr = wconoct.MU_unit_string(width_mu);
+disp("units for 'width' is:");
+disp(width_unitStr);
+width_canonUnitStr = wconoct.MU_canonical_unit_string(width_mu);
+disp("Canonical units for 'width' is:");
+disp(width_canonUnitStr);
+age_mu = wconoct.unitsDict_valueFromKey(units_data,"'age'");
+age_unitStr = wconoct.MU_unit_string(age_mu);
+disp("units for 'age' is:");
+disp(age_unitStr);
+
 metadata_data = wconoct.metadata(loaded_worm);
 disp(metadata_data);
 if (wconoct.isNoneHandle(metadata_data) == 1)

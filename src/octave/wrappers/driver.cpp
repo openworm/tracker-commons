@@ -216,13 +216,13 @@ int main(int argc, char **argv) {
 
   // For now we will just test whether we can get our hands on
   //   the WCONWorms attribute entities
-  handle = wconOct_WCONWorms_units(&err,
-				   loadedWCONWormsObjHandle);
+  WconOctUnitsDict *dict = wconOct_WCONWorms_units(&err,
+						   loadedWCONWormsObjHandle);
   if (err == FAILED) {
     cerr << "Error: Failed to acquire units from handle " 
 	 << loadedWCONWormsObjHandle << endl;
   } else {
-    cout << "Got units dictionary handle " << handle 
+    cout << "Got units dictionary pointer"
 	 << " from object handle " << loadedWCONWormsObjHandle << endl;
   }
 
