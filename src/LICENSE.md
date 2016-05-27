@@ -4,7 +4,9 @@ Copyright © 2015 by
   Andre Brown,
   Rex Kerr,
   Calico Life Sciences,
-  OpenWorm
+  Michael Currie,
+  Chee Wai Lee,
+  OpenWorm Foundation (Delaware #5785727)
 
 The software component of **tracker_commons**, like all software that is
 part of the [OpenWorm](https://github.com/openworm) project, is free
