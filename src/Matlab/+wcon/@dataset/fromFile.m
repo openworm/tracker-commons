@@ -6,6 +6,10 @@ function obj = fromFile(file_path,options)
 %   Still To Do:
 %   ------------
 %   1) Multiple file support
+%
+%   See Also:
+%   ---------
+%   wcon.loadDatset
 
 
 obj = wcon.dataset;
@@ -14,13 +18,21 @@ obj = wcon.dataset;
 
 
 %{
+    options = struct;
     file_root = 'C:\Users\RNEL\Google Drive\OpenWorm\OpenWorm Public\Movement Analysis\example_data\WCON'
     file_name = 'testfile_new.wcon'
+    options.merge_data = true;
+
     file_name = 'XJ30_NaCl500mM4uL6h_10m45x10s40s_Ea.wcon'
     
+
     file_path = fullfile(file_root,file_name);
     
-    f = wcon.loadDataset(file_path);
+    tic
+    profile on
+    f = wcon.loadDataset(file_path,options);
+    profile off
+    toc
 %}
 
 REQUIRED_BASE_PROP_NAMES = {'units','data'};
