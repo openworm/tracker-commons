@@ -9,7 +9,7 @@ classdef dataset < handle
     
     file_path = fullfile(file_root,file_name);
     
-    f = wcon.dataset(file_path);
+    f = wcon.loadDataset(file_path);
     
     https://github.com/openworm/tracker-commons/blob/master/WCON_format.md
     %}
