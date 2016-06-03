@@ -45,13 +45,13 @@ tokens = json.tokens(file_path);
 
 root = tokens.getRootInfo();
 
-custom_prop_names = setdiff(root.attribute_names,STANDARD_BASE_PROP_NAMES);
+custom_prop_names = setdiff(root.key_names,STANDARD_BASE_PROP_NAMES);
 
 %units
 %metadata
 %data
 
-if any(strcmp(root.attribute_names,'metadata'))
+if any(strcmp(root.key_names,'metadata'))
    obj.meta = wcon.metadata.fromFile(root.getToken('metadata')); 
 end
 

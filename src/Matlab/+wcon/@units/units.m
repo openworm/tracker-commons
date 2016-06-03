@@ -19,7 +19,7 @@ classdef units < sl.obj.dict
             obj = wcon.units;
             props = obj.props;
             
-            names = t.attribute_names;
+            names = t.key_names;
             for iName = 1:length(names)
                 cur_name = names{iName};
                 props(cur_name) = t.getTokenString(cur_name);

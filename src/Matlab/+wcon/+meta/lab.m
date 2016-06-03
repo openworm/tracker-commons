@@ -37,7 +37,7 @@ classdef lab < handle
             for iObj = 1:n_objs
                 obj = objs(iObj);
                 cur_m = all_m(iObj);
-                attribute_names = cur_m.attribute_names;
+                attribute_names = cur_m.key_names;
                 n_names = length(attribute_names);
                 for iName = 1:n_names
                     switch attribute_names{iName}

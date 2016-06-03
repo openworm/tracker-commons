@@ -33,7 +33,7 @@ classdef metadata < handle
         function obj = fromFile(m)
             obj = wcon.metadata;
             custom = struct;
-            attribute_names = m.attribute_names;
+            attribute_names = m.key_names;
             n_names = length(attribute_names);
             %TODO: Use getTokenString
             for iName = 1:n_names

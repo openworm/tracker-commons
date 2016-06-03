@@ -142,7 +142,7 @@ classdef data < sl.obj.dict
                 props = cur_obj.props;
                 cur_json = data_json_objs(iObj);
                 
-                names = cur_json.attribute_names;
+                names = cur_json.key_names;
                 for iName = 1:length(names)
                    cur_name = names{iName};
                    switch cur_name
