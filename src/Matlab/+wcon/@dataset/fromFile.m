@@ -18,12 +18,16 @@ obj = wcon.dataset;
 
 
 %{
-    FILE_USE = 1;
+    %Testing code
+    %-----------------------------------------
+    FILE_USE = 2;
     file_root = 'C:\Users\RNEL\Google Drive\OpenWorm\OpenWorm Public\Movement Analysis\example_data\WCON'
     options = struct;
     if FILE_USE == 1
         file_name = 'testfile_new.wcon'
-        options.merge_data = true;
+
+        %This is incorrect
+        %options.merge_data = true;
     else
         file_name = 'XJ30_NaCl500mM4uL6h_10m45x10s40s_Ea.wcon'
     end
@@ -33,7 +37,9 @@ obj = wcon.dataset;
     
     tic
     profile on
+for i = 1:10
     f = wcon.loadDataset(file_path,options);
+end
     profile off
     toc
 %}
