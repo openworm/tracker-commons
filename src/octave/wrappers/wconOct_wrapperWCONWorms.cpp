@@ -3,6 +3,7 @@
 #include <Python.h>
 
 #include <iostream>
+#include <string.h>
 using namespace std;
 
 #include "wrapperInternal.h"
@@ -377,15 +378,15 @@ extern "C" int wconOct_WCONWorms_eq(WconOctError *err,
 }
 
 extern "C" 
-WconOctHandle wconOct_WCONWorms_units(WconOctError *err,
-				     const WconOctHandle selfHandle) {
+WconOctUnitsDict *wconOct_WCONWorms_units(WconOctError *err,
+					  const WconOctHandle selfHandle) {
   PyObject *WCONWorms_selfInstance=NULL;
   PyObject *pErr, *pAttr;
   
   wconOct_initWrapper(err);
   if (*err == FAILED) {
     cerr << "Failed to initialize wrapper library." << endl;
-    return WCONOCT_NULL_HANDLE;
+    return NULL;
   }
 
   WCONWorms_selfInstance = wrapInternalGetReference(selfHandle);
@@ -393,7 +394,7 @@ WconOctHandle wconOct_WCONWorms_units(WconOctError *err,
     cerr << "ERROR: Failed to acquire object instance using handle "
 	 << selfHandle << endl;
     *err = FAILED;
-    return WCONOCT_NULL_HANDLE;
+    return NULL;
   }
 
   // Attribute is a Python dict (Dictionary) object.
@@ -410,33 +411,61 @@ WconOctHandle wconOct_WCONWorms_units(WconOctError *err,
     PyErr_Print();
     Py_XDECREF(pAttr);
     *err = FAILED;
-    return WCONOCT_NULL_HANDLE;
+    return NULL;
   }
 
   if (pAttr != NULL) {
     if (PyDict_Check(pAttr)) {
-      WconOctHandle result = wrapInternalStoreReference(pAttr);
-      if (result == WCONOCT_NULL_HANDLE) {
-	cerr << "ERROR: failed to store object reference in wrapper." 
-	     << endl;
-	Py_DECREF(pAttr);
-	*err = FAILED;
-	return WCONOCT_NULL_HANDLE;
-      } else {
-	*err = SUCCESS;
-	return result;
+      PyObject *key, *value; /* borrowed references */
+      Py_ssize_t pos = 0;
+      int num = PyDict_Size(pAttr);
+      int idx = 0;
+      cout << "Number of elements = " << num << endl;
+      WconOctUnitsKeyValue *retKeyValueArray = 
+	new WconOctUnitsKeyValue[num];
+      while (PyDict_Next(pAttr, &pos, &key, &value)) {
+	WconOctHandle muHandle = wrapInternalStoreReference(value);
+	/* How does one construct a C string from a Python string? */
+	PyObject *keyAscii = PyObject_ASCII(key);
+	/* don't deallocate this! */
+	if (muHandle == WCONOCT_NULL_HANDLE) {
+	  cerr << "ERROR: PyDict index " << pos 
+	       << " :Failed to store object reference in wrapper."  
+	       << endl;
+	  Py_DECREF(pAttr);
+	  Py_DECREF(keyAscii);
+	  *err = FAILED;
+	  return NULL;
+	} else {
+	  char *newKey = PyUnicode_AsUTF8(keyAscii);
+	  // cout << "Pair at idx " << idx << " (pos " << pos << ")" << endl;
+	  retKeyValueArray[idx].value = muHandle;
+	  retKeyValueArray[idx].key = new char[strlen(newKey)+1];
+	  strcpy(retKeyValueArray[idx].key,newKey);
+	  /*
+	  cout << "Found key-value pair [" << retKeyValueArray[idx].key
+	       << "] x [" << retKeyValueArray[idx].value << "]" << endl;
+	  */
+	  idx++;
+	  Py_DECREF(keyAscii);
+	}
       }
+      *err = SUCCESS;
+      WconOctUnitsDict *result = new WconOctUnitsDict;
+      result->numElements = num;
+      result->unitsDict = retKeyValueArray;
+      return result;
     } else {
       cerr << "ERROR: units is not a dict object." << endl;
       Py_DECREF(pAttr);
       *err = FAILED;
-      return WCONOCT_NULL_HANDLE;
+      return NULL;
     }
   } else {
     cerr << "ERROR: Null handle from units" << endl;
     // No need to DECREF a NULL pAttr
     *err = FAILED;
-    return WCONOCT_NULL_HANDLE;
+    return NULL;
   }
 }
 

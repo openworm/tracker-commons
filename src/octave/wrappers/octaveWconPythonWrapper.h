@@ -30,8 +30,8 @@ WconOctHandle wconOct_WCONWorms_add(WconOctError *err,
 int wconOct_WCONWorms_eq(WconOctError *err,
 				     const WconOctHandle selfHandle,
 				     const WconOctHandle handle);
-WconOctHandle wconOct_WCONWorms_units(WconOctError *err,
-						const WconOctHandle selfHandle);
+WconOctUnitsDict *wconOct_WCONWorms_units(WconOctError *err,
+					  const WconOctHandle selfHandle);
 WconOctHandle wconOct_WCONWorms_metadata(WconOctError *err,
 					const WconOctHandle selfHandle);
 WconOctHandle wconOct_WCONWorms_data(WconOctError *err,

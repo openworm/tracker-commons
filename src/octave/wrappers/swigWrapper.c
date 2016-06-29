@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 void initWrapper() {
   WconOctError err;
@@ -88,16 +89,26 @@ int eq(int selfHandle, int handle2) {
   }
 }
 
-int units(int selfHandle) {
+WconOctUnitsDict *units(int selfHandle) {
   WconOctError err;
-  WconOctHandle octSelf, retHandle;
+  WconOctHandle octSelf;
+  WconOctUnitsDict *dictionary;
+  int i;
   octSelf = (WconOctHandle)selfHandle;
-  retHandle = wconOct_WCONWorms_units(&err,octSelf);
+  dictionary = wconOct_WCONWorms_units(&err,octSelf);
   if (err == FAILED) {
     fprintf(stderr,"Err: units failed\n");
     exit(-1);
   } else {
-    return (int)retHandle;
+    /*    
+    fprintf(stdout,"Debug: num elements = %d\n", dictionary->numElements); 
+    for (i=0; i<dictionary->numElements; i++) {
+      fprintf(stdout,"Debug: [%d] [%s]x[%d]\n",i,
+	      (dictionary->unitsDict[i]).key,
+	      (dictionary->unitsDict[i]).value);
+    }
+    */
+    return dictionary;
   }
 }
 
@@ -220,4 +231,28 @@ const char *MU_canonical_unit_string(int selfHandle) {
   } else {
     return retValue;
   }
+}
+
+/* 
+   Preliminary C-based Dictionary support.
+   Note that there are type-issues here that I am not bothering
+   to address for now - Units dictionaries are different from
+   other dictionaries.
+ */
+
+int unitsDict_numElements(WconOctUnitsDict *dictionary) {
+  return dictionary->numElements;
+}
+
+int unitsDict_valueFromKey(WconOctUnitsDict *dictionary,
+			   const char *key) {
+  int i;
+  int numElements = dictionary->numElements;
+
+  for (i=0; i<numElements; i++) {
+    if (!strcmp(key,(dictionary->unitsDict)[i].key)) {
+      return (int)(dictionary->unitsDict)[i].value;
+    }
+  }
+  return (int)(wconOct_makeNullHandle());
 }
