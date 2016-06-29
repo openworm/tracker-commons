@@ -1,0 +1,12 @@
+--- 
+repo: openworm/tracker-commons
+shortDescription: "Compilation of information and code bases related to open-source trackers for C. elegans"
+coordinator: mcurrie@openworm.org
+documentation: https://github.com/openworm/tracker-commons/blob/master/README.md
+gitter: https://gitter.im/openworm/open-worm-analysis-toolbox
+outputs: 
+  - openworm/sibernetic
+  - openworm/org.geppetto
+  - openworm/open-worm-analysis-toolbox
+parent:
+  - openworm/open-worm-analysis-toolbox
