@@ -11,45 +11,21 @@ function obj = fromFile(file_path,options)
 %   ---------
 %   wcon.loadDatset
 
+%REQUIRED_BASE_PROP_NAMES = {'units','data'};
+STANDARD_BASE_PROP_NAMES = {'units','metadata','data'};
 
 obj = wcon.dataset;
 
-
-
-
-%{
-    %Testing code
-    %-----------------------------------------
-    FILE_USE = 2;
-    file_root = 'C:\Users\RNEL\Google Drive\OpenWorm\OpenWorm Public\Movement Analysis\example_data\WCON'
-    options = struct;
-    if FILE_USE == 1
-        file_name = 'testfile_new.wcon'
-
-        %This is incorrect
-        %options.merge_data = true;
-    else
-        file_name = 'XJ30_NaCl500mM4uL6h_10m45x10s40s_Ea.wcon'
-    end
-    
-    file_path = fullfile(file_root,file_name);
-
-    
-    tic
-    profile on
-for i = 1:10
-    f = wcon.loadDataset(file_path,options);
-end
-    profile off
-    toc
-%}
-
-REQUIRED_BASE_PROP_NAMES = {'units','data'};
-STANDARD_BASE_PROP_NAMES = {'units','metadata','data'};
-
+%Parse the JSON data
+%-------------------
 tokens = json.tokens(file_path);
 
+%Populate the file from the tokens
+%---------------------------------
 root = tokens.getRootInfo();
+
+%This will allow us to maintain order ...
+obj.logFieldNames(STANDARD_BASE_PROP_NAMES);
 
 custom_prop_names = setdiff(root.key_names,STANDARD_BASE_PROP_NAMES);
 
@@ -63,8 +39,8 @@ end
 
 obj.units = wcon.units.fromFile(root.getToken('units')); 
 
-obj.data = wcon.data.fromFile(root.getToken('data'),options);
-
+%obj.data = wcon.data.fromFile(root.getToken('data'),options);
+obj.lazy_fields('data') = @()wcon.data.fromFile(root.getToken('data'),options);
 obj.files = {file_path};
 
 %@fields => should be parsed

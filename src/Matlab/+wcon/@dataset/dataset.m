@@ -1,19 +1,26 @@
-classdef dataset < handle
+classdef dataset < wcon.utils.jsonable_dict
     %
     %   Class:
     %   wcon.dataset
     %
-    %   
+    %   Currently missing functionality:
+    %   --------------------------------
+    %   1) Creating from memory
+    %   2) Loading from multiple files
+    %
+    %   See Also
+    %   wcon.load()
     
     properties
         units
         data %wcon.data
         meta = wcon.NULL;
-        files
+        files = {}
     end
     
     methods (Static)
-       obj = fromFile(file_path,varargin)
+        %wcon.dataset.fromFile
+        obj = fromFile(file_path,varargin)
     end
     
 end

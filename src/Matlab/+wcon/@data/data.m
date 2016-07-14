@@ -1,4 +1,4 @@
-classdef data < sl.obj.dict
+classdef data < wcon.utils.jsonable_dict
     %
     %   Class:
     %   wcon.loaded_data
@@ -29,16 +29,6 @@ classdef data < sl.obj.dict
     
     
     %}
-    
-    %   id
-    %   
-    
-% % %     properties
-% % %         id %required if data is present
-% % %         x  
-% % %         y
-% % %         t
-% % %     end
     
     methods
         function plotWorm(obj,varargin)

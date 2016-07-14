@@ -27,7 +27,7 @@ classdef software < handle
            for iObj = 1:n_objs
               cur_obj = objs(iObj);
               cur_json = json_objs(iObj);
-              names = cur_json.attribute_names;
+              names = cur_json.key_names;
               for iName = 1:length(names)
                   switch names{iName}
                       case 'name'
