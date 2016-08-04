@@ -25,23 +25,25 @@ tokens = json.tokens(file_path);
 root = tokens.getRootInfo();
 
 %This will allow us to maintain order ...
-obj.logFieldNames(STANDARD_BASE_PROP_NAMES);
-
 custom_prop_names = setdiff(root.key_names,STANDARD_BASE_PROP_NAMES);
 
 %units
 %metadata
 %data
-
+props = obj.props;
 if any(strcmp(root.key_names,'metadata'))
-   obj.meta = wcon.metadata.fromFile(root.getToken('metadata')); 
+   obj.addProp('meta',wcon.metadata.fromFile(root.getToken('metadata'))); 
 end
 
-obj.units = wcon.units.fromFile(root.getToken('units')); 
+obj.addProp('units',wcon.units.fromFile(root.getToken('units'))); 
 
 %obj.data = wcon.data.fromFile(root.getToken('data'),options);
-obj.lazy_fields('data') = @()wcon.data.fromFile(root.getToken('data'),options);
-obj.files = {file_path};
+obj.addLazyField('data',@()wcon.data.fromFile(root.getToken('data'),options));
+obj.addProp('files',{file_path});
+
+%Custom fields
+%-------------
+%Need to use tokens.getParsedData
 
 %@fields => should be parsed
 %non-@fields => general parsing ...?

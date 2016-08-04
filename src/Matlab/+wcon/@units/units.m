@@ -1,4 +1,4 @@
-classdef units < sl.obj.dict
+classdef units < wcon.sl.obj.dict
     %
     %   Class:
     %   wcon.units
@@ -36,11 +36,19 @@ classdef units < sl.obj.dict
             obj = wcon.units;
             props = obj.props;
             
+            setField = @wcon.sl.struct.setField;
+            
             names = t.key_names;
             for iName = 1:length(names)
                 cur_name = names{iName};
-                props(cur_name) = t.getTokenString(cur_name);
+                value = t.getTokenString(cur_name);
+                try
+                    props(cur_name) = value;
+                catch
+                    props = setField(props,cur_name,value);  
+                end
             end
+            obj.props = props;
         end
     end
     

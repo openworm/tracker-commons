@@ -1,4 +1,4 @@
-classdef dataset < wcon.utils.jsonable_dict
+classdef dataset < wcon.utils.lazy_dict
     %
     %   Class:
     %   wcon.dataset
@@ -11,12 +11,28 @@ classdef dataset < wcon.utils.jsonable_dict
     %   See Also
     %   wcon.load()
     
-    properties
-        units
-        data %wcon.data
-        meta = wcon.NULL;
-        files = {}
-    end
+    %{
+    Properties
+    ----------
+    units : wcon.units
+    
+    data : wcon.data 
+    Loaded lazily
+    
+    meta : wcon.metadata
+    
+    files : 
+    
+    
+    %}
+    
+    
+%     properties
+%         units
+%         data %wcon.data
+%         meta = wcon.NULL;
+%         files = {}
+%     end
     
     methods (Static)
         %wcon.dataset.fromFile

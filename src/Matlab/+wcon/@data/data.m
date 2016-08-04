@@ -1,4 +1,4 @@
-classdef data < wcon.utils.jsonable_dict
+classdef data < wcon.sl.obj.dict
     %
     %   Class:
     %   wcon.loaded_data
@@ -118,6 +118,8 @@ classdef data < wcon.utils.jsonable_dict
             %   options : struct
             %       See wcon.loadDataset
             %
+            
+            
             if strcmp(t.type,'array')
                 n_objs = t.n_elements;
                 data_json_objs = t.getObjectArray;
@@ -133,22 +135,24 @@ classdef data < wcon.utils.jsonable_dict
                 cur_json = data_json_objs(iObj);
                 
                 names = cur_json.key_names;
+                                
                 for iName = 1:length(names)
                    cur_name = names{iName};
                    switch cur_name
                        case 'id'
-                           props('id') = cur_json.getToken('id');
+                           props.('id') = cur_json.getToken('id');
                        case 't'
-                           props('t') = h__getNumericArray(cur_json,'t',options);
+                           props.('t') = h__getNumericArray(cur_json,'t',options);
                        case 'x'
-                           props('x') = h__getNumericArray(cur_json,'x',options);
+                           props.('x') = h__getNumericArray(cur_json,'x',options);
                        case 'y'
-                           props('y') = h__getNumericArray(cur_json,'y',options);
+                           props.('y') = h__getNumericArray(cur_json,'y',options);
                        otherwise
                            %What do we want to do here ????
                            %We might need to change this ....
-                           props(cur_name) = h__getNumericArray(cur_json,cur_name,options);
+                           props.(cur_name) = h__getNumericArray(cur_json,cur_name,options);
                    end
+                   cur_obj.props = props;
                 end
             end 
         end
