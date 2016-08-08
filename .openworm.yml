@@ -4,9 +4,26 @@ shortDescription: "Compilation of information and code bases related to open-sou
 coordinator: mcurrie@openworm.org
 documentation: https://github.com/openworm/tracker-commons/blob/master/README.md
 gitter: https://gitter.im/openworm/open-worm-analysis-toolbox
+keywords:
+  - data
+languages:
+  - scala
+  - python
+  - java
+  - r
+  - julia
+  - octave
+  - matlab
+  - c
+  - c++
+latest-release:
+  - beta 1.1.0
+members:
+  - cheelee@openworm.org
 outputs: 
   - openworm/sibernetic
   - openworm/org.geppetto
   - openworm/open-worm-analysis-toolbox
 parent:
   - openworm/open-worm-analysis-toolbox
+tests: true
