@@ -1,4 +1,4 @@
-classdef dataset < wcon.utils.lazy_dict
+classdef dataset < json.lazy_dict
     %
     %   Class:
     %   wcon.dataset
@@ -12,7 +12,7 @@ classdef dataset < wcon.utils.lazy_dict
     %   wcon.load()
     
     %{
-    Properties
+    WCON Properties
     ----------
     units : wcon.units
     
@@ -21,22 +21,23 @@ classdef dataset < wcon.utils.lazy_dict
     
     meta : wcon.metadata
     
-    files : 
-    
-    
+    Additional Properties
+    ----------------------    
+    files : cellstr
     %}
-    
-    
-%     properties
-%         units
-%         data %wcon.data
-%         meta = wcon.NULL;
-%         files = {}
-%     end
     
     methods (Static)
         %wcon.dataset.fromFile
         obj = fromFile(file_path,varargin)
+    end
+    
+    methods
+        function s = getPropertiesStruct(obj)
+           s = getPropertiesStruct@wcon.utils.lazy_dict(obj);
+           if isfield(s,'files')
+              s = rmfield(s,'files');
+           end
+        end
     end
     
 end

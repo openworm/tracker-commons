@@ -11,7 +11,7 @@ function obj = load(file_path,varargin)
 %{
     %Testing code
     %-----------------------------------------
-    FILE_USE = 2;
+    FILE_USE = 1;
     file_root = 'C:\Users\RNEL\Google Drive\OpenWorm\OpenWorm Public\Movement Analysis\example_data\WCON'
     options = struct;
     if FILE_USE == 1
@@ -25,8 +25,12 @@ function obj = load(file_path,varargin)
     
     file_path = fullfile(file_root,file_name);
 
+    tic
+for i = 1:10    
+f = wcon.load(file_path,options);
 
-
+end
+    toc/10
     
     tic
     profile on

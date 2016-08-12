@@ -1,4 +1,4 @@
-classdef metadata < handle
+classdef metadata < json.dict
     %
     %   Class:
     %   wcon.metadata
@@ -7,46 +7,69 @@ classdef metadata < handle
     
     %All entries in this object are optional
     
-    properties
-        custom = wcon.NULL;
-        lab = wcon.NULL;
-        who = wcon.NULL;
-        timestamp = wcon.NULL;
-        temperature = wcon.NULL;
-        humidity = wcon.NULL;
-        arena = wcon.NULL;
-        food = wcon.NULL;
-        media = wcon.NULL;
-        sex = wcon.NULL;
-        stage = wcon.NULL;
-        age = wcon.NULL;
-        strain = wcon.NULL;
-        protocol = wcon.NULL;
-        software = wcon.NULL;
-        settings %arbitrary JSON
-    end
+    %{
+    custom
+    lab
+    who
+    timestamp
+    temperature
+    humidity
+    arena
+    food
+    media
+    sex
+    stage
+    age
+    strain
+    protocol
+    software
+    settings
+    
+    
+    %}
     
     methods
+        function obj = metadata()
+           null = wcon.NULL;
+           props = obj.props;
+           props.custom = null;
+           props.lab = null;
+           props.who = null;
+           props.timestamp = null;
+           props.temperature = null;
+           props.humidity = null;
+           props.arena = null;
+           props.food = null;
+           props.media = null;
+           props.sex = null;
+           props.stage = null;
+           props.age = null;
+           props.strain = null;
+           props.protocol = null;
+           props.software = null;
+           props.settings = null;
+           obj.props = props;
+        end
     end
     
     methods (Static)
         function obj = fromFile(m)
+            %
+            %   Inputs
+            %   ------
+            %   m : json.token_info.object_token_info
+                        
             obj = wcon.metadata;
-            custom = struct;
             attribute_names = m.key_names;
             n_names = length(attribute_names);
             %TODO: Use getTokenString
             for iName = 1:n_names
-                switch attribute_names{iName}
+                name = attribute_names{iName};
+                switch name
                     case 'lab'
-                        obj.lab = wcon.meta.lab.fromFile(m.getToken('lab'));
+                        value = wcon.meta.lab.fromFile(m.getToken('lab'));
                     case 'who'
-                        temp = m.getToken('who');
-                        if ischar(temp)
-                            obj.who = temp;
-                        else
-                            obj.who = temp.getCellstr();
-                        end
+                        value = m.getStringOrCellstr('who');
                     case 'timestamp'
                         temp = m.getToken('timestamp');
                         error('Not Yet Implemented'); 
@@ -64,7 +87,7 @@ classdef metadata < handle
                         error('Not Yet Implemented'); 
                         keyboard
                     case 'food'
-                        obj.food = m.getTokenString('food');
+                        value = m.getTokenString('food');
                     case 'media'
                       	temp = m.getToken('media');
                         error('Not Yet Implemented'); 
@@ -74,29 +97,22 @@ classdef metadata < handle
                         error('Not Yet Implemented'); 
                         keyboard
                     case 'stage'
-                       	temp = m.getTokenString('stage');
+                       	value = m.getTokenString('stage');
                     case 'age'
-                     	obj.age = m.getNumericToken('age');
+                     	value = m.getNumericToken('age');
                     case 'strain'
-                     	obj.strain = m.getTokenString('strain');
+                     	value = m.getTokenString('strain');
                     case 'protocol'
-                    	temp = m.getToken('protocol');
-                        if ischar(temp)
-                            obj.protocol = temp;
-                        else
-                            obj.protocol = temp.getCellstr();
-                        end
+                        value = m.getStringOrCellstr('protocol');
                     case 'software'
                         temp = m.getToken('software');
-                        obj.software = wcon.meta.software.fromFile(temp);
+                        value = wcon.meta.software.fromFile(temp);
                     otherwise
                         %TODO: Check and handle custom ...
-                        cur_name = attribute_names{iName};
-                        custom.(cur_name(2:end)) = m.getParsedToken(cur_name);
+                        value = m.getParsedToken(name);
                 end
-                if ~isempty(fieldnames(custom))
-                   obj.custom = custom; 
-                end
+                obj.addProp(name,value);
+
             end
             
         end

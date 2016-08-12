@@ -1,4 +1,4 @@
-classdef data < wcon.sl.obj.dict
+classdef data < json.dict
     %
     %   Class:
     %   wcon.loaded_data

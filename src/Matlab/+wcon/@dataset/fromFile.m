@@ -30,14 +30,11 @@ custom_prop_names = setdiff(root.key_names,STANDARD_BASE_PROP_NAMES);
 %units
 %metadata
 %data
-props = obj.props;
 if any(strcmp(root.key_names,'metadata'))
    obj.addProp('meta',wcon.metadata.fromFile(root.getToken('metadata'))); 
 end
 
 obj.addProp('units',wcon.units.fromFile(root.getToken('units'))); 
-
-%obj.data = wcon.data.fromFile(root.getToken('data'),options);
 obj.addLazyField('data',@()wcon.data.fromFile(root.getToken('data'),options));
 obj.addProp('files',{file_path});
 

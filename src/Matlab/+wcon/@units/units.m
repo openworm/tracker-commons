@@ -1,4 +1,4 @@
-classdef units < wcon.sl.obj.dict
+classdef units < json.dict
     %
     %   Class:
     %   wcon.units
@@ -36,6 +36,7 @@ classdef units < wcon.sl.obj.dict
             obj = wcon.units;
             props = obj.props;
             
+            
             setField = @wcon.sl.struct.setField;
             
             names = t.key_names;
@@ -43,7 +44,7 @@ classdef units < wcon.sl.obj.dict
                 cur_name = names{iName};
                 value = t.getTokenString(cur_name);
                 try
-                    props(cur_name) = value;
+                    props.(cur_name) = value;
                 catch
                     props = setField(props,cur_name,value);  
                 end
