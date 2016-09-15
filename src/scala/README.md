@@ -27,7 +27,7 @@ classpath.
 
 ```scala
 import org.openworm.trackercommons._
-val worms = ReadWrite("../../tests/intermediate.wcon") match {
+val worms = ReadWrite.read("../../tests/intermediate.wcon") match {
   case Right(ws) => ws
   case Left(err) => println(err); throw new Exception
 }
