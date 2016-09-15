@@ -242,7 +242,7 @@ A WCON parser should, if it's going to interpret units, handle the following SI 
 | milli    | m       | 10<sup>-3</sup> |
 | micro    | u µ μ   | 10<sup>-6</sup> |
 | nano     | n       | 10<sup>-9</sup> |
-| kilo     | k K     | 10<sup>3</sup>  |
+| kilo     | k       | 10<sup>3</sup>  |
 | mega     | M       | 10<sup>6</sup>  |
 | giga     | G       | 10<sup>9</sup>  |
 
