@@ -7,5 +7,5 @@ lazy val root = (project in file(".")).settings(
   scalacOptions ++= Seq("-unchecked", "-feature", "-deprecation"),
   libraryDependencies += "com.novocode" % "junit-interface" % "0.9" % "test",
   libraryDependencies += "com.lihaoyi" %% "fastparse" % "0.2.1",
-  libraryDependencies += "com.github.ichoran" %% "kse" % "0.4-SNAPSHOT"
+  libraryDependencies += "com.github.ichoran" %% "kse" % "0.5-SNAPSHOT"
 )
