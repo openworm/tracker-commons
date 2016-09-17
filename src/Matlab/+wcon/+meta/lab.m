@@ -18,6 +18,8 @@ classdef lab < handle
         PI = wcon.NULL
         %to indicate the principal investigator of that lab
         
+        address = wcon.NULL
+        %temp
     end
     
     methods (Static)
@@ -47,8 +49,10 @@ classdef lab < handle
                             obj.name = cur_m.getTokenString('name');
                         case 'PI'
                             obj.PI = cur_m.getTokenString('PI');
+                        case 'address'
+                            obj.address = cur_m.getTokenString('address');
                         otherwise
-                            error('Unsupported attribute for lab: %s',attribute_names{iName})
+                            error('Unsupported attribute for lab: ''%s''',attribute_names{iName})
                     end
                 end
             end

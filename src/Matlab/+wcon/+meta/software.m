@@ -7,6 +7,7 @@ classdef software < handle
         name = wcon.NULL
         version = wcon.NULL
         featureID = wcon.NULL
+        commit_hash = wcon.NULL
     end
     
     methods (Static)
@@ -36,8 +37,10 @@ classdef software < handle
                           cur_obj.version = cur_json.getTokenString('version');
                       case 'featureID'
                           cur_obj.featureID = cur_json.getStringOrCellstr('featureID');
+                      case 'commit_hash'
+                          cur_obj.commit_hash = cur_json.getTokenString('commit_hash');
                       otherwise
-                          error('unrecognized feature')
+                          error('unrecognized feature in software: ''%s''',names{iName})
                   end
               end
            end

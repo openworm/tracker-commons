@@ -71,9 +71,12 @@ classdef metadata < json.dict
                     case 'who'
                         value = m.getStringOrCellstr('who');
                     case 'timestamp'
-                        temp = m.getToken('timestamp');
-                        error('Not Yet Implemented'); 
-                        keyboard
+                        temp = m.getTokenString('timestamp');
+                        value = temp;
+                        
+%                         temp = m.getToken('timestamp');
+%                         error('Not Yet Implemented'); 
+%                         keyboard
                     case 'temperature'
                         temp = m.getToken('temperature');
                         error('Not Yet Implemented'); 
@@ -83,9 +86,8 @@ classdef metadata < json.dict
                         error('Not Yet Implemented'); 
                         keyboard
                     case 'arena'
-                        temp = m.getToken('arena');
-                        error('Not Yet Implemented'); 
-                        keyboard
+                        temp = m.getTokenString('arena');
+                        value = temp;
                     case 'food'
                         value = m.getTokenString('food');
                     case 'media'
@@ -93,9 +95,11 @@ classdef metadata < json.dict
                         error('Not Yet Implemented'); 
                         keyboard
                     case 'sex'
-                        temp = m.getToken('sex');
-                        error('Not Yet Implemented'); 
-                        keyboard
+                        temp = m.getTokenString('sex');
+                        value = temp;
+%                         temp = m.getToken('sex');
+%                         error('Not Yet Implemented'); 
+%                         keyboard
                     case 'stage'
                        	value = m.getTokenString('stage');
                     case 'age'

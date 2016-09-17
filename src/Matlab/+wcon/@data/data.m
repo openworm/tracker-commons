@@ -148,9 +148,30 @@ classdef data < json.dict
                        case 'y'
                            props.('y') = h__getNumericArray(cur_json,'y',options);
                        otherwise
-                           %What do we want to do here ????
-                           %We might need to change this ....
-                           props.(cur_name) = h__getNumericArray(cur_json,cur_name,options);
+                           %TODO: We need to get a static method to the
+                           %generic parser ...
+
+                           value = cur_json.getParsedData('index',iName);
+                           
+                           %Ideally we would be able to use the addProp
+                           %method, but I'm holding onto the props value
+                           %here so I would need:
+                           %
+                           %    cur_obj.props = props;
+                           %    cur_obj.addProp()
+                           %    props = cur_obj.props
+                           %
+                           %    :/ This is not great
+                           %
+                           %    TODO: Will we support arbitrary field names
+                           %    ...
+                           
+                           
+                           props = json.setField(props,cur_name,value);
+% % % % %                            addProp(obj,name,value)
+% % % % %                            %What do we want to do here ????
+% % % % %                            %We might need to change this ....
+% % % % %                            props.(cur_name) = h__getNumericArray(cur_json,cur_name,options);
                    end
                    cur_obj.props = props;
                 end
