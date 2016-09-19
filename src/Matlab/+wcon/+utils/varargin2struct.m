@@ -1,5 +1,10 @@
 function opt=varargin2struct(varargin)
 %
+%
+%   This is a temporary file as I'm currently using the jsonlab code
+%   to write json files, but it would be much better to remove this
+%   as the performance is not good
+%
 % opt=varargin2struct('param1',value1,'param2',value2,...)
 %   or
 % opt=varargin2struct(...,optstruct,...)

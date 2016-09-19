@@ -3,6 +3,11 @@ function obj = fromFile(file_path,options)
 %
 %   wcon.dataset.fromFile(obj,file_path,options)
 %
+%   Inputs
+%   ------
+%   file_path :
+%   options
+%
 %   Still To Do:
 %   ------------
 %   1) Multiple file support
@@ -18,7 +23,29 @@ obj = wcon.dataset;
 
 %Parse the JSON data
 %-------------------
-tokens = json.tokens(file_path);
+[~,~,ext] = fileparts(file_path);
+if strcmp(ext,'.zip')
+    %1) Get zip data
+    %2) 
+    temp = wcon.utils.zip_file(file_path);
+    if temp.n_files > 1
+        error('Multiple files detected, this functionality is not yet supported')
+    end
+    %TODO: We should build in the string buffering into the zip reading ...
+    %With the current zip implementation, we could pass in the file path
+    %but eventually I want to avoid unzipping the files to disk
+    data_in_zip_file = temp.readFile(1);
+    
+    %This is temporary, char conversion back and forth kills performance
+    temp_char_data = char(data_in_zip_file);
+    
+    tic;
+    tokens = json.stringToTokens(temp_char_data);
+    toc;
+    keyboard
+end
+
+tokens = json.fileToTokens(file_path);
 
 %Populate the file from the tokens
 %---------------------------------
