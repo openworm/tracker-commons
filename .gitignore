@@ -6,3 +6,6 @@ src/Python/dist/*
 src/Python/tests/test_chunk*
 src/Python/wcon.egg*
 .pypirc
+
+#Matlab
+*.asv
