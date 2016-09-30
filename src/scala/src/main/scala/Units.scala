@@ -22,7 +22,7 @@ package units {
     def changeToExternal(fss: Array[Array[Float]]) { var i = 0; while (i < fss.length) { changeToExternal(fss(i)); i += 1 } }
   }
 
-  case class LinearConvert(name: String, one: Double, dDim: Int, tDim: Int) extends Convert {
+  case class LinearConvert(name: String, one: Double, dDim: Int, tDim: Int, aDim: Int) extends Convert {
     import LinearConvert._
     def toInternal(x: Double) = x * one
     def toExternal(x: Double) = x / one
@@ -41,25 +41,31 @@ package units {
       if (math.abs(one-1) > 1e-9) { var i = 0; while (i < fs.length) { fs(i) = (fs(i) / one).toFloat; i += 1 } }
     }
 
-    def *(lc: LinearConvert) = new LinearConvert(s"($name) * (${lc.name})", one * lc.one, dDim + lc.dDim, tDim + lc.tDim)
-    def /(lc: LinearConvert) = new LinearConvert(s"($name) / (${lc.name})", one / lc.one, dDim - lc.dDim, tDim - lc.tDim)
-    def ^(n: Int) = new LinearConvert(s"($name)^$n", math.pow(one, n), dDim*n, tDim*n)
+    def *(lc: LinearConvert) =
+      new LinearConvert(s"($name) * (${lc.name})", one * lc.one, dDim + lc.dDim, tDim + lc.tDim, aDim + lc.aDim)
+    def /(lc: LinearConvert) = 
+      new LinearConvert(s"($name) / (${lc.name})", one / lc.one, dDim - lc.dDim, tDim - lc.tDim, aDim - lc.aDim)
+    def ^(n: Int) =
+      new LinearConvert(s"($name)^$n", math.pow(one, n), dDim*n, tDim*n, aDim*n)
+
     def e(n: Int) = copy(one = if (n >= 0) one * ("1e"+n.toString).toDouble else one / ("1e"+(-n).toString).toDouble)
   }
 
   object Standard {
-    val millimeter = LinearConvert("mm", 1, 1, 0)
-    val meter = LinearConvert("m", 1e3, 1, 0)
-    val micron = LinearConvert("um", 1e-3, 1, 0)
-    val inch = LinearConvert("in", 25.4, 1, 0)
-    val foot = LinearConvert("ft", 304.8, 1, 0)
-    val second = LinearConvert("s", 1, 0, 1)
-    val minute = LinearConvert("min", 60, 0, 1)
-    val hour = LinearConvert("hr", 3600, 0, 1)
-    val day = LinearConvert("day", 86400, 0, 1)
-    val one = LinearConvert("", 1, 0, 0)
-    def scalar(x: Double) = LinearConvert(x.toString, x, 0, 0)
-    val percent = LinearConvert("%", 0.01, 0, 0)
+    val millimeter = LinearConvert("mm", 1, 1, 0, 0)
+    val meter = LinearConvert("m", 1e3, 1, 0, 0)
+    val micron = LinearConvert("um", 1e-3, 1, 0, 0)
+    val inch = LinearConvert("in", 25.4, 1, 0, 0)
+    val foot = LinearConvert("ft", 304.8, 1, 0, 0)
+    val second = LinearConvert("s", 1, 0, 1, 0)
+    val minute = LinearConvert("min", 60, 0, 1, 0)
+    val hour = LinearConvert("hr", 3600, 0, 1, 0)
+    val day = LinearConvert("day", 86400, 0, 1, 0)
+    val radian = LinearConvert("radian", 1, 0, 0, 1)
+    val degree = LinearConvert("degree", 180/math.Pi, 0, 0, 1)
+    val one = LinearConvert("", 1, 0, 0, 0)
+    def scalar(x: Double) = LinearConvert(x.toString, x, 0, 0, 0)
+    val percent = LinearConvert("%", 0.01, 0, 0, 0)
     val celsius = new Convert { def name = "C"; def toInternal(x: Double) = x; def toExternal(x: Double) = x }
     val kelvin = new Convert { def name = "K"; def toInternal(x: Double) = x - 273.15; def toExternal(x: Double) = x + 273.15 }
     val fahrenheit = new Convert { def name = "F"; def toInternal(x: Double) = ((x-32)*5)/9; def toExternal(x: Double) = (x*9)/5 + 32 }    
@@ -85,7 +91,9 @@ package units {
       P("seconds" | "second").map(_ => second) |
       P("minutes" | "minute").map(_ => minute) |
       P("hours" | "hour").map(_ => hour) |
-      P("days" | "day").map(_ => day)
+      P("days" | "day").map(_ => day) |
+      P("radians" | "radian").map(_ => radian) |
+      P("degrees" | "degree").map(_ => degree)
     val LongPrefix =
       P("centi").map(_ => -2) |
       P("milli").map(_ => -3) |
@@ -105,7 +113,9 @@ package units {
       P("s").map(_ => second) |
       P("min").map(_ => minute) |
       P("hr" | "h").map(_ => hour) |
-      P("d").map(_ => day)
+      P("d").map(_ => day) |
+      P("rad").map(_ => radian) |
+      P("deg").map(_ => degree)
     val ShortPrefix =
       P("c").map(_ => -2) |
       P("m").map(_ => -3) |
