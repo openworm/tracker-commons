@@ -16,7 +16,7 @@ object ReadWrite {
     try {
       Jast.parse(f).to[DataSet].left.map(err => s"Could not read ${f.getPath} because\n$err")
     }
-    catch { case NonFatal(e) => Left("Could not read " + f.getPath + " because of a " + e.getClass.getName) }
+    catch { case NonFatal(e) => Left("Could not read " + f.getPath + " because of a " + e.getClass.getName + "\nDetails:\n" + e.getStackTrace.mkString("\n")) }
   }
 
   def readZip(f: java.io.File): Either[String, DataSet] = {
