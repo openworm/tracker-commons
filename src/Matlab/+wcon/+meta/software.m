@@ -1,4 +1,4 @@
-classdef software < handle
+classdef software < json.objs.dict
     %
     %   Class:
     %   wcon.meta.software
@@ -10,40 +10,39 @@ classdef software < handle
         commit_hash = wcon.NULL
     end
     
+    methods
+        function obj = software()
+            n = wcon.NULL;
+            s.version = n;
+            s.name = n;
+            s.featureID = n;
+            s.commit_hash = n;
+            obj.props = s;
+        end
+    end
+    
     methods (Static)
-        function objs = fromFile(t)
+        function objs = fromFile(m)
             %
-            %   obj = wcon.meta.software.fromFile(t)
+            %   obj = wcon.meta.software.fromFile(m)
             
-           if strcmp(t.type,'array')
-               n_objs = t.n_elements;
-               json_objs = t.getObjectArray;
-           else
-               n_objs = 1;
-               json_objs = t;
-           end
-           
-           objs(n_objs) = wcon.meta.software;
-           
-           for iObj = 1:n_objs
-              cur_obj = objs(iObj);
-              cur_json = json_objs(iObj);
-              names = cur_json.key_names;
-              for iName = 1:length(names)
-                  switch names{iName}
-                      case 'name'
-                          cur_obj.name = cur_json.getTokenString('name');
-                      case 'version'
-                          cur_obj.version = cur_json.getTokenString('version');
-                      case 'featureID'
-                          cur_obj.featureID = cur_json.getStringOrCellstr('featureID');
-                      case 'commit_hash'
-                          cur_obj.commit_hash = cur_json.getTokenString('commit_hash');
-                      otherwise
-                          error('unrecognized feature in software: ''%s''',names{iName})
-                  end
-              end
-           end
+            temp = m.getParsedData;
+            n_objs = length(temp);
+            objs(n_objs) = wcon.meta.software;
+            if iscell(temp)
+                for iObj = 1:n_objs
+                    cur_obj = objs(iObj);
+                    cur_obj.props = temp{iObj};
+                end
+            elseif length(temp) > 1
+                for iObj = 1:n_objs
+                    cur_obj = objs(iObj);
+                    cur_obj.props = temp(iObj);
+                end
+            else
+                objs.props = temp;
+                endd
+            end
         end
     end
     

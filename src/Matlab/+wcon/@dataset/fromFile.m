@@ -1,6 +1,5 @@
 function obj = fromFile(file_path,options)
 %
-%
 %   wcon.dataset.fromFile(obj,file_path,options)
 %
 %   Inputs
@@ -14,15 +13,16 @@ function obj = fromFile(file_path,options)
 %
 %   See Also:
 %   ---------
-%   wcon.loadDatset
+%   wcon.load
 
 %REQUIRED_BASE_PROP_NAMES = {'units','data'};
-STANDARD_BASE_PROP_NAMES = {'units','metadata','data'};
+%STANDARD_BASE_PROP_NAMES = {'units','metadata','data'};
 
 obj = wcon.dataset;
 
 %Parse the JSON data
 %-------------------
+%This needs to be changed ...
 [~,~,ext] = fileparts(file_path);
 if strcmp(ext,'.zip')
     %1) Get zip data
@@ -40,39 +40,34 @@ if strcmp(ext,'.zip')
     temp_char_data = char(data_in_zip_file);
     
     tic;
-    tokens = json.stringToTokens(temp_char_data);
+    root = json.tokens.parse(temp_char_data);
     toc;
-    keyboard
+else
+    root = json.tokens.load(file_path);
+end
+%--------------------------------------------------------------------------
+
+props = root.parseExcept({'units','data','metadata'});
+
+if ~isfield(props,'units')
+    error('WCON file must contain units')
+end
+props.units = wcon.units.fromFile(root.getToken('units'));
+
+if ~isfield(props,'data') 
+    error('WCON file must contain data')
+end
+%TODO: We could make this lazy again ...
+%This needs to go at the end ...
+%obj.addLazyField('data',@()wcon.data.fromFile(root.getToken('data'),options));
+props.data = wcon.data.fromFile(root.getToken('data'));
+
+if isfield(props,'metadata')
+    props.metadata = wcon.metadata.fromFile(root.getToken('metadata'));
 end
 
-tokens = json.fileToTokens(file_path);
+props.files = {file_path};
+obj.props = props;
 
-%Populate the file from the tokens
-%---------------------------------
-root = tokens.getRootInfo();
-
-%This will allow us to maintain order ...
-custom_prop_names = setdiff(root.key_names,STANDARD_BASE_PROP_NAMES);
-
-%units
-%metadata
-%data
-if any(strcmp(root.key_names,'metadata'))
-   obj.addProp('meta',wcon.metadata.fromFile(root.getToken('metadata'))); 
-end
-
-obj.addProp('units',wcon.units.fromFile(root.getToken('units'))); 
-obj.addLazyField('data',@()wcon.data.fromFile(root.getToken('data'),options));
-obj.addProp('files',{file_path});
-
-%Custom fields
-%-------------
-%Need to use tokens.getParsedData
-
-%@fields => should be parsed
-%non-@fields => general parsing ...?
-if ~isempty(custom_prop_names)
-   error('Custom code not yet supported') 
-end
 
 end

@@ -1,4 +1,4 @@
-classdef dataset < json.lazy_dict
+classdef dataset < json.objs.lazy_dict
     %
     %   Class:
     %   wcon.dataset

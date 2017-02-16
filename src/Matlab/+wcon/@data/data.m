@@ -1,4 +1,4 @@
-classdef data < json.dict
+classdef data < json.objs.dict
     %
     %   Class:
     %   wcon.loaded_data
@@ -119,6 +119,8 @@ classdef data < json.dict
             %       See wcon.loadDataset
             %
             
+            %
+            temp = t.getParsedData();
             
             if strcmp(t.type,'array')
                 n_objs = t.n_elements;

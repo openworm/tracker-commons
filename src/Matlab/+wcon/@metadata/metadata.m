@@ -1,4 +1,4 @@
-classdef metadata < json.dict
+classdef metadata < json.objs.dict
     %
     %   Class:
     %   wcon.metadata
@@ -60,65 +60,17 @@ classdef metadata < json.dict
             %   m : json.token_info.object_token_info
                         
             obj = wcon.metadata;
-            attribute_names = m.key_names;
-            n_names = length(attribute_names);
-            %TODO: Use getTokenString
-            for iName = 1:n_names
-                name = attribute_names{iName};
-                switch name
-                    case 'lab'
-                        value = wcon.meta.lab.fromFile(m.getToken('lab'));
-                    case 'who'
-                        value = m.getStringOrCellstr('who');
-                    case 'timestamp'
-                        temp = m.getTokenString('timestamp');
-                        value = temp;
-                        
-%                         temp = m.getToken('timestamp');
-%                         error('Not Yet Implemented'); 
-%                         keyboard
-                    case 'temperature'
-                        temp = m.getToken('temperature');
-                        error('Not Yet Implemented'); 
-                        keyboard
-                    case 'humidity'
-                     	temp = m.getToken('humidity');
-                        error('Not Yet Implemented'); 
-                        keyboard
-                    case 'arena'
-                        temp = m.getTokenString('arena');
-                        value = temp;
-                    case 'food'
-                        value = m.getTokenString('food');
-                    case 'media'
-                      	temp = m.getToken('media');
-                        error('Not Yet Implemented'); 
-                        keyboard
-                    case 'sex'
-                        temp = m.getTokenString('sex');
-                        value = temp;
-%                         temp = m.getToken('sex');
-%                         error('Not Yet Implemented'); 
-%                         keyboard
-                    case 'stage'
-                       	value = m.getTokenString('stage');
-                    case 'age'
-                     	value = m.getNumericToken('age');
-                    case 'strain'
-                     	value = m.getTokenString('strain');
-                    case 'protocol'
-                        value = m.getStringOrCellstr('protocol');
-                    case 'software'
-                        temp = m.getToken('software');
-                        value = wcon.meta.software.fromFile(temp);
-                    otherwise
-                        %TODO: Check and handle custom ...
-                        value = m.getParsedToken(name);
-                end
-                obj.addProp(name,value);
-
+            
+            [props,key_locations] = m.parseExcept({'lab','software'});
+            if key_locations(1)
+                props.lab = wcon.meta.lab.fromFile(m.getToken('lab'));
+            end
+            if key_locations(2)
+                props.software = wcon.meta.software.fromFile(m.getToken('software'));
             end
             
+            obj.props = props;
+
         end
     end
     

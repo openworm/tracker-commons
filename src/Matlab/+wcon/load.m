@@ -9,17 +9,23 @@ function obj = load(file_path,varargin)
 %
 %   Optional Inputs
 %   ----------------
-%   merge_data
+%   merge_data : (default false)
+%       If true, data.x and data.y are matrices when all frames
+%       have the same number of samples.
 
+%{
 
+root_path = 'G:\wcon_files\'
+ff = @(x) fullfile(root_path,x);
+file_path = ff('XJ30_NaCl500mM4uL6h_10m45x10s40s_Ea.wcon');
+file_path = ff('wcon_testfile_new.wcon');
+obj = wcon.load(file_path);
 
+%}
 
-in = struct();
 in.merge_data = false;
-%TODO: move to local sl
 in = wcon.sl.in.processVarargin(in,varargin);
 
 obj = wcon.dataset.fromFile(file_path,in);
-
 
 end
