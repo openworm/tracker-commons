@@ -8,6 +8,7 @@ package units {
     def name: String
     def toInternal(x: Double): Double
     def toExternal(x: Double): Double
+    def isIdentity: Boolean = false
 
     def json = Json.Str(name)
 
@@ -22,10 +23,17 @@ package units {
     def changeToExternal(fss: Array[Array[Float]]) { var i = 0; while (i < fss.length) { changeToExternal(fss(i)); i += 1 } }
   }
 
+  case class IdentityConvert(name: String) extends Convert {
+    def toInternal(x: Double) = x
+    def toExternal(x: Double) = x
+    override def isIdentity = true
+  }
+
   case class LinearConvert(name: String, one: Double, dDim: Int, tDim: Int, aDim: Int) extends Convert {
     import LinearConvert._
     def toInternal(x: Double) = x * one
     def toExternal(x: Double) = x / one
+    override def isIdentity = math.abs(one - 1) < 1e-9
 
     override def changeToInternal(ds: Array[Double]) { 
       if (math.abs(one-1) > 1e-9) { var i = 0; while (i < ds.length) { ds(i) = ds(i) * one; i +=1 } }
@@ -66,7 +74,7 @@ package units {
     val one = LinearConvert("", 1, 0, 0, 0)
     def scalar(x: Double) = LinearConvert(x.toString, x, 0, 0, 0)
     val percent = LinearConvert("%", 0.01, 0, 0, 0)
-    val celsius = new Convert { def name = "C"; def toInternal(x: Double) = x; def toExternal(x: Double) = x }
+    val celsius = IdentityConvert("C")
     val kelvin = new Convert { def name = "K"; def toInternal(x: Double) = x - 273.15; def toExternal(x: Double) = x + 273.15 }
     val fahrenheit = new Convert { def name = "F"; def toInternal(x: Double) = ((x-32)*5)/9; def toExternal(x: Double) = (x*9)/5 + 32 }    
   }

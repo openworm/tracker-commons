@@ -2,13 +2,13 @@
     "units":{ "t":"s", "x":"mm", "y":"mm", "cx":"mm", "cy":"mm" },
     "data":[
         { "id":1, "t":0, "cx":7, "cy":8,
-            "x":[-0.5, 0, 0.5], "y":[0.3, 0, -0.4]
+            "x":[6.5, 7, 7.5], "y":[8.3, 8, 7.6]
 	},
         {
             "id":2, "t":[0, 0.1],
             "cx":[7, 7.1], "cy":[6, 5.9],
-            "x":[[-0.5, 0.5], [-0.5, 0.4]],
-            "y":[[0.4, -0.3], [0.3, -0.4]]
+            "x":[[6.5, 7.5], [6.6, 7.5]],
+            "y":[[6.4, 5.7], [6.2, 5.5]]
         }
     ],
     "comment":"All four .wcon test files starting with 'offset_' should represent the same spine points.  Additionally, if there are centroids they should match.",

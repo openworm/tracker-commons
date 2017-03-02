@@ -382,35 +382,26 @@ class Data(
   def toUnderlying = {
     val nid = Jast.parse(id).double
     val sid = if (nid.isNaN) id else ""
-    val oxs = if (cxs.length == 0) org.openworm.trackercommons.Data.findFloatOffsets(xss) else Data.emptyDoubleArray
-    val oys = if (cys.length == 0) org.openworm.trackercommons.Data.findFloatOffsets(yss) else Data.emptyDoubleArray
+    val rxs = 
+      if (cxs.length == 0) xss.map(_.min.toDouble)
+      else java.util.Arrays.copyOf(cxs, cxs.length)
+    val rys = 
+      if (cys.length == 0) yss.map(_.min.toDouble)
+      else java.util.Arrays.copyOf(cys, cys.length)
     new org.openworm.trackercommons.Data(
       nid, sid,
       java.util.Arrays.copyOf(ts, ts.length),
-      xss.indices.toArray.map(i =>
-        original.Data.singly(
-          xss(i),
-          if (cxs.length > 0) -cxs(i)
-          else if (oxs.length > 1) -oxs(i)
-          else if (oxs.length == 1) -oxs(0)
-          else 0.0
-        )
-      ),
-      yss.indices.toArray.map(i => 
-        original.Data.singly(
-          yss(i),
-          if (cys.length > 0) -cys(i)
-          else if (oys.length > 1) -oys(i)
-          else if (oys.length == 1) -oys(0)
-          else 0.0
-        )
-      ),
+      xss.indices.toArray.map(i => original.Data.singly(xss(i), -rxs(i))),
+      yss.indices.toArray.map(i => original.Data.singly(yss(i), -rys(i))),
       java.util.Arrays.copyOf(cxs, cxs.length),
       java.util.Arrays.copyOf(cys, cys.length),
-      oxs,
-      oys,
+      Data.emptyDoubleArray,
+      Data.emptyDoubleArray,
+      false,
+      None,
+      None,
       custom
-    )
+    )(rxs,rys)
   }
 }
 object Data {
@@ -447,22 +438,15 @@ object Data {
       new MemoizedGenerator(java.util.Arrays.copyOf(underlying.ts, underlying.ts.length)),
       new MemoizedGenerator(java.util.Arrays.copyOf(underlying.cxs, underlying.cxs.length)),
       new MemoizedGenerator(java.util.Arrays.copyOf(underlying.cys, underlying.cys.length)),
-      new MemoizedGenerator(underlying.xs.indices.toArray.map(i =>
+      new MemoizedGenerator(underlying.xDatas.indices.toArray.map(i =>
         org.openworm.trackercommons.Data.doubly(
-          underlying.xs(i),
-          if (underlying.cxs.length > 0 && underlying.cxs(i).finite) underlying.cxs(i)
-          else if (underlying.oxs.length > i) { if (underlying.oxs(i).finite) underlying.oxs(i) else 0.0 }
-          else if (underlying.oxs.length == 1 && underlying.oxs(0).finite) underlying.oxs(0)
-          else 0
+          underlying.xDatas(i), underlying.rxs(i)
         )
       )),
-      new MemoizedGenerator(underlying.ys.indices.toArray.map(i =>
+      new MemoizedGenerator(underlying.yDatas.indices.toArray.map(i =>
         org.openworm.trackercommons.Data.doubly(
-          underlying.ys(i),
-          if (underlying.cys.length > 0 && underlying.cys(i).finite) underlying.cys(i)
-          else if (underlying.oys.length > i) { if (underlying.oys(i).finite) underlying.oys(i) else 0.0 }
-          else if (underlying.oys.length == 1 && underlying.oys(0).finite) underlying.oys(0)
-          else 0
+          underlying.yDatas(i),
+          underlying.rys(i)
         )
       )),
       underlying.custom
