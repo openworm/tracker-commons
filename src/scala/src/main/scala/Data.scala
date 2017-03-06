@@ -37,6 +37,9 @@ trait Perimeter {
   def y(i: Int): Double
   def getPoints(): (Array[Double], Array[Double])
 }
+object Perimeter {
+  def empty: Perimeter = NoPerimeter
+}
 
 object NoPerimeter extends Perimeter {
   private[this] val noPoints = new Array[Double](0)
@@ -55,7 +58,12 @@ extends Perimeter with AsJson {
   private[this] var myI = 0
   def tailIndex = if (tail >= 0) Some(tail) else None
   def size = n
-  def step(i: Int) = ((path(i >>> 4) & 0xFF) >>> (i & 0x3)) & 0x3
+  def step(i: Int) = {
+    if (i>=4*path.length || i < 0) {
+      println(f"This isn't going to work; asking for $i when length is ${path.length}")
+    }
+    ((path(i >>> 2) & 0xFF) >>> (i & 0x3)) & 0x3
+  }
   private[this] def findI(i: Int) {
     if (myI < i) {
       while (myI < i) { 
@@ -65,7 +73,7 @@ extends Perimeter with AsJson {
           case 2 => myGxn -= 1
           case _ => myGyn -= 1
         }
-        myI -= 1
+        myI += 1
       }
     }
     else if (myI > i) {
@@ -103,7 +111,8 @@ extends Perimeter with AsJson {
   }
 }
 object PixelWalk extends FromJson[PixelWalk] {
-  val empty = new PixelWalk(new Array[Byte](0), 0, 0, 0, 0, -1)(0, 0)
+  val emptyBytes = new Array[Byte](0)
+  val empty = new PixelWalk(emptyBytes, 0, 0, 0, 0, -1)(0, 0)
 
   def parse(j: Json): Either[JastError, PixelWalk] = j match {
     case o: Json.Obj =>
@@ -120,9 +129,11 @@ object PixelWalk extends FromJson[PixelWalk] {
         case _ =>
           return Left(JastError("PixelWalk must contain an 'n' field that is a single integer, or an array of two integers"))
       }
-      val path = o("path").to[Array[Byte]] match { case Left(je) => return Left(je); case Right(p) => p }
-      if (n(0) > 3*path.length) return Left(JastError("path contains at most ${3*path.length} steps but ${n(0)} declared"))
-      if (n(1) >= n(0)) return Left(JastError("tail index ${n(1)} is outside of path length ${n(0)}"))
+      val path =
+        if (n(0) > 0) o("path").to[Array[Byte]] match { case Left(je) => return Left(je); case Right(p) => p }
+        else emptyBytes
+      if (n(0) > 4*path.length) return Left(JastError(f"path contains at most ${4*path.length} steps but ${n(0)} declared"))
+      if (n(1) >= n(0)) return Left(JastError(f"tail index ${n(1)} is outside of path length ${n(0)}"))
       Right(new PixelWalk(path, n(0), ori(0), ori(1), ori(2).toFloat, n(1))(0, 0))
     case _ => Left(JastError("JSON value is not an array so cannot be a PixelWalk"))
   }
@@ -748,6 +759,7 @@ object Data extends FromJson[Data] {
                 case Left(je) => return MYBAD(nid, sid, t(i), "Can't read walk: " + je.toString)
               }
             }
+            i += 1
           }
           Some(pws)
         }

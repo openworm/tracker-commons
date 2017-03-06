@@ -25,10 +25,8 @@ object DataSet extends FromJson[DataSet] {
 
   val convertedParts = UnitMap.Nested(Map(
     ("files", UnitMap.OnlyCustom),
-    ("data", UnitMap.OnlyCustom),
-    ("metadata", UnitMap.Leaves(Set(
-      "lab", "arena", "software"
-    )))
+    ("data", UnitMap.Leaves(Set("walk"))),
+    ("metadata", UnitMap.Leaves(Set("lab", "arena", "software")))
   ))
 
   def parse(j: Json): Either[JastError, DataSet] = {

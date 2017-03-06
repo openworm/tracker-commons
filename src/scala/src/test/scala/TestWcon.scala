@@ -228,6 +228,25 @@ class TestWcon {
 
   def same(a: UnitMap, b: UnitMap): String = same(a.json, b.json, "unitmap")
 
+  def same(pa: Option[Array[Perimeter]], pb: Option[Array[Perimeter]], where: String, ev: Perimeter.type): String = (pa, pb) match {
+    case (None, None) => ""
+    case (Some(_), None) => where + " perimeter-mismatch(exists, missing)"
+    case (None, Some(_)) => where + " perimeter-mismatch(missing, exists)"
+    case (Some(ps), Some(qs)) =>
+      if (ps.length != qs.length) f"$where perimeter-number-mismatch(${ps.length}, ${qs.length})"
+      else (ps zip qs).zipWithIndex.map{ case ((p,q), i) =>
+        if (p.size != q.size) f"$where perimeter($i).size-mismatch(${p.size}, ${q.size})"
+        else {
+          val (px, py) = p.getPoints
+          val (qx, qy) = q.getPoints
+          val ans = same(Json.Arr.Dbl(px), Json.Arr.Dbl(qx), where + f" perimeter($i).x") + same(Json.Arr.Dbl(py), Json.Arr.Dbl(qy), where + f" perimeter($i).y")
+          if (ans.length > 0 && p.isInstanceOf[PixelWalk])
+              ans + f"\n${p.asInstanceOf[PixelWalk].toString}\n${q.asInstanceOf[PixelWalk].toString}"
+          else ans
+        }
+      }.filter(_.length > 0).mkString("\n")
+  }
+
   def same(a: Datum, b: Datum, where: String): String = same(a.toData, b.toData, where)
 
   def same(a: Data, b: Data, where: String): String =
@@ -244,7 +263,9 @@ class TestWcon {
       where + ".ys"
     ) +
     same(Json.Arr.Dbl(a.cxs), Json.Arr.Dbl(b.cxs), where + ".cxs") +
-    same(Json.Arr.Dbl(a.cys), Json.Arr.Dbl(b.cys), where + ".cys") +   
+    same(Json.Arr.Dbl(a.cys), Json.Arr.Dbl(b.cys), where + ".cys") +
+    same(a.perims.map(_.map(x => x: Perimeter)), b.perims.map(_.map(x => x: Perimeter)), where + ".perim", Perimeter) +
+    same(a.walks.map(_.map(x => x: Perimeter)), b.walks.map(_.map(x => x: Perimeter)), where +".walk", Perimeter) +
     same(a.custom, b.custom, where + ".custom")
 
   def same(a: Array[Either[Datum, Data]], b: Array[Either[Datum, Data]]): String = {
@@ -415,7 +436,9 @@ class TestWcon {
       "ox" -> units.parseUnit(dist).get,
       "oy" -> units.parseUnit(dist).get,
       "cx" -> units.parseUnit(dist).get,
-      "cy" -> units.parseUnit(dist).get
+      "cy" -> units.parseUnit(dist).get,
+      "px" -> units.parseUnit(dist).get,
+      "py" -> units.parseUnit(dist).get
     )
     (0 until (r.nextInt(10) - 5)).foreach{ _ =>
       val qs = "q" * (r.nextInt(10) + 1)
@@ -459,8 +482,33 @@ class TestWcon {
       xsb += x
       ysb += y
     }
+    val xs = xsb.result
+    val ys = ysb.result
+    val prms = r.nextInt(4) match {
+      case x if x < 2 => None
+      case y => Some(Array.fill(ts.length){
+        val xs, ys = new Array[Float](20)
+        var i = 0; while (i < xs.length) { xs(i) = 2*(r.nextDouble - 0.5).toFloat; ys(i) = 2*(r.nextDouble - 0.5).toFloat; i += 1 }
+        PerimeterPoints(xs, ys, if (y == 3) Some(r.nextInt(10)+5) else None)(0, 0)
+      })
+    }
+    val wlks = r.nextInt(4) match {
+      case x if x < 2 => None
+      case y => Some(Array.tabulate(ts.length){ i =>
+        val n = r.nextInt(20)+10
+        val w = new Array[Byte]((n+3)/4)
+        var j = 0; while (j < w.length) { w(j) = r.nextInt(256).toByte; j += 1 }
+        val t = if (y == 3) n/2 else -1
+        val x0 = xs(i)(0)
+        val y0 = ys(i)(0)
+        val s = 0.02 + 0.18*r.nextDouble
+        val rx = if (oxs.length == 0) 0 else if (oxs.length == 1) oxs(0) else oxs(i)
+        val ry = if (oys.length == 0) 0 else if (oys.length == 1) oys(0) else oys(i)
+        PixelWalk(w, n, x0, y0, s, t)(0, 0).translate(rx, ry)
+      })
+    }
     Data(
-      nid, sid, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, false, None, None, genCustom(r)
+      nid, sid, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, false, prms, wlks, genCustom(r)
     )(
       new Array[Double](ts.length), new Array[Double](ts.length)
     )
