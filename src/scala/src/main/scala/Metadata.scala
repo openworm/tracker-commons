@@ -203,9 +203,11 @@ object Metadata extends FromJson[Metadata] {
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid metadata: " + msg))
   private def BAD(msg: String, because: JastError): Either[JastError, Nothing] =
     Left(JastError("Invalid metadata: " + msg, because = because))
+
   val empty = new Metadata(
     Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, Vector.empty, None, Json.Obj.empty
   )
+  
   def parse(j: Json): Either[JastError, Metadata] = {
     val o = j match {
       case jo: Json.Obj => jo

@@ -247,8 +247,6 @@ class TestWcon {
       }.filter(_.length > 0).mkString("\n")
   }
 
-  def same(a: Datum, b: Datum, where: String): String = same(a.toData, b.toData, where)
-
   def same(a: Data, b: Data, where: String): String =
     same(a.idJSON, b.idJSON, where + ".id") +
     same(Json.Arr.Dbl(a.ts), Json.Arr.Dbl(b.ts), where + ".ts") +
@@ -268,23 +266,9 @@ class TestWcon {
     same(a.walks.map(_.map(x => x: Perimeter)), b.walks.map(_.map(x => x: Perimeter)), where +".walk", Perimeter) +
     same(a.custom, b.custom, where + ".custom")
 
-  def same(a: Array[Either[Datum, Data]], b: Array[Either[Datum, Data]]): String = {
-    if (a.length != b.length) " unequal-data-length(" + a.length + ", " + b.length + ") "
-    else {
-      for (i <- a.indices) {
-        val w = " data["+i+"]"
-        val s = (a(i), b(i)) match {
-          case (Left(am), Left(bm))                       => same(am, bm, w)
-          case (Left(am), Right(ba)) if ba.ts.length == 1 => same(am.toData, ba, w)
-          case (Right(aa), Left(bm)) if aa.ts.length == 1 => same(aa, bm.toData, w)
-          case (Right(aa), Right(ba))                     => same(aa, ba, w)
-          case _                                          => w + f" unequal lengths at $i (singleton vs. array)"
-        }
-        if (s.nonEmpty) return s
-      }
-      ""
-    }
-  }
+  def same(a: Array[Data], b: Array[Data]): String =
+    if (a.length != b.length) f"unequal-data-lengths(${a.length}, ${b.length})"
+    else (a zip b).zipWithIndex.map{ case ((ai, bi), i) => same(ai, bi, "data[" + i + "]") }.filter(_.length > 0).mkString("\n")
 
   def same(a: FileSet, b: FileSet): String =
     same(a.me, b.me, "fileset.this") +
@@ -451,8 +435,6 @@ class TestWcon {
     UnitMap(m, Json.Obj.empty)
   }
 
-  def genDatum(r: R): Datum = genData(r).datum(0)
-
   def genData(r: R): Data = {
     val (nid, sid) = r.nextInt(4) match {
       case 0 => (sigfig(r.nextDouble), null)
@@ -507,16 +489,17 @@ class TestWcon {
         PixelWalk(w, n, x0, y0, s, t)(0, 0).translate(rx, ry)
       })
     }
+    val unarr = ts.length == 1 && r.nextInt(3) == 0
     Data(
-      nid, sid, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, false, prms, wlks, genCustom(r)
+      nid, sid, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, prms, wlks, genCustom(r)
     )(
-      new Array[Double](ts.length), new Array[Double](ts.length)
+      new Array[Double](ts.length), new Array[Double](ts.length), unarr, oxs.length == 1 && !unarr && r.nextInt(3) == 0
     )
   }
 
-  def genDataA(r: R): Array[Either[Datum, Data]] = {
+  def genDataA(r: R): Array[Data] = {
     val n = math.max(1, r.nextInt(10)-3)
-    Array.fill(n)(if (r.nextBoolean) Right(genData(r)) else Left(genDatum(r)))
+    Array.fill(n)(genData(r))
   }
 
   def genFiles(r: R): FileSet = if (r.nextDouble < 0.5) FileSet.empty else {
@@ -568,7 +551,7 @@ class TestWcon {
       val dss = wc.toUnderlying
       val Seq(dsnd, dssnd) =
         Seq(ds, dss).map(dx => dx.copy(data = dx.data.map{ d => 
-          val c = d.fold(_.custom, _.custom); Right[Datum, Data](Data.empty.copy(custom = c)(Data.empty.rxs, Data.empty.rys)) 
+          Data.empty.copy(custom = d.custom)(Data.empty.rxs, Data.empty.rys, false, false)
         }))
       assertEquals(
         "", 
@@ -578,15 +561,15 @@ class TestWcon {
           println(dssnd)
           println(x)
         }} +
-        (ds.data.map(_.fold(_.toData, x=>x)) zip dss.data.map(_.fold(_.toData, x=>x))).map{ case (da, db) =>
-          if (da.similarTo(db, 1e-6)) ""
-          else "%s\nISN'T\n%s\n\n".format(da.json.toString, db.json.toString)
-        }.mkString
+        same(
+          ds.copy(data  = ds.data.map(x =>  x.copy(perims = None, walks = None)(x.rxs, x.rys, false, x.originUnarrayed))),
+          dss.copy(data = dss.data.map(x => x.copy(perims = None, walks = None)(x.rxs, x.rys, false, x.originUnarrayed)))
+        )
       )      
     }
   }
 
-  case class Ex(text: String, line: Int)
+  case class Ex(text: String, line: Int) {}
 
   def pull_Examples_From_MD(lines: Vector[String], knownExamples: Vector[Ex] = Vector.empty, n: Int = 0): Vector[Ex] = {
     val next = lines.dropWhile(x => !(x.trim.toUpperCase == "```JSON")).drop(1)
@@ -633,7 +616,10 @@ class TestWcon {
 
     val wcons: Array[DataSet] = (jsons.map(_.to(DataSet)) zip paths).map{
       case (Left(je), p) => println(je); println(p); fail("Error reading WCON data from JSON"); throw new Exception("Never here")
-      case (Right(ds), p) => ds.withSourceFile(p)
+      case (Right(ds), p) =>
+       val dsi = if (ds.files.names.length == 0) ds.copy(files = FileSet(Vector(p.getName), 0, Json.Obj.empty)) else ds
+       dsi.files.setRootFile(p)
+       dsi
     }
 
     assertTrue("All coordinates not the same", {
@@ -642,20 +628,19 @@ class TestWcon {
         w.data.indices.forall{ i =>
           val wi = w.data(i)
           val vi = v.data(i)
-          val ans = (wi, vi) match {
-            case (Left(wd), Left(vd)) => wd.similarTo(vd, 1e-4, wd.cx.finite && vd.cx.finite)
-            case (Right(wd), Right(vd)) => wd.similarTo(vd, 1e-4, wd.cxs.length > 0 && vd.cxs.length > 0)
-            case _ => fail("Data/datum mismatch"); false
-          }
+          val ans = wi.similarTo(vi, 1e-4, wi.cxs.length > 0 && vi.cxs.length > 0)
           if (!ans) {
             println( "Failed coordinate match!")
+            println(wi)
+            println("ISN'T")
+            println(vi)
             println(f"Mismatch at data index $i; note rxs/rys")
-            println(f"In ${w.sourceFile.map(_.getName).getOrElse("?")}:")            
-            println(f"  ${wi match { case Right(d) => d.rxs.mkString(", "); case Left(dm) => dm.rx.toString } }")
-            println(f"  ${wi match { case Right(d) => d.rys.mkString(", "); case Left(dm) => dm.ry.toString } }")
-            println(f"In ${v.sourceFile.map(_.getName).getOrElse("?")}:")
-            println(f"  ${vi match { case Right(d) => d.rxs.mkString(", "); case Left(dm) => dm.rx.toString } }")
-            println(f"  ${vi match { case Right(d) => d.rys.mkString(", "); case Left(dm) => dm.ry.toString } }")
+            println(f"In ${w.files.me}:")            
+            println(f"  ${wi.rxs.mkString(", ")}")
+            println(f"  ${wi.rys.mkString(", ")}")
+            println(f"In ${v.files.me}:")
+            println(f"  ${vi.rxs.mkString(", ")}")
+            println(f"  ${vi.rys.mkString(", ")}")
           }
           ans
         }
