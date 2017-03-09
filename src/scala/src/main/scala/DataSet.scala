@@ -17,6 +17,8 @@ extends AsJson {
   )
 }
 object DataSet extends FromJson[DataSet] {
+  val empty = new DataSet(Metadata.empty, UnitMap(Map.empty, Json.Obj.empty), new Array[Data](0))
+
   val convertedParts = UnitMap.Nested(Map(
     ("files", UnitMap.OnlyCustom),
     ("data", UnitMap.Leaves(Set("walk"))),

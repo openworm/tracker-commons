@@ -9,7 +9,7 @@ trait HasId extends math.Ordered[HasId] {
   def nid: Double
   def sid: String
   def idEither: Either[Double, String] = if (nid.isNaN) Right(sid) else Left(nid)
-  def idJSON: Json = if (nid.isNaN) { if (sid == null) Json.Null else Json.Str(sid) } else Json.Num(nid)
+  def idJSON: Json = if (nid.isNaN || nid.isInfinite) { if (sid == null) Json.Null else Json.Str(sid) } else Json.Num(nid)
   def compare(them: HasId) =
     if (nid.isNaN)
       if (them.nid.isNaN)
@@ -51,7 +51,7 @@ object NoPerimeter extends Perimeter {
   def getPoints(): (Array[Double], Array[Double]) = noPointsPair
 }
 
-case class PixelWalk(path: Array[Byte], n: Int, x0: Double, y0: Double, side: Double, tail: Int = -1)(val ocx: Double, val ocy: Double)
+case class PixelWalk(path: Array[Byte], n: Int, x0: Double, y0: Double, side: Double, tail: Int = -1)(val ox: Double, val oy: Double)
 extends Perimeter with AsJson {
   private[this] var myGxn = 0
   private[this] var myGyn = 0
@@ -102,9 +102,10 @@ extends Perimeter with AsJson {
     while (i < n) { xs(i) = x(i); ys(i) = y(i); i += 1 }
     (xs, ys)
   }
-  def translate(rx: Double, ry: Double) = new PixelWalk(path, n, x0+rx, y0+ry, side, tail)(rx, ry)
+  def notRelativeTo(xo: Double, yo: Double) = new PixelWalk(path, n, x0+xo, y0+yo, side, tail)(ox + xo, oy + yo)
+  def moveOrigin(xo: Double, yo: Double) = new PixelWalk(path, n, x0, y0, side, tail)(xo, yo)
   def json = {
-    val b = Json ~ ("px", Json.Arr.Dbl(Array(Data.sig(x0-ocx), Data.sig(y0-ocy), side)))
+    val b = Json ~ ("px", Json.Arr.Dbl(Array(Data.sig(x0-ox), Data.sig(y0-oy), side)))
     if (tail >= 0) b ~ ("n", Json(Array[Double](n, tail)))
     else b ~ ("n", n)
     b ~ ("path", path) ~ Json
@@ -238,9 +239,9 @@ extends HasId with AsJson {
 
   def perimN(i: Int) = myPerims(i).size
 
-  def px(i: Int, j: Int) = ???
+  def px(i: Int, j: Int) = myPerims(i).x(j)
 
-  def py(i: Int, j: Int) = ???
+  def py(i: Int, j: Int) = myPerims(i).y(j)
 
   def perimPoints(i: Int): (Array[Double], Array[Double]) = myPerims(i).getPoints()
 
@@ -326,10 +327,38 @@ extends HasId with AsJson {
         else b ~ ("ptail", Json(tis))
       }
     }
-    if (walks.isDefined) {
-      val wks = walks.get
-      if (wks.length == 1 && allUnarrayed) b ~ ("walk", wks(0))
-      else b ~ ("walk", Json(wks))
+    walks match {
+      case Some(ws) =>
+        var i = 0
+        var same = true
+        while (same && i < rxs.length) {
+          var oxi, oyi = 0.0
+          if (oxs.length > 0) {
+            val j = if (oxs.length > 1) i else 0
+            oxi = oxs(j)
+            oyi = oys(j)
+          }
+          same = ws(i).size == 0 || (ws(i).ox == oxi && ws(i).oy == oyi)
+          i += 1
+        }
+        val wks = if (same) ws else {
+          val wz = java.util.Arrays.copyOf(ws, ws.length)
+          var i = 0
+          while (i < rxs.length) {
+            var oxi, oyi = 0.0
+            if (oxs.length > 0) {
+              val j = if (oxs.length > 1) i else 0
+              oxi = oxs(j)
+              oyi = oys(j)
+            }
+            if (!(wz(i).size == 0 || (wz(i).ox == oxi && wz(i).oy == oyi))) wz(i) = wz(i).moveOrigin(oxi, oyi)
+            i += 1
+          }
+          wz
+        }
+        if (wks.length == 1 && allUnarrayed) b ~ ("walk", wks(0))
+        else b ~ ("walk", Json(wks))
+      case _ =>
     }
     b ~~ custom ~ Json
   }
@@ -600,7 +629,7 @@ object Data extends FromJson[Data] {
       ry(i) = sensiblyOffset(hasO, oyi, hasC, if (hasC) cy(i) else Double.NaN, y0(i), if (py0 eq null) null else py0(i))
       x(i) = Data.singly(x0(i))
       y(i) = Data.singly(y0(i))
-      walk.foreach{ w => if (w(i).size > 0) w(i) = w(i).translate(if (hasO) oxi else 0, if (hasO) oyi else 0) }
+      walk.foreach{ w => if (w(i).size > 0) w(i) = w(i).notRelativeTo(if (hasO) oxi else 0, if (hasO) oyi else 0) }
       opms.foreach{ pms => 
         val ptaili = ptail.map(ai => if (ai.length == 1) ai(0) else ai(i))
         pms(i) = if (px0 ne null)
