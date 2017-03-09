@@ -65,6 +65,38 @@ res0: Array[org.openworm.trackercommons.Data] =
       "y": [ [-0.5, -0.25, 0, 0.25, 0.5] ] })
 ```
 
+## Using the reference implementation to create data
+
+The Scala implementation also contains routines to create data suitable for writing in WCON format.  In particular, it helps populate the standard data structures and ensure that minimal requirements are met.
+
+To create a simple WCON data file in memory, one can do something like the following:
+
+```scala
+import org.openworm.trackercommons._
+val one = Create.worm(1).add(
+  0, Array(-0.6, -0.3, 0, 0.3, 0.6), Array(0, -0.2, 0, 0.2, 0),
+  ox = 0.6, oy = 0
+).add(
+  1, Array(-0.6, -0.3, 0, 0.3, 0.6), Array(-0.16, 0.04, 0.24, 0.04, -0.16),
+  ox = 0.9, oy = -0.04
+)
+val two = Create.worm(2).add(
+  1, Array(0, 0.2, 0, -0.2, 0), Array(-0.5, -0.25, 0, 0.25, 0.5),
+  ox = 0, oy = 1.5
+)
+val wcon = Create.wcon().
+  addData(one.result, two.result).
+  setUnits()
+val inMemory = wcon.result
+val onDisk = wcon.setFile("scala-create-example.wcon").write
+```
+
+Note that the creation methods are meant to be used fluently (i.e. `that(arg).other(arg2).more(stuff)`).  The reason is that it uses phantom types to make sure you've actually gone through the necessary steps to create a valid WCON file (i.e. you must add some data, and you must set the units; and if you want to write the file, you must set the file).
+
+Worm creation starts with specification of the worm ID, followed by calls to one or more of the large number of `add` methods that allow you to specify different subsets of optional data.
+
+Note that all coordinates are _global_ coordinates.  If you specify offsets they will be used in the WCON file but not in memory.
+
 ## Running project tests
 
 Type `sbt test` in this directory.  The test suite will run, which mostly

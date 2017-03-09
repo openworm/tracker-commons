@@ -30,7 +30,7 @@ object Create {
       stale = true
       new MakeWcon[YesUnits, D, F](building.copy(unitmap = u), nData)
     }
-    def setUnits(extra: Map[String, String] = Map.empty): Either[String, MakeWcon[YesUnits, D, F]] = {
+    def setUnits(extra: Map[String, String]): Either[String, MakeWcon[YesUnits, D, F]] = {
       val all = new collection.mutable.AnyRefMap[String, String]
       def sym(a: String, b: String) {
         val hasA = all contains a
@@ -84,6 +84,7 @@ object Create {
         Json.Obj.empty
       )))
     }
+    def setUnits(): MakeWcon[YesUnits, D, F] = setUnits(Map.empty[String, String]).right.get   // Always succeeds when no extras
 
     def setFile(files: FileSet): MakeWcon[U, D, YesFile] = {
       stale = true
@@ -112,6 +113,11 @@ object Create {
         d2(nData) = data
         new MakeWcon[U, YesData, F](building.copy(data = d2), nData + 1)
       }
+    }
+    def addData(data1: Data, data2: Data, more: Data*): MakeWcon[U, YesData, F] = {
+      var w = addData(data1).addData(data2)
+      for (d <- more) w = w.addData(d)
+      w
     }
     def dropData: MakeWcon[U, NoData, F] = { stale = false; new MakeWcon[U, NoData, F](building.copy(data = Array.empty), 0) }
 
