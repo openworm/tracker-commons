@@ -1,0 +1,8 @@
+{ "units":{ "t":s", "x":"mm", "y":"mm" },
+  "data":[{"id":0, "t":0, "x":[0], "y":[0]}],
+  "comment": [
+    "All metadata that is present is the same across all files.",
+    "The exception is files starting in alt- which test variations.",
+    "Files starting in just- contain only one field of metadata.",
+    "all-metadata.wcon contains all fields.  This obviously contains none." ]
+}
