@@ -1,0 +1,23 @@
+{ "units":{
+    "t":"s", "x":"cm", "y":"cm", "size":"cm", "q":"cm",
+    "@example": { "q": 1 } },
+  "data":[
+    { "id":0, "t":0, "x":[0], "y":[0], "@example": { "q":0.1 } },
+    { "id":0, "t":[1,2], "x":[[0],[0]], "y":[[0],[0]],
+      "@example": { "q":[0.1, 0.1] } } ],
+  "metadata":{
+    "lab":{"location":"missing", "@example": { "q":0.1 } },
+    "arena":{"size":6, "@example": { "q":0.1 } },
+    "software":{ "featureID":"@example", "@example": { "q":0.1 } },
+    "settings":{ "q": 1 },
+    "@example":{ "q": 0.1 , "inner": { "q":1 }, "@": { "q": 0.1 } } },
+  "files":{"this":"q-is-one.wcon", "@example": { "q":0.1 }}
+  "@example": { "q":0.1 },
+  "comments":[
+    "This field is ignored because it's not part of the specification.",
+    "This file contains custom data in every allowed location.",
+    "Every time it appears, the key 'q' should be converted to 1.",
+    "Note that the 'q' in 'settings' should NOT be converted.",
+    "The 'q' in '@example' in 'units' also should not be converted!",
+    "Also, the 'q' in 'inner' should not be converted but in '@' it should." ]
+}

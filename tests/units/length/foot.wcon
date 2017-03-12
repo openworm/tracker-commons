@@ -1,0 +1,4 @@
+{ "units": {"t":"s", "x":"ft", "y":"ft" },
+  "data": [{"id":0, "x":[1], "y":[-1]}],
+  "comment": "x and y should be identical and opposite sign in all files."
+}
