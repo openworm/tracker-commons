@@ -377,7 +377,7 @@ The origin used to define the worm's xy-coordinates can change over time to redu
 
 It is often the case that the centroid of an animal is known with considerably greater accuracy than any other position.  The centroid positions can be specified by `cx` and `cy`, and must be given for every time point.  If `ox` and `oy` are not specified, it is assumed that the value of `cx` and `cy` is used for the origin; if `ox` and `oy` are specified, the values of `cx` and `cy` are relative to the origin.  If you wish to specify absolute numbers for `cx` and `cy` as well as `x` and `y`, use `"ox":0, "oy":0` to explicity set the origin to `(0,0)`.
 
-Note that you must specify units for `cx`, `cy`, `ox`, and `oy` if you use them.  Also, note that they must be used in pairs: a `cx` without a `cy` is uninterpretable.
+Note that you must specify units for `cx`, `cy`, `ox`, and `oy` if you use them.  Also, note that they must be used in pairs: a `cx` without a `cy` is uninterpretable.  And `ox` and `oy` should have the same dimension: either both vectors or both a single value.
 
 Here is an example WCON file using origin and centroid points:
 

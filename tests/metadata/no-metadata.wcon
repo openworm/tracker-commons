@@ -1,4 +1,4 @@
-{ "units":{ "t":s", "x":"mm", "y":"mm" },
+{ "units":{ "t":"s", "x":"mm", "y":"mm" },
   "data":[{"id":0, "t":0, "x":[0], "y":[0]}],
   "comment": [
     "All metadata that is present is the same across all files.",

@@ -1,4 +1,4 @@
-{ "units":{ "t":s", "x":"mm", "y":"mm", "temperature":"C", "humidity":"1",
+{ "units":{ "t":"s", "x":"mm", "y":"mm", "temperature":"C", "humidity":"1",
     "size":"mm", "age":"h" },
   "data":[{"id":0, "t":0, "x":[0], "y":[0]}],
   "metadata":{ "age":31557600 }
