@@ -132,11 +132,15 @@ object FileSet extends FromJson[FileSet] {
       case Json.Str(text) => text
       case _ => return Left(JastError("'this' entry not found or not a string"))
     }
-    val List(prev, next) = List("prev", "next").map{ key => o.get(key).map(_.to[Either[Array[String], String]]) match {
+    val List(prev, next) = List("prev", "next").map{ key => o.get(key) match {
       case None => Array.empty[String]
-      case Some(Right(Right(x))) => Array(x)
-      case Some(Right(Left(x))) => x
-      case Some(Left(e)) => return Left(JastError(f"Did not find strings of file names for $key key in file information", because = e))
+      case Some(Json.Null) => Array.empty[String]
+      case Some(s: Json.Str) => Array(s.text)
+      case Some(jaa: Json.Arr.All) => jaa.to[Array[String]] match {
+        case Right(x) => x
+        case Left(je) => return Left(JastError(f"Did not find strings of file names for key $key in file information", because = je))
+      }
+      case _ => return Left(JastError(f"Did not find strings of file names for $key key in file information"))
     }}
     Right(new FileSet((prev.reverse.toVector :+ me) ++ next, prev.length, o.filter((k, _) => k.startsWith("@"))))
   }
