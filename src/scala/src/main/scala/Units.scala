@@ -153,7 +153,7 @@ package units {
     val Cvt = (PrecC ~ End) | (NonLin ~ End)
 
     def apply(s: String): Option[Convert] = Cvt.parse(s) match {
-      case Result.Success(x, _) => Some(x)
+      case Parsed.Success(x, _) => Some(x)
       case _ => None
     }
   }

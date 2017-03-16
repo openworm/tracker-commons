@@ -695,4 +695,9 @@ class TestWcon {
       })
     }
   }
+
+  @Test
+  def run_all_examples() {
+    examples.CountAnimals.run(Array.empty[String]) // Expect failure for now, so don't test return value
+  }
 }

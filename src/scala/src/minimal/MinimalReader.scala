@@ -99,9 +99,9 @@ object Reader {
 
   // Interpretation of JSON as WCON (not counting extraction of data)
   def apply(wcon: String): Either[String, Array[Worm]] = All.parse{wcon} match {
-    case rf: Result.Failure =>
+    case rf: Parsed.Failure =>
       Left("Error parsing WCON: not valid JSON.\nParse error:\n" + rf.toString)
-    case Result.Success(j, _) => j match {
+    case Parsed.Success(j, _) => j match {
       case m: Map[String @unchecked, Any @unchecked] =>
         if (!m.contains("units")) Left("Error parsing WCON: no units")
         else if (!m("units").isInstanceOf[Map[_,_]]) Left("Error parsing WCON: units is not an object")

@@ -266,8 +266,121 @@ extends AsJson {
     Array(if (oys.length == 0) Double.NaN else oys(i)),
     perims.flatMap(pms => if (pms(i).size == 0) None else Some(Array(pms(i)))),
     walks.flatMap(pws => if (pws(i).size == 0) None else Some(Array(pws(i)))),
-    custom
+    if (i == 0 && ts.length == 1) custom else pickCustomIndices(Array(i))
   )(Array(rxs(i)), Array(rys(i)))
+
+  private def pickCustomIndices(picks: Array[Int]): Json.Obj = {
+    if (picks.length == 0) Json.Obj.empty
+    else {
+      val keysToShrink = custom.iterator.count{ case (k, v) => v match {
+        case jaa: Json.Arr.All => jaa.size == ts.length
+        case jad: Json.Arr.Dbl => jad.size == ts.length
+        case _                 => false
+      }}
+      if (keysToShrink == 0) custom
+      else custom.mapValues{ case (k, v) => v match {
+        case jaa: Json.Arr.All if jaa.size == ts.length =>
+          val a = new Array[Json](picks.length)
+          var i = 0
+          while (i < picks.length) {
+            a(i) = jaa.values(picks(i))
+            i += 1
+          }
+          new Json.Arr.All(a)
+        case jad: Json.Arr.Dbl if jad.size == ts.length =>
+          val a = new Array[Double](picks.length)
+          var i = 0
+          while (i < picks.length) {
+            a(i) = jad.doubles(picks(i))
+            i += 1
+          }
+          new Json.Arr.Dbl(a)
+        case x => x
+      }}
+    }
+  }
+
+  private def pickIndices(picks: Array[Int]): Option[Data] = {
+    val n = picks.length
+    if (n == 0) return None
+    if (n == ts.length) return Some(this)
+
+    val nts = new Array[Double](n)
+    val nxs = new Array[Array[Float]](n)
+    val nys = new Array[Array[Float]](n)
+    val nrx = new Array[Double](n)
+    val nry = new Array[Double](n)
+    var j = 0
+    while (j < picks.length) {
+      val i = picks(j)
+      nts(j) = ts(i)
+      nxs(j) = xDatas(i)
+      nys(j) = yDatas(i)
+      nrx(j) = rxs(i)
+      nry(j) = rys(i)
+      j += 1
+    }
+    val (ncxs, ncys) =
+      if (cxs.length == 0) (cxs, cys)
+      else {
+        val tcxs, tcys = new Array[Double](n)
+        var j = 0
+        while (j < picks.length) {
+          val i = picks(j)
+          tcxs(j) = cxs(i)
+          tcys(j) = cys(i)
+          j += 1
+        }
+        (tcxs, tcys)
+      }
+    val (noxs, noys) =
+      if (oxs.length == 0 || n == 0) (Data.empty.oxs, Data.empty.oys)
+      else if (oxs.length == 1 && ts.length > 0) (oxs, oys)
+      else {
+        val toxs, toys = new Array[Double](n)
+        var j = 0
+        while (j < picks.length) {
+          val i = picks(j)
+          toxs(j) = oxs(i)
+          toys(j) = oys(i)
+          j += 1
+        }
+        (toxs, toys)
+      }
+    val nper = perims.map{ ps =>
+      val nps = new Array[PerimeterPoints](n)
+      var j = 0; while (j < picks.length) { nps(j) = ps(picks(j)); j += 1 }
+      nps
+    }
+    val nwlk = walks.map{ wk =>
+      val nwk = new Array[PixelWalk](n)
+      var j = 0; while (j < picks.length) { nwk(j) = wk(picks(j)); j += 1 }
+      nwk
+    }
+    val nuO = noxs.length == 1 && n > 1
+    val ncust = pickCustomIndices(picks)
+    Some(new Data(nid, sid, nts, nxs, nys, ncxs, ncys, noxs, noys, nper, nwlk, ncust)(nrx, nry, n == 1, nuO))
+  }
+
+  def filterByTime(p: Double => Boolean): Option[Data] = {
+    val table = new Array[Int](ts.length)
+    var i, j = 0
+    while (i < ts.length) {
+      if (p(ts(i))) { table(j) = i; j += 1 }
+      i += 1
+    }
+    pickIndices(table)
+  }
+
+  def filterByIndex(p: Int => Boolean): Option[Data] = {
+    val table = new Array[Int](ts.length)
+    var i, j = 0
+    while (i < ts.length) {
+      if (p(i)) { table(j) = i; j += 1 }
+      i += 1
+    }
+    pickIndices(table)
+  }
 
   private def externalize(coords: Array[Float], r: Double, has: Boolean, oc: Double): Array[Double] = {
     val ext = new Array[Double](coords.length)

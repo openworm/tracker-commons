@@ -5,6 +5,10 @@ import kse.jsonal.JsonConverters._
 
 case class DataSet(meta: Metadata, unitmap: UnitMap, data: Array[Data], files: FileSet = FileSet.empty, custom: Json.Obj = Json.Obj.empty)
 extends AsJson {
+  def foreach[U](f: Data => U) { data.foreach(f) }
+  def map(f: Data => Data) = new DataSet(meta, unitmap, data.map(f), files, custom)
+  def flatMap(f: Data => Option[Data]) = new DataSet(meta, unitmap, data.flatMap(x => f(x)), files, custom)
+
   def json = unitmap.unfix(
     Json
     ~ ("units", unitmap)
