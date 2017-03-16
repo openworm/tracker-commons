@@ -10,6 +10,7 @@ import org.junit.Assert._
 
 class TestWcon {
   private val Accuracy = 1.001e-3
+  private def sigfig(x: Double) = org.openworm.trackercommons.Data.sig(x)
 
   def same(a: Json.Bool, b: Json.Bool, where: String): String =
     if (a.value == b.value) ""
@@ -227,27 +228,44 @@ class TestWcon {
 
   def same(a: UnitMap, b: UnitMap): String = same(a.json, b.json, "unitmap")
 
-  def same(a: Datum, b: Datum, where: String): String = same(
-    Data(a.nid, a.sid, Array(a.t), Array(a.x), Array(a.y), Array(a.cx), Array(a.cy), Array(a.ox), Array(a.oy), a.custom),
-    Data(b.nid, b.sid, Array(b.t), Array(b.x), Array(b.y), Array(b.cx), Array(b.cy), Array(a.ox), Array(a.oy), b.custom),
-    where
-  )
+  def same(pa: Option[Array[Perimeter]], pb: Option[Array[Perimeter]], where: String, ev: Perimeter.type): String = (pa, pb) match {
+    case (None, None) => ""
+    case (Some(_), None) => where + " perimeter-mismatch(exists, missing)"
+    case (None, Some(_)) => where + " perimeter-mismatch(missing, exists)"
+    case (Some(ps), Some(qs)) =>
+      if (ps.length != qs.length) f"$where perimeter-number-mismatch(${ps.length}, ${qs.length})"
+      else (ps zip qs).zipWithIndex.map{ case ((p,q), i) =>
+        if (p.size != q.size) f"$where perimeter($i).size-mismatch(${p.size}, ${q.size})"
+        else {
+          val (px, py) = p.getPoints
+          val (qx, qy) = q.getPoints
+          val ans = same(Json.Arr.Dbl(px), Json.Arr.Dbl(qx), where + f" perimeter($i).x") + same(Json.Arr.Dbl(py), Json.Arr.Dbl(qy), where + f" perimeter($i).y")
+          if (ans.length > 0 && p.isInstanceOf[PixelWalk])
+              ans + f"\n${p.asInstanceOf[PixelWalk].toString}\n${q.asInstanceOf[PixelWalk].toString}"
+          else ans
+        }
+      }.filter(_.length > 0).mkString("\n")
+  }
+
+  def same(a: Datum, b: Datum, where: String): String = same(a.toData, b.toData, where)
 
   def same(a: Data, b: Data, where: String): String =
     same(a.idJSON, b.idJSON, where + ".id") +
     same(Json.Arr.Dbl(a.ts), Json.Arr.Dbl(b.ts), where + ".ts") +
     same(
-      Json.Arr.All((0 until a.xs.length).map(i => Json.Arr.Dbl(a.gxs(i))).toArray), 
-      Json.Arr.All((0 until b.xs.length).map(i => Json.Arr.Dbl(b.gxs(i))).toArray), 
+      Json.Arr.All((0 until a.xDatas.length).map(i => Json.Arr.Dbl(a.spinePoints(i)._1)).toArray), 
+      Json.Arr.All((0 until b.xDatas.length).map(i => Json.Arr.Dbl(b.spinePoints(i)._1)).toArray), 
       where + ".xs"
     ) +
     same(
-      Json.Arr.All((0 until a.ys.length).map(i => Json.Arr.Dbl(a.gys(i))).toArray), 
-      Json.Arr.All((0 until b.ys.length).map(i => Json.Arr.Dbl(b.gys(i))).toArray), 
+      Json.Arr.All((0 until a.yDatas.length).map(i => Json.Arr.Dbl(a.spinePoints(i)._2)).toArray), 
+      Json.Arr.All((0 until b.yDatas.length).map(i => Json.Arr.Dbl(b.spinePoints(i)._2)).toArray), 
       where + ".ys"
     ) +
     same(Json.Arr.Dbl(a.cxs), Json.Arr.Dbl(b.cxs), where + ".cxs") +
-    same(Json.Arr.Dbl(a.cys), Json.Arr.Dbl(b.cys), where + ".cys") +   
+    same(Json.Arr.Dbl(a.cys), Json.Arr.Dbl(b.cys), where + ".cys") +
+    same(a.perims.map(_.map(x => x: Perimeter)), b.perims.map(_.map(x => x: Perimeter)), where + ".perim", Perimeter) +
+    same(a.walks.map(_.map(x => x: Perimeter)), b.walks.map(_.map(x => x: Perimeter)), where +".walk", Perimeter) +
     same(a.custom, b.custom, where + ".custom")
 
   def same(a: Array[Either[Datum, Data]], b: Array[Either[Datum, Data]]): String = {
@@ -256,34 +274,11 @@ class TestWcon {
       for (i <- a.indices) {
         val w = " data["+i+"]"
         val s = (a(i), b(i)) match {
-          case (Left(am), Left(bm)) => same(am, bm, w)
-          case (Left(am), Right(ba)) if ba.ts.length == 1 =>
-            same(
-              am,
-              Datum(
-                ba.nid, ba.sid, ba.ts(0), ba.xs(0), ba.ys(0),
-                if (ba.cxs.length > 0) ba.cxs(0) else Double.NaN,
-                if (ba.cys.length > 0) ba.cys(0) else Double.NaN,
-                if (ba.oxs.length > 0) ba.oxs(0) else Double.NaN,
-                if (ba.oys.length > 0) ba.oys(0) else Double.NaN,
-                ba.custom
-              ),
-              w
-            )
-          case (Right(aa), Left(bm)) if aa.ts.length == 1 => 
-            same(
-              Datum(
-                aa.nid, aa.sid, aa.ts(0), aa.xs(0), aa.ys(0),
-                if (aa.cxs.length > 0) aa.cxs(0) else Double.NaN,
-                if (aa.cys.length > 0) aa.cys(0) else Double.NaN,
-                if (aa.oxs.length > 0) aa.oxs(0) else Double.NaN,
-                if (aa.oys.length > 0) aa.oys(0) else Double.NaN,
-                aa.custom
-              ),
-              bm,
-              w
-            )
-          case (Right(aa), Right(ba)) => same(aa, ba, w)
+          case (Left(am), Left(bm))                       => same(am, bm, w)
+          case (Left(am), Right(ba)) if ba.ts.length == 1 => same(am.toData, ba, w)
+          case (Right(aa), Left(bm)) if aa.ts.length == 1 => same(aa, bm.toData, w)
+          case (Right(aa), Right(ba))                     => same(aa, ba, w)
+          case _                                          => w + f" unequal lengths at $i (singleton vs. array)"
         }
         if (s.nonEmpty) return s
       }
@@ -307,7 +302,7 @@ class TestWcon {
     case 0 => Double.PositiveInfinity
     case 1 => Double.NegativeInfinity
     case 2 | 3 => Double.NaN
-    case _ => 10*(r.nextDouble - 0.3)
+    case _ => 10*sigfig(r.nextDouble - 0.3)
   }
 
   def genANumJ(r: R): Json.Arr.Dbl = Json.Arr.Dbl((0 to r.nextInt(30)).map(_ => genDbl(r)).toArray)
@@ -351,7 +346,7 @@ class TestWcon {
     case 1 => Json.Bool(r.nextBoolean)
     case 2 => Json.Str(genFish(r))
     case 3 => Json.Num(r.nextInt(5) match { case 0 => Double.PositiveInfinity; case 1 => Double.NegativeInfinity; case _ => Double.NaN })
-    case 4 => Json.Num(r.nextDouble - 0.5)
+    case 4 => Json.Num(sigfig(r.nextDouble - 0.5))
     case 5 => genANumJ(r)
     case 6 => genAANumJ(r)
     case 7 => genArrJ(r, depth + 1, allowDuplicates)
@@ -386,7 +381,7 @@ class TestWcon {
       }
     })
 
-  def genTemp(r: R): Double = 273.15 + 33*r.nextDouble
+  def genTemp(r: R): Double = 273.15 + 33*sigfig(r.nextDouble)
 
   def genArena(r: R): Arena = Iterator.continually{
     Arena(
@@ -416,7 +411,7 @@ class TestWcon {
     Vector.fill(r.nextInt(3))(genFish(r)),
     opt(r)(genLDT(r)),
     opt(r)(genTemp(r)),
-    opt(r)(r.nextDouble),
+    opt(r)(sigfig(r.nextDouble)),
     opt(r)(genArena(r)),
     opt(r)(genFish(r)),
     opt(r)(genFish(r)),
@@ -432,7 +427,7 @@ class TestWcon {
 
   def genUnitMap(r: R, md: Metadata): UnitMap = {
     val dur = r.nextInt(6) match { case 0 => "ms"; case 1 => "h"; case 2 => "min"; case _ => "s" }
-    val dist = r.nextInt(6) match { case 0 => "cm"; case 1 => "um"; case 2 => "inch"; case _ => "mm" }
+    val dist = (3+r.nextInt(6)) match { case 0 => "cm"; case 1 => "um"; case 2 => "inch"; case _ => "mm" }
     val namedUnits = Array("mm", "cm", "meter", "metre", "K", "C", "F", "mm^2/s", "1/hr", "1 / ms cm").map(units.parseUnit).map(_.get)
     var m = Map(
       "t" -> units.parseUnit(dur).get,
@@ -441,7 +436,9 @@ class TestWcon {
       "ox" -> units.parseUnit(dist).get,
       "oy" -> units.parseUnit(dist).get,
       "cx" -> units.parseUnit(dist).get,
-      "cy" -> units.parseUnit(dist).get
+      "cy" -> units.parseUnit(dist).get,
+      "px" -> units.parseUnit(dist).get,
+      "py" -> units.parseUnit(dist).get
     )
     (0 until (r.nextInt(10) - 5)).foreach{ _ =>
       val qs = "q" * (r.nextInt(10) + 1)
@@ -454,36 +451,67 @@ class TestWcon {
     UnitMap(m, Json.Obj.empty)
   }
 
-  def genDatum(r: R): Datum = genData(r) match {
-    case Data(nid, sid, ts, xs, ys, cxs, cys, oxs, oys, custom) => Datum(nid, sid, ts(0), xs(0), ys(0), cxs.headOption.getOrElse(Double.NaN), cys.headOption.getOrElse(Double.NaN), oxs.headOption.getOrElse(Double.NaN), cys.headOption.getOrElse(Double.NaN), custom)
-  }
+  def genDatum(r: R): Datum = genData(r).datum(0)
 
   def genData(r: R): Data = {
     val (nid, sid) = r.nextInt(4) match {
-      case 0 => (r.nextDouble, null)
+      case 0 => (sigfig(r.nextDouble), null)
       case 1 => (r.nextInt(100).toDouble, null)
       case _ => (Double.NaN, "worm-"+r.nextInt(1000))
     }
-    val ts = Array.fill(r.nextInt(10)+1)(0.1 + 0.9*r.nextDouble) match { case x => var i = 1; while (i < x.length) { x(i) = x(i) + x(i-1); i += 1 }; x }
+    val ts = Array.fill(r.nextInt(10)+1)(0.1 + 0.9*r.nextDouble) match { case x =>
+      x(0) = sigfig(x(0)); var i = 1; while (i < x.length) { x(i) = sigfig(x(i) + x(i-1)); i += 1 }; x
+    }
     val (cxs, cys) = 
       if (r.nextInt(5) == 0) (Data.emptyD, Data.emptyD)
       else {
-        val a, b = Array.fill(ts.length)(r.nextDouble - 0.5) match { case x => var i = 1; while (i < x.length) { x(i) = x(i) + x(i-1); i += 1 }; x }
+        val a, b = Array.fill(ts.length)(r.nextDouble - 0.5) match { case x => 
+          x(0) = sigfig(x(0)); var i = 1; while (i < x.length) { x(i) = sigfig(x(i) + x(i-1)); i += 1 }; x 
+        }
         (a, b)
       }
     val (oxs, oys) = r.nextInt(5) match {
       case 0 => (Data.emptyD, Data.emptyD)
-      case 1 => val a, b = Array(100*(r.nextDouble - 0.5)); (a, b)
-      case _ => val a, b = Array.fill(ts.length)(100*(r.nextDouble - 0.5)); (a, b)
+      case 1 => val a, b = Array(sigfig(100*(r.nextDouble - 0.5))); (a, b)
+      case _ => val a, b = Array.fill(ts.length)(sigfig(100*(r.nextDouble - 0.5))); (a, b)
     }
     val xsb, ysb = Array.newBuilder[Array[Float]]
     (0 until ts.length).foreach{ _ =>
       val n = r.nextInt(11)+1
-      val x, y = Array.fill(n)((r.nextDouble - 0.5).toFloat).sorted
+      val x, y = Array.fill(n)(sigfig(r.nextDouble - 0.5).toFloat).sorted
       xsb += x
       ysb += y
     }
-    Data(nid, sid, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, genCustom(r))
+    val xs = xsb.result
+    val ys = ysb.result
+    val prms = r.nextInt(4) match {
+      case x if x < 2 => None
+      case y => Some(Array.fill(ts.length){
+        val xs, ys = new Array[Float](20)
+        var i = 0; while (i < xs.length) { xs(i) = 2*(r.nextDouble - 0.5).toFloat; ys(i) = 2*(r.nextDouble - 0.5).toFloat; i += 1 }
+        PerimeterPoints(xs, ys, if (y == 3) Some(r.nextInt(10)+5) else None)(0, 0)
+      })
+    }
+    val wlks = r.nextInt(4) match {
+      case x if x < 2 => None
+      case y => Some(Array.tabulate(ts.length){ i =>
+        val n = r.nextInt(20)+10
+        val w = new Array[Byte]((n+3)/4)
+        var j = 0; while (j < w.length) { w(j) = r.nextInt(256).toByte; j += 1 }
+        val t = if (y == 3) n/2 else -1
+        val x0 = xs(i)(0)
+        val y0 = ys(i)(0)
+        val s = 0.02 + 0.18*r.nextDouble
+        val rx = if (oxs.length == 0) 0 else if (oxs.length == 1) oxs(0) else oxs(i)
+        val ry = if (oys.length == 0) 0 else if (oys.length == 1) oys(0) else oys(i)
+        PixelWalk(w, n, x0, y0, s, t)(0, 0).translate(rx, ry)
+      })
+    }
+    Data(
+      nid, sid, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, false, prms, wlks, genCustom(r)
+    )(
+      new Array[Double](ts.length), new Array[Double](ts.length)
+    )
   }
 
   def genDataA(r: R): Array[Either[Datum, Data]] = {
@@ -523,7 +551,8 @@ class TestWcon {
           println(ser)
           println("###############################")
           println(des.json)
-          println(x) 
+          println(x)
+          println
           x
         case x => x
       })      
@@ -539,7 +568,7 @@ class TestWcon {
       val dss = wc.toUnderlying
       val Seq(dsnd, dssnd) =
         Seq(ds, dss).map(dx => dx.copy(data = dx.data.map{ d => 
-          val c = d.fold(_.custom, _.custom); Right[Datum, Data](Data.empty.copy(custom = c)) 
+          val c = d.fold(_.custom, _.custom); Right[Datum, Data](Data.empty.copy(custom = c)(Data.empty.rxs, Data.empty.rys)) 
         }))
       assertEquals(
         "", 
@@ -604,7 +633,7 @@ class TestWcon {
 
     val wcons: Array[DataSet] = (jsons.map(_.to(DataSet)) zip paths).map{
       case (Left(je), p) => println(je); println(p); fail("Error reading WCON data from JSON"); throw new Exception("Never here")
-      case (Right(j), _) => j
+      case (Right(ds), p) => ds.withSourceFile(p)
     }
 
     assertTrue("All coordinates not the same", {
@@ -613,11 +642,22 @@ class TestWcon {
         w.data.indices.forall{ i =>
           val wi = w.data(i)
           val vi = v.data(i)
-          (wi, vi) match {
+          val ans = (wi, vi) match {
             case (Left(wd), Left(vd)) => wd.similarTo(vd, 1e-4, wd.cx.finite && vd.cx.finite)
             case (Right(wd), Right(vd)) => wd.similarTo(vd, 1e-4, wd.cxs.length > 0 && vd.cxs.length > 0)
             case _ => fail("Data/datum mismatch"); false
           }
+          if (!ans) {
+            println( "Failed coordinate match!")
+            println(f"Mismatch at data index $i; note rxs/rys")
+            println(f"In ${w.sourceFile.map(_.getName).getOrElse("?")}:")            
+            println(f"  ${wi match { case Right(d) => d.rxs.mkString(", "); case Left(dm) => dm.rx.toString } }")
+            println(f"  ${wi match { case Right(d) => d.rys.mkString(", "); case Left(dm) => dm.ry.toString } }")
+            println(f"In ${v.sourceFile.map(_.getName).getOrElse("?")}:")
+            println(f"  ${vi match { case Right(d) => d.rxs.mkString(", "); case Left(dm) => dm.rx.toString } }")
+            println(f"  ${vi match { case Right(d) => d.rys.mkString(", "); case Left(dm) => dm.ry.toString } }")
+          }
+          ans
         }
       }))
     })

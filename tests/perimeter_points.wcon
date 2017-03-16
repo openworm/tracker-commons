@@ -1,0 +1,25 @@
+{
+    "units":{
+        "t":"s", "x":"mm", "y":"mm",
+        "ox":"mm", "oy":"mm", "px":"mm", "py":"mm"
+    },
+    "data":[
+        {
+            "id":1, "t":0, "ox":2, "oy":4,
+            "x":[4.5, 5, 5.5], "y":[4.3, 4, 3.6],
+            "px":[4.5, 4.8, 5.2, 5.5, 5.3, 4.7],
+            "py":[4.3, 4.2, 3.9, 3.6, 3.7, 4.1],
+            "ptail":3
+	},
+        {
+            "id":2, "t":[0, 0.1],
+            "ox":[4, 4], "oy":[3, 3],
+            "x":[[2.5, 3.5], [2.6, 3.5]],
+            "y":[[3.4, 2.7], [3.2, 2.5]],
+            "px":[[2.5, 2.6, 3.5, 3.4], [2.6, 2.7, 3.5, 3.3]],
+            "py":[[3.4, 3.3, 2.7, 2.8], [3.2, 2.9, 2.5, 2.7]]
+        }
+    ],
+    "comment":"Perimeter points px and py are an optional feature understood by some WCON readers!",
+    "note":"Neither 'comment' nor 'note' are understood by WCON.  They, and other unspecified tags, should be ignored by readers."
+}
