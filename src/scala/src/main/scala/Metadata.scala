@@ -10,9 +10,15 @@ trait MightBeEmpty[A] { self: A =>
   def nonEmptyOption: Option[A] = if (isEmpty) None else Some(this)
 }
 
+trait Customizable[A] { self: A =>
+  def custom: Json.Obj
+  def customFn(f: Json.Obj => Json.Obj): A
+}
+
 case class Laboratory(pi: String, name: String, location: String, custom: Json.Obj)
-extends AsJson with MightBeEmpty[Laboratory] {
+extends AsJson with MightBeEmpty[Laboratory] with Customizable[Laboratory] {
   def isEmpty = pi.isEmpty && name.isEmpty && location.isEmpty && custom.size == 0
+  def customFn(f: Json.Obj => Json.Obj) = new Laboratory(pi, name, location, f(custom))
   def json = Json ~? ("PI", pi) ~? ("name", name) ~? ("location", location) ~~ custom ~ Json
 }
 object Laboratory extends FromJson[Laboratory] {
@@ -40,12 +46,14 @@ object Laboratory extends FromJson[Laboratory] {
 }
 
 case class Arena(kind: String, diameter: Either[(Double, Double), Double], orient: String, custom: Json.Obj)
-extends AsJson with MightBeEmpty[Arena] {
+extends AsJson with MightBeEmpty[Arena] with Customizable[Arena] {
   def isEmpty =
     kind.isEmpty &&
     (diameter match { case Right(x) => !x.finite; case Left((x,y)) => !x.finite && !y.finite }) &&
     orient.isEmpty &&
     custom.size == 0
+
+  def customFn(f: Json.Obj => Json.Obj) = new Arena(kind, diameter, orient, f(custom))
 
   import Arena.jsonizeDoublePair
   def json = (Json
@@ -93,8 +101,9 @@ object Arena extends FromJson[Arena] {
 }
 
 case class Software(name: String, version: String, featureID: Set[String], custom: Json.Obj)
-extends AsJson with MightBeEmpty[Software] {
+extends AsJson with MightBeEmpty[Software] with Customizable[Software] {
   def isEmpty = name.isEmpty && version.isEmpty && featureID.size == 0 && custom.size == 0
+  def customFn(f: Json.Obj => Json.Obj) = new Software(name, version, featureID, f(custom))
   def json = Json ~? ("name", name) ~? ("version", version) ~? ("featureID", featureID.toArray) ~~ custom ~ Json
 }
 object Software extends FromJson[Software] {
@@ -151,7 +160,7 @@ case class Metadata(
   software: Vector[Software],
   settings: Option[Json],
   custom: Json.Obj
-) extends AsJson with MightBeEmpty[Metadata] {
+) extends AsJson with MightBeEmpty[Metadata] with Customizable[Metadata] {
   def isEmpty =
     (lab.isEmpty || lab.forall(_.isEmpty)) &&
     (who.isEmpty || who.forall(_.isEmpty)) &&
@@ -169,6 +178,11 @@ case class Metadata(
     (software.isEmpty || software.forall(_.isEmpty)) &&
     settings.isEmpty &&
     custom.size == 0
+
+  def customFn(f: Json.Obj => Json.Obj) =
+    new Metadata(
+      lab, who, timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain, protocol, software, settings, f(custom)
+    )
     
   def json = (Json
     ~? ("lab", if (lab.length == 1) lab.head.json else Json(lab))
@@ -203,9 +217,11 @@ object Metadata extends FromJson[Metadata] {
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid metadata: " + msg))
   private def BAD(msg: String, because: JastError): Either[JastError, Nothing] =
     Left(JastError("Invalid metadata: " + msg, because = because))
+
   val empty = new Metadata(
     Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, Vector.empty, None, Json.Obj.empty
   )
+
   def parse(j: Json): Either[JastError, Metadata] = {
     val o = j match {
       case jo: Json.Obj => jo

@@ -397,11 +397,10 @@ class Data(
       java.util.Arrays.copyOf(cys, cys.length),
       Data.emptyDoubleArray,
       Data.emptyDoubleArray,
-      false,
       None,
       None,
       custom
-    )(rxs,rys)
+    )(rxs,rys, false, false)
   }
 }
 object Data {
@@ -509,7 +508,7 @@ class Wcon(
   def toUnderlying: original.DataSet = new original.DataSet(
     meta.underlying,
     units,
-    myDatas.map(d => Right(d.toUnderlying): Either[original.Datum, original.Data]),
+    myDatas.map(_.toUnderlying),
     original.FileSet(
       previousFiles.reverse.toVector ++ (if (myFile.isEmpty) Vector() else Vector(myFile)) ++ nextFiles.toVector,
       previousFiles.length,
@@ -535,7 +534,7 @@ object Wcon {
     val u = underlying // Just too long of a name!
     new Wcon(
       Metadata from u.meta,
-      u.data.map{ case Left(dm) => Data from dm.toData; case Right(da) => Data from da },
+      u.data.map{ da => Data from da },
       u.unitmap,
       if (u.files.names.length > 0) u.files.names.take(u.files.index).reverse.toArray else emptyStringArray,
       if (u.files.names.length > 0) u.files.names.drop(u.files.index+1).toArray else emptyStringArray,

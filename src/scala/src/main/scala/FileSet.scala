@@ -100,7 +100,8 @@ object FileSet extends FromJson[FileSet] {
   private[trackercommons]
   def indexInPath(path: String, me: String): Int = {
     val r5 = path.takeRight(5)
-    val isJsonWcon = (r5 equalsIgnoreCase ".json") || (r5 equalsIgnoreCase ".wcon")
+    val mr5 = me.takeRight(5)
+    val isJsonWcon = !(r5 == mr5) && ((r5 equalsIgnoreCase ".json") || (r5 equalsIgnoreCase ".wcon"))
     val index = path.lastIndexOf(me, if (isJsonWcon) path.length-5-me.length else path.length-me.length)
     if (index >= 0) index
     else path.
