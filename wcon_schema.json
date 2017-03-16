@@ -29,7 +29,7 @@
                 ]}
             },
             "additionalProperties": false,
-            "required": ["this", "prev", "next"]
+            "required": ["this"]
         },
         "units": {
             "type": "object",
@@ -53,14 +53,18 @@
                 "timestamp": {"type": "string", "format":"date-time"},
                 "temperature": {"type": "number"},
                 "humidity": {"type": "number"},
-                "dish": {
+                "arena": {
                     "type": "object",
                     "properties":{
                         "type": {"type": "string", "default":"petri"},
-                        "size": {"type": "number"},
-                        "units": {"type": "string"}
+                        "size": {"oneOf":[ {"type": "number"}, {"type": "array", "minItems":2, "items": {"type":"string"} }] },
+                        "orientation": {"type": "string"}
                     }
                 },
+                "interpolate": {"oneOf":[
+                    { "$ref": "#/definitions/interpolate_metadata" },
+                    { "type": "array", "items": {"$ref": "#/definitions/interpolate_metadata"} }
+                ]},
                 "food": {"type": "string"},
                 "media": {"type": "string"},
                 "sex": {"type": "string", "enum": ["hermaphrodite", "male"]},
@@ -77,48 +81,13 @@
                             "items": { "$ref": "#/definitions/software_metadata" }
                         }
                     ]
-                },
-                "settings": {}
+                }
             },
             "additionalProperties": true
         },
         "data": {"oneOf":[
-            {
-                "type": "array",
-                "items": {
-                    "type":"object",
-                    "properties": {
-                        "id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
-                        "t": { "$ref": "#/definitions/element_without_aspect" },
-                        "ox": { "$ref": "#/definitions/element_without_aspect" },
-                        "oy": { "$ref": "#/definitions/element_without_aspect" },
-                        "cx": { "$ref": "#/definitions/element_without_aspect" },
-                        "cy": { "$ref": "#/definitions/element_without_aspect" },
-                        "x": { "$ref": "#/definitions/element_with_aspect" },
-                        "y": { "$ref": "#/definitions/element_with_aspect" },
-                        "head": {
-                            "oneOf": [
-                                {"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]},
-                                {"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]}}
-                            ]
-                        },
-                        "ventral": {
-                            "oneOf": [
-                                {"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]},
-                                {"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]}}
-                            ]
-                        }
-                    },
-                    "patternProperties" : {
-                        "^@.*": {
-                            "title": "Custom Feature Type 2",
-                            "description": "Data Array Time Series Custom Feature"
-                        }
-                    },
-                    "additionalProperties": true,
-                    "required": ["id", "t", "x", "y"]
-                }
-            }
+            { "$ref": "#/definitions/data_record" },
+            { "type":"array", "items":{ "$ref": "#/definitions/data_record" } }
         ]}
     },
     "definitions": {
@@ -157,8 +126,64 @@
                 "featureID": {
                     "description": "i.e. the lab strain designation followed by an optional suffix (e.g. '@OMG')",
                     "type":"string"
-                }
+                },
+                "settings": {}
             }
+        },
+        "interpolate_metadata": {
+            "type": "object",
+            "properties": {
+                "method": {"type": "string"},
+                "values": {"$ref": "#/definitions/string_or_array_of_strings"}
+            }
+        },
+        "pixel_walk_arrayable": {
+            "oneOf":[ {"$ref":"#/definitions/pixel_walk_record"}, {"type":"array", "items":{"$ref":"#/definitions/pixel_walk_record"}}]
+        },
+        "pixel_walk_record": {
+            "type": "object",
+            "properties": {
+                "px": {"type": "array", "minItems": 3, "items": { "type":"number" }},
+                "n": { "oneOf":[ {"type": "number"}, {"type":"array", "minItems":2, "items":{"type":"number"}} ] },
+                "4": { "type": "string" }
+            }
+        },
+        "data_record": {
+            "type":"object",
+            "properties": {
+                "id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
+                "t": { "$ref": "#/definitions/element_without_aspect" },
+                "ox": { "$ref": "#/definitions/element_without_aspect" },
+                "oy": { "$ref": "#/definitions/element_without_aspect" },
+                "cx": { "$ref": "#/definitions/element_without_aspect" },
+                "cy": { "$ref": "#/definitions/element_without_aspect" },
+                "x": { "$ref": "#/definitions/element_with_aspect" },
+                "y": { "$ref": "#/definitions/element_with_aspect" },
+                "px": { "$ref": "#/definitions/element_with_aspect"},
+                "py": { "$ref": "#/definitions/element_with_aspect"},
+                "ptail": { "$ref": "#/definitions/element_without_aspect"},
+                "walk": { "$ref": "#/definitions/pixel_walk_arrayable" },
+                "head": {
+                    "oneOf": [
+                        {"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]},
+                        {"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["L","R","?"]}]}}
+                    ]
+                },
+                "ventral": {
+                    "oneOf": [
+                        {"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]},
+                        {"type":"array", "items":{"oneOf": [{"type":"null"},{"type":"string", "enum":["CW","CCW","?"]}]}}
+                    ]
+                }
+            },
+            "patternProperties" : {
+                "^@.*": {
+                    "title": "Custom Feature Type 2",
+                    "description": "Data Array Time Series Custom Feature"
+                }
+            },
+            "additionalProperties": true,
+            "required": ["id", "t", "x", "y"]
         }
     }
 }

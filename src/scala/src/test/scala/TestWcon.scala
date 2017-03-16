@@ -486,7 +486,7 @@ class TestWcon {
         val s = 0.02 + 0.18*r.nextDouble
         val rx = if (oxs.length == 0) 0 else if (oxs.length == 1) oxs(0) else oxs(i)
         val ry = if (oys.length == 0) 0 else if (oys.length == 1) oys(0) else oys(i)
-        PixelWalk(w, n, x0, y0, s, t)(0, 0).notRelativeTo(rx, ry)
+        PixelWalk(w, n, x0, y0, s, t)(0, 0).globalizeFrom(rx, ry)
       })
     }
     val unarr = ts.length == 1 && r.nextInt(3) == 0

@@ -42,9 +42,15 @@ object DataSet extends FromJson[DataSet] {
       case _ => return Left(JastError("Not a JSON object so not a WCON data set"))
     }
     
-    val d = o("data").to[Array[Data]] match {
-      case Right(x) => x
-      case Left(e) => return Left(JastError("Error parsing data in WCON data set", because = e))
+    val d = o("data") match {
+      case jo: Json.Obj => jo.to[Data] match {
+        case Right(x) => Array(x)
+        case Left(e) => return Left(JastError("Error parsing single data entry in WCON", because = e))
+      }
+      case jj => jj.to[Array[Data]] match {
+        case Right(x) => x
+        case Left(e) => return Left(JastError("Error parsing data array in WCON", because = e))
+      }
     }
     val f = o.get("files").map(_.to(FileSet)) match {
       case None => FileSet.empty

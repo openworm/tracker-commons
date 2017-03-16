@@ -68,10 +68,10 @@ extends Perimeter with AsJson {
     if (myI < i) {
       while (myI < i) { 
         step(myI) match {
-          case 0 => myGxn += 1
-          case 1 => myGyn += 1
-          case 2 => myGxn -= 1
-          case _ => myGyn -= 1
+          case 0 => myGxn -= 1
+          case 1 => myGxn += 1
+          case 2 => myGyn -= 1
+          case _ => myGyn += 1
         }
         myI += 1
       }
@@ -80,10 +80,10 @@ extends Perimeter with AsJson {
       while (myI > i) {
         myI -= 1
         step(myI) match {
-          case 0 => myGxn -= 1
-          case 1 => myGyn -= 1
-          case 2 => myGxn += 1
-          case _ => myGyn += 1
+          case 0 => myGxn += 1
+          case 1 => myGxn -= 1
+          case 2 => myGyn += 1
+          case _ => myGyn -= 1
         }
       }
     }
@@ -102,13 +102,13 @@ extends Perimeter with AsJson {
     while (i < n) { xs(i) = x(i); ys(i) = y(i); i += 1 }
     (xs, ys)
   }
-  def notRelativeTo(xo: Double, yo: Double) = new PixelWalk(path, n, x0+xo, y0+yo, side, tail)(ox + xo, oy + yo)
+  def globalizeFrom(xo: Double, yo: Double) = new PixelWalk(path, n, x0+xo, y0+yo, side, tail)(ox + xo, oy + yo)
   def moveOrigin(xo: Double, yo: Double) = new PixelWalk(path, n, x0, y0, side, tail)(xo, yo)
   def json = {
     val b = Json ~ ("px", Json.Arr.Dbl(Array(Data.sig(x0-ox), Data.sig(y0-oy), side)))
     if (tail >= 0) b ~ ("n", Json(Array[Double](n, tail)))
     else b ~ ("n", n)
-    b ~ ("path", path) ~ Json
+    b ~ ("4", path) ~ Json
   }
 }
 object PixelWalk extends FromJson[PixelWalk] {
@@ -131,7 +131,7 @@ object PixelWalk extends FromJson[PixelWalk] {
           return Left(JastError("PixelWalk must contain an 'n' field that is a single integer, or an array of two integers"))
       }
       val path =
-        if (n(0) > 0) o("path").to[Array[Byte]] match { case Left(je) => return Left(je); case Right(p) => p }
+        if (n(0) > 0) o("4").to[Array[Byte]] match { case Left(je) => return Left(je); case Right(p) => p }
         else emptyBytes
       if (n(0) > 4*path.length) return Left(JastError(f"path contains at most ${4*path.length} steps but ${n(0)} declared"))
       if (n(1) >= n(0)) return Left(JastError(f"tail index ${n(1)} is outside of path length ${n(0)}"))
@@ -629,7 +629,7 @@ object Data extends FromJson[Data] {
       ry(i) = sensiblyOffset(hasO, oyi, hasC, if (hasC) cy(i) else Double.NaN, y0(i), if (py0 eq null) null else py0(i))
       x(i) = Data.singly(x0(i))
       y(i) = Data.singly(y0(i))
-      walk.foreach{ w => if (w(i).size > 0) w(i) = w(i).notRelativeTo(if (hasO) oxi else 0, if (hasO) oyi else 0) }
+      walk.foreach{ w => if (w(i).size > 0) w(i) = w(i).globalizeFrom(if (hasO) oxi else 0, if (hasO) oyi else 0) }
       opms.foreach{ pms => 
         val ptaili = ptail.map(ai => if (ai.length == 1) ai(0) else ai(i))
         pms(i) = if (px0 ne null)
