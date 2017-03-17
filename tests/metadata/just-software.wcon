@@ -2,6 +2,9 @@
     "size":"mm", "age":"h" },
   "data":[{"id":"0", "t":0, "x":[0], "y":[0]}],
   "metadata":{
-    "software":{"name":"Timaeus", "version":"1", "featureID":"@plato"}
+    "software":{
+      "name":"Timaeus", "version":"1", "featureID":"@plato",
+      "settings":[1, null, {"this is arbitrary":true}]
+    }
   }
 }

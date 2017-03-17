@@ -185,11 +185,15 @@ object Create {
     def setStrain(strain: String) = if (strain.isEmpty) dropStrain else new MakeMeta(result.copy(strain = Some(strain)))
     def dropStrain = if (result.strain.isEmpty) this else new MakeMeta(result.copy(strain = None))
 
-    def addProtocol(protocol: String): MakeMeta =
-      if (protocol.isEmpty) this
-      else new MakeMeta(result.copy(protocol = result.protocol :+ protocol))
+    def addProtocol(protocol: String): MakeMeta = new MakeMeta(result.copy(protocol = result.protocol :+ protocol))
     def setProtocol(protocols: Seq[String]): MakeMeta = new MakeMeta(result.copy(protocol = protocols.toVector))
     def dropProtocols = if (result.protocol.isEmpty) this else new MakeMeta(result.copy(protocol = Vector.empty))
+
+    def addInterpolate(interpolate: Interpolate): MakeMeta =
+      if (interpolate.isEmpty) this
+      else new MakeMeta(result.copy(interpolate = result.interpolate :+ interpolate))
+    def setInterpolate(interpolations: Seq[Interpolate]): MakeMeta = new MakeMeta(result.copy(interpolate = interpolations.toVector))
+    def dropInterpolations = if (result.interpolate.isEmpty) this else new MakeMeta(result.copy(interpolate = Vector.empty))
 
     def addSoftware(software: Software): MakeMeta =
       if (software.isEmpty) this
@@ -197,9 +201,6 @@ object Create {
     def addSoftware(software: MakeSoft): MakeMeta = addSoftware(software.result)
     def setSoftware(softwares: Seq[Software]): MakeMeta = new MakeMeta(result.copy(software = softwares.toVector))
     def dropSoftware = if (result.software.isEmpty) this else new MakeMeta(result.copy(software = Vector.empty))
-
-    def setSettings(settings: Json) = new MakeMeta(result.copy(settings = Some(settings)))
-    def dropSettings = if (result.settings.isEmpty) this else new MakeMeta(result.copy(settings = None))
 
     def putCustom(key: String, value: Json) = new MakeMeta(result.copy(custom = Json.Obj(result.custom.asMap + ((key, value)))))
     def setCustom(custom: Json.Obj) = new MakeMeta(result.copy(custom = custom))
@@ -225,10 +226,10 @@ object Create {
   final class MakeArena private[trackercommons] (val result: Arena) {
     def isEmpty = result.isEmpty
 
-    def kind(s: String) = result.copy(kind = s)
-    def orient(s: String) = result.copy(orient = s)
-    def diameter(d: Double) = result.copy(diameter = Right(d))
-    def diameter(d1: Double, d2: Double) = result.copy(diameter = Left((d1, d2)))
+    def kind(s: String) = new MakeArena(result.copy(kind = s))
+    def orient(s: String) = new MakeArena(result.copy(orient = s))
+    def diameter(d: Double) = new MakeArena(result.copy(diameter = Right(d)))
+    def diameter(d1: Double, d2: Double) = new MakeArena(result.copy(diameter = Left((d1, d2))))
 
     def putCustom(key: String, value: Json) = new MakeArena(result.copy(custom = Json.Obj(result.custom.asMap + ((key, value)))))
     def setCustom(custom: Json.Obj) = new MakeArena(result.copy(custom = custom))
@@ -236,6 +237,22 @@ object Create {
   }
 
   def arena() = new MakeArena(Arena.empty)
+
+  final class MakeInterp private[trackercommons] (val result: Interpolate) {
+    def isEmpty = result.isEmpty
+
+    def method(s: String) = new MakeInterp(result.copy(method = s))
+
+    def addValue(s: String): MakeInterp = new MakeInterp(result.copy(values = result.values :+ s))
+    def setValues(ss: Iterable[String]): MakeInterp = new MakeInterp(result.copy(values = ss.toVector))
+    def dropValues = if (result.values.isEmpty) this else new MakeInterp(result.copy(values = Vector.empty))
+
+    def putCustom(key: String, value: Json) = new MakeInterp(result.copy(custom = Json.Obj(result.custom.asMap + ((key, value)))))
+    def setCustom(custom: Json.Obj) = new MakeInterp(result.copy(custom = custom))
+    def dropCustom = if (result.custom.size == 0) this else new MakeInterp(result.copy(custom = Json.Obj.empty))
+  }
+
+  def interpolate() = new MakeInterp(Interpolate.empty)
 
   final class MakeSoft private[trackercommons] (val result: Software) {
     def isEmpty = result.isEmpty
@@ -247,6 +264,9 @@ object Create {
     def setFeatures(ss: Iterable[String]) =
       new MakeSoft(result.copy(featureID = ss.map(s => if (s.startsWith("@")) s else "@" + s).toSet))
     def dropFeatures = new MakeSoft(result.copy(featureID = Set.empty))
+
+    def setSettings(j: Json) = new MakeSoft(result.copy(settings = Some(j)))
+    def dropSettings = new MakeSoft(result.copy(settings = None))
 
     def putCustom(key: String, value: Json) = new MakeSoft(result.copy(custom = Json.Obj(result.custom.asMap + ((key, value)))))
     def setCustom(custom: Json.Obj) = new MakeSoft(result.copy(custom = custom))

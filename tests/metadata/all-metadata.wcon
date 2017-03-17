@@ -15,7 +15,10 @@
     "age":31557600,
     "strain":"mythological",
     "protocol":["Sink beneath waves", "Cultivate mystery"],
-    "software":{"name":"Timaeus", "version":"1", "featureID":"@plato"},
-    "settings":[1, null, {"this is arbitrary":true}]
+    "interpolate": {"method": "cubic", "values": ["x", "y"]},
+    "software":{
+      "name":"Timaeus", "version":"1", "featureID":"@plato",
+      "settings":[1, null, {"this is arbitrary":true}]
+    }
   }
 }

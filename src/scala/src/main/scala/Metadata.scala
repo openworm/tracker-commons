@@ -15,17 +15,17 @@ trait Customizable[A] { self: A =>
   def customFn(f: Json.Obj => Json.Obj): A
 }
 
-case class Laboratory(pi: String, name: String, location: String, custom: Json.Obj)
+case class Laboratory(pi: String, name: String, location: String, contact: Vector[String], custom: Json.Obj)
 extends AsJson with MightBeEmpty[Laboratory] with Customizable[Laboratory] {
-  def isEmpty = pi.isEmpty && name.isEmpty && location.isEmpty && custom.size == 0
-  def customFn(f: Json.Obj => Json.Obj) = new Laboratory(pi, name, location, f(custom))
-  def json = Json ~? ("PI", pi) ~? ("name", name) ~? ("location", location) ~~ custom ~ Json
+  def isEmpty = pi.isEmpty && name.isEmpty && location.isEmpty && contact.isEmpty && custom.size == 0
+  def customFn(f: Json.Obj => Json.Obj) = new Laboratory(pi, name, location, contact, f(custom))
+  def json = Json ~? ("PI", pi) ~? ("name", name) ~? ("location", location) ~? ("contact", contact) ~~ custom ~ Json
 }
 object Laboratory extends FromJson[Laboratory] {
   private val listKeyNames = List("PI", "name", "location")
-  private val someKeyNames = Option(listKeyNames.toSet)
+  private val someKeyNames = Option(("contact" :: listKeyNames).toSet)
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid laboratory: " + msg))
-  def empty = new Laboratory("", "", "", Json.Obj.empty)
+  def empty = new Laboratory("", "", "", Vector.empty, Json.Obj.empty)
   def parse(j: Json): Either[JastError, Laboratory] = {
     // If we didn't need detailed error messages this would be a one-liner!
     // j("PI").stringOr("") etc. would do the trick.
@@ -41,7 +41,15 @@ object Laboratory extends FromJson[Laboratory] {
       case Json.Str(text) => text
       case _ => return BAD(key + " is not text") 
     })
-    Right(new Laboratory(pi, name, location, o.filter((k,_) => k.startsWith("@"))))
+    val contact = o get_or_java_null "contact" match {
+      case null => Vector.empty[String]
+      case Json.Str(text) => Vector(text)
+      case jj   => jj.to[Vector[String]] match {
+        case Right(vs) => vs
+        case Left(je) => return BAD("Invalid contact: " + je.toString)
+      }
+    }
+    Right(new Laboratory(pi, name, location, contact, o.filter((k,_) => k.startsWith("@"))))
   }
 }
 
@@ -70,7 +78,7 @@ object Arena extends FromJson[Arena] {
   def empty = new Arena("", Right(Double.NaN), "", Json.Obj.empty)
   def parse(j: Json): Either[JastError, Arena] = {
     val o = j match {
-      case jo: Json. Obj => jo
+      case jo: Json.Obj => jo
       case _ => return BAD("not a JSON object")
     }
     var kind, orient: String = null
@@ -100,20 +108,46 @@ object Arena extends FromJson[Arena] {
   }
 }
 
-case class Software(name: String, version: String, featureID: Set[String], custom: Json.Obj)
+case class Interpolate(method: String, values: Vector[String], custom: Json.Obj)
+extends AsJson with MightBeEmpty[Interpolate] with Customizable[Interpolate] {
+  def isEmpty = method.isEmpty && values.isEmpty
+  def customFn(f: Json.Obj => Json.Obj) = new Interpolate(method, values, f(custom))
+  def json = Json ~? ("method", method) ~? ("values", values) ~~ custom ~ Json
+}
+object Interpolate extends FromJson[Interpolate] {
+  val empty = new Interpolate("", Vector.empty, Json.Obj.empty)
+  def parse(j: Json): Either[JastError, Interpolate] = j match {
+    case o: Json.Obj =>
+      val method = o get_or_java_null "method" match {
+        case s: Json.Str => s.text
+        case null => ""
+        case _ => return Left(JastError("Interpolate 'method' was not a string"))
+      }
+      val values =
+        if (o.contains("values")) o("values").to[Vector[String]] match {
+          case Right(v) => v
+          case Left(je) => return Left(JastError("Interpolate 'values' were not all strings: ", because = je))
+        }
+        else Vector.empty[String]
+      Right(new Interpolate(method, values, o.filter((k, _) => k.startsWith("@"))))
+    case _ => Left(JastError("Invalid interpolate record: not a JSON object"))
+  }
+}
+
+case class Software(name: String, version: String, featureID: Set[String], settings: Option[Json], custom: Json.Obj)
 extends AsJson with MightBeEmpty[Software] with Customizable[Software] {
-  def isEmpty = name.isEmpty && version.isEmpty && featureID.size == 0 && custom.size == 0
-  def customFn(f: Json.Obj => Json.Obj) = new Software(name, version, featureID, f(custom))
-  def json = Json ~? ("name", name) ~? ("version", version) ~? ("featureID", featureID.toArray) ~~ custom ~ Json
+  def isEmpty = name.isEmpty && version.isEmpty && featureID.size == 0 && custom.size == 0 && settings.isEmpty
+  def customFn(f: Json.Obj => Json.Obj) = new Software(name, version, featureID, settings, f(custom))
+  def json = Json ~? ("name", name) ~? ("version", version) ~? ("featureID", featureID.toArray) ~? ("settings", settings) ~~ custom ~ Json
 }
 object Software extends FromJson[Software] {
-  private val listKeyNames = List("name", "version", "featureID")
+  private val listKeyNames = List("name", "version", "featureID", "settings")
   private val shortListKeyNames = List("name", "version")
   private val someKeyNames = Option(listKeyNames.toSet)
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid software metadata: " + msg))
 
-  val default = new Software("Tracker Commons", "1.0-scala", Set.empty, Json.Obj.empty)
-  val empty = new Software("", "", Set.empty, Json.Obj.empty)
+  val default = new Software("Tracker Commons", "1.0-scala", Set.empty, None, Json.Obj.empty)
+  val empty = new Software("", "", Set.empty, None, Json.Obj.empty)
 
   def parse(j: Json): Either[JastError, Software] = {
     val o = j match {
@@ -139,7 +173,11 @@ object Software extends FromJson[Software] {
       case s: Json.Str => Set(s.text)
       case _ => return BAD("featureID is not an array of strings")
     }
-    Right(new Software(name, version, features, o.filter{ (k,_) => k.startsWith("@") }))
+    val settings = o get_or_java_null "settings" match {
+      case j: Json => Some(j)
+      case _       => None
+    }
+    Right(new Software(name, version, features, settings, o.filter{ (k,_) => k.startsWith("@") }))
   }
 }
 
@@ -157,8 +195,8 @@ case class Metadata(
   age: Option[Double],
   strain: Option[String],
   protocol: Vector[String],
+  interpolate: Vector[Interpolate],
   software: Vector[Software],
-  settings: Option[Json],
   custom: Json.Obj
 ) extends AsJson with MightBeEmpty[Metadata] with Customizable[Metadata] {
   def isEmpty =
@@ -175,13 +213,13 @@ case class Metadata(
     (age.isEmpty || age.forall(! _.finite)) &&
     (strain.isEmpty || strain.forall(_.isEmpty)) &&
     (protocol.isEmpty || protocol.forall(_.isEmpty)) &&
+    (interpolate.isEmpty || interpolate.forall(_.isEmpty)) &&
     (software.isEmpty || software.forall(_.isEmpty)) &&
-    settings.isEmpty &&
     custom.size == 0
 
   def customFn(f: Json.Obj => Json.Obj) =
     new Metadata(
-      lab, who, timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain, protocol, software, settings, f(custom)
+      lab, who, timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain, protocol, interpolate, software, f(custom)
     )
     
   def json = (Json
@@ -198,20 +236,21 @@ case class Metadata(
     ~? ("age", age)
     ~? ("strain", strain getOrElse "")
     ~? ("protocol", if (protocol.length == 1) Json(protocol.head) else Json(protocol))
+    ~? ("interpolate", if (interpolate.length == 1) Json(interpolate.head) else Json(interpolate))
     ~? ("software", if (software.length == 1) Json(software.head) else Json(software))
-    ~? ("settings", settings)
     ~~ custom ~ Json)
 }
 object Metadata extends FromJson[Metadata] {
   private implicit val parseLab: FromJson[Laboratory] = Laboratory
   private implicit val parseArena: FromJson[Arena] = Arena
+  private implicit val parseInterpolate: FromJson[Interpolate] = Interpolate
   private implicit val parseSoftware: FromJson[Software] = Software
 
   val listKeyStrings = List("food", "media", "sex", "stage", "strain")
   val listKeyNumbers = List("temperature", "humidity", "age")
   val listKeyOtherSingles = List("timestamp", "arena", "settings")
   val listKeyStringVectors = List("who", "protocol")
-  val listKeyOtherVectors = List("lab", "software")
+  val listKeyOtherVectors = List("lab", "software", "interpolate")
   val someSingles = Option((listKeyStrings ++ listKeyNumbers ++ listKeyOtherSingles).toSet)
   val someVectors = Option((listKeyStringVectors ++ listKeyOtherVectors).toSet)
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid metadata: " + msg))
@@ -219,7 +258,7 @@ object Metadata extends FromJson[Metadata] {
     Left(JastError("Invalid metadata: " + msg, because = because))
 
   val empty = new Metadata(
-    Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, Vector.empty, None, Json.Obj.empty
+    Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, Vector.empty, Vector.empty, Json.Obj.empty
   )
 
   def parse(j: Json): Either[JastError, Metadata] = {
@@ -271,6 +310,14 @@ object Metadata extends FromJson[Metadata] {
       }
       ls
     }.result
+    val interpolate = o.fold(Vector.newBuilder[Interpolate]){ (is, k, v) =>
+      if (k == "interpolate") v.to[Either[Array[Interpolate], Interpolate]] match {
+        case Right(Right(i)) => is += i
+        case Right(Left(ii)) => is ++= ii
+        case Left(je) => return BAD("error in interpolate data in metadata", because = je)
+      }
+      is
+    }.result
     val software = o.fold(Vector.newBuilder[Software]){ (ss, k, v) =>
       if (k == "software") v.to[Either[Array[Software], Software]] match {
         case Right(Right(s)) => ss += s
@@ -279,6 +326,9 @@ object Metadata extends FromJson[Metadata] {
       }
       ss
     }.result
-    Right(new Metadata(lab, who, timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain, protocol, software, settings, o.filter((k, _) => k.startsWith("@"))))
+    Right(new Metadata(
+      lab, who, timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain, protocol, interpolate, software,
+      o.filter((k, _) => k.startsWith("@"))
+    ))
   }
 }

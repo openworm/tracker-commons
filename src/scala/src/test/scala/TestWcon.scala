@@ -176,6 +176,13 @@ class TestWcon {
     ""
   }
 
+  def sameJ(a: Option[Json], b: Option[Json], where: String): String = (a, b) match {
+    case (None, None) => ""
+    case (Some(x), None) => where + ".only-one-set(" + x + ", _)"
+    case (None, Some(y)) => where + ".only-one-set(_, " + y + ")"
+    case (Some(ja), Some(jb)) => same(ja, jb, where)
+  }
+
   def sameTS(
     a: Option[Either[java.time.OffsetDateTime, java.time.LocalDateTime]],
     b: Option[Either[java.time.OffsetDateTime, java.time.LocalDateTime]]
@@ -199,12 +206,21 @@ class TestWcon {
       same(aa.custom, ba.custom, "arena.custom")
   }
 
+  def sameI(a: Vector[Interpolate], b: Vector[Interpolate]) =
+    if (a.length != b.length) " interpolate-length-mismatch(" + a.length + ", " + b.length + ") "
+    else (a zip b).map{ case (ia, ib) =>
+      same(ia.method, ib.method, "interpolate.method") +
+      same(ia.values.toSet, ib.values.toSet, "interpolate.values") +
+      same(ia.custom, ib.custom, "software.custom")
+    }.filter(_.length > 0).mkString("; ")
+
   def sameS(a: Vector[Software], b: Vector[Software]): String = 
     if (a.length != b.length) " software-length-mismatch(" + a.length + ", " + b.length + ") "
     else (a zip b).map{ case (sa, sb) =>
       same(sa.name, sb.name, "software.name") +
       same(sa.version, sb.version, "software.version") +
       same(sa.featureID, sb.featureID, "software.featureID") +
+      sameJ(sa.settings, sb.settings, "software.settings") +
       same(sa.custom, sb.custom, "software.custom")
     }.filter(_.length > 0).mkString("; ")
 
@@ -222,8 +238,8 @@ class TestWcon {
     same(a.age.getOrElse(Double.NaN), b.age.getOrElse(Double.NaN), "age") +
     same(a.strain, b.strain, "strain") +
     same(a.protocol, b.protocol, "protocol") +
+    sameI(a.interpolate, b.interpolate) +
     sameS(a.software, b.software) +
-    same(a.settings getOrElse Json.Null, b.settings getOrElse Json.Null, "settings") +
     same(a.custom, b.custom, "custom")
 
   def same(a: UnitMap, b: UnitMap): String = same(a.json, b.json, "unitmap")
@@ -347,8 +363,8 @@ class TestWcon {
   def genFish(r: R) = fish(r.nextInt(fish.length))
 
   def genLab(r: R): Laboratory = Iterator.
-    continually(Laboratory(genFish(r), genFish(r), genFish(r), genCustom(r))).
-    dropWhile(x => x.pi.isEmpty && x.name.isEmpty && x.location.isEmpty).next
+    continually(Laboratory(genFish(r), genFish(r), genFish(r), Vector.fill(r.nextInt(3))(genFish(r)), genCustom(r))).
+    dropWhile(x => x.pi.isEmpty && x.name.isEmpty && x.location.isEmpty && x.contact.isEmpty).next
 
   def genLDT(r: R): Either[java.time.OffsetDateTime, java.time.LocalDateTime] =
     if (r.nextBoolean) Right({
@@ -384,11 +400,24 @@ class TestWcon {
     case true => r.nextInt(1000000)/3600.0   // In hours
   }
 
-  def genSoft(r: R): Software = Iterator.continually{
-    Software(genFish(r), genFish(r), Vector.fill(r.nextInt(4))("@" + genFish(r)).toSet, genCustom(r))
-    }.dropWhile(x => x.name.isEmpty && x.version.isEmpty && x.featureID.isEmpty).next
+  def genInterp(r: R): Interpolate = Iterator.continually{
+    Interpolate(
+      r.nextInt(4) match { case 0 => ""; case 1 => "quadratic"; case 2 => "pchip"; case _ => "cubic" },
+      r.nextInt(6) match {
+        case 0 => Vector.empty[String]
+        case 1 => Vector("t", "x")
+        case 2 => Vector("t", "y")
+        case _ => Vector("x", "y") 
+      },
+      genCustom(r)
+    )
+  }.dropWhile(i => i.method.isEmpty && i.values.isEmpty).next
 
   def genJSON(r: R): Json = genJSON(r, 0)
+
+  def genSoft(r: R): Software = Iterator.continually{
+    Software(genFish(r), genFish(r), Vector.fill(r.nextInt(4))("@" + genFish(r)).toSet, opt(r)(genJSON(r)), genCustom(r))
+    }.dropWhile(x => x.name.isEmpty && x.version.isEmpty && x.featureID.isEmpty).next
 
   def genMetadata(r: R): Metadata = if (r.nextDouble < 0.33) Metadata.empty else Metadata(
     Vector.fill(r.nextInt(3))(genLab(r)),
@@ -404,8 +433,8 @@ class TestWcon {
     opt(r)(genAge(r)),
     opt(r)(genFish(r)),
     Vector.fill(r.nextInt(3))(genFish(r)),
+    Vector.fill(r.nextInt(3))(genInterp(r)),
     Vector.fill(r.nextInt(3))(genSoft(r)),
-    opt(r)(genJSON(r)),
     genCustom(r)
   )
 
