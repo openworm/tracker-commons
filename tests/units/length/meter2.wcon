@@ -1,4 +1,4 @@
 { "units": {"t":"s", "x":"meter", "y":"metre" },
-  "data": [{"id":0, "t":0, "x":[0.3048], "y":[-0.3048]}],
+  "data": [{"id":"0", "t":0, "x":[0.3048], "y":[-0.3048]}],
   "comment": "x and y should be identical and opposite sign in all files."
 }

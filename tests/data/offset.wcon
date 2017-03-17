@@ -1,4 +1,4 @@
 { "units":{ "t":"s", "x":"mm", "y":"mm", "ox":"mm", "oy":"mm" },
-  "data":[{"id":123, "t":0, "x":[1.0], "y":[1.2], "ox":1, "oy":0.5 }],
+  "data":[{"id":"123", "t":0, "x":[1.0], "y":[1.2], "ox":1, "oy":0.5 }],
   "comment": "The actual position of x and y are 2.0 and 1.7"
 }

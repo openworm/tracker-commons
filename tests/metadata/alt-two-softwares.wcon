@@ -1,6 +1,6 @@
 { "units":{ "t":"s", "x":"mm", "y":"mm", "temperature":"C", "humidity":"1",
     "size":"mm", "age":"h" },
-  "data":[{"id":0, "t":0, "x":[0], "y":[0]}],
+  "data":[{"id":"0", "t":0, "x":[0], "y":[0]}],
   "metadata":{
     "software":[
       {"name":"Timaeus", "version":"1", "featureID":"@plato"},

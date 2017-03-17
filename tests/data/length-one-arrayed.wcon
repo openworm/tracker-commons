@@ -1,4 +1,4 @@
 { "units":{ "t":"s", "x":"mm", "y":"mm" },
-  "data":[{"id":123, "t":[0], "x":[[2.0]], "y":[[1.7]]}],
+  "data":[{"id":"123", "t":[0], "x":[[2.0]], "y":[[1.7]]}],
   "comment": "Data is arrayed despite being length one" 
 }

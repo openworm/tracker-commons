@@ -147,7 +147,7 @@
         "data_record": {
             "type":"object",
             "properties": {
-                "id": {"oneOf": [{"type":"string"},{"$ref": "#/definitions/nullable_number"}]},
+                "id": { "type":"string" },
                 "t": { "$ref": "#/definitions/array_of_numbers" },
                 "ox": { "$ref": "#/definitions/array_of_numbers" },
                 "oy": { "$ref": "#/definitions/array_of_numbers" },

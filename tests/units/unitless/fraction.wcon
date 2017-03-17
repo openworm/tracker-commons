@@ -1,5 +1,5 @@
 { "units": {"t":"s", "x":"mm", "y":"mm", "p":"1"},
-  "data": [{"id": 0, "t":0, "x":[0], "y":[0]}],
+  "data": [{"id": "0", "t":0, "x":[0], "y":[0]}],
   "@example": { "p": 0.72 },
   "comment": "'p' in 'example' should have the same value in all files."
 }

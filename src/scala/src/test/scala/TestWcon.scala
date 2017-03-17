@@ -248,7 +248,7 @@ class TestWcon {
   }
 
   def same(a: Data, b: Data, where: String): String =
-    same(a.idJSON, b.idJSON, where + ".id") +
+    same(a.id, b.id, where + ".id") +
     same(Json.Arr.Dbl(a.ts), Json.Arr.Dbl(b.ts), where + ".ts") +
     same(
       Json.Arr.All((0 until a.xDatas.length).map(i => Json.Arr.Dbl(a.spinePoints(i)._1)).toArray), 
@@ -436,10 +436,9 @@ class TestWcon {
   }
 
   def genData(r: R): Data = {
-    val (nid, sid) = r.nextInt(4) match {
-      case 0 => (sigfig(r.nextDouble), null)
-      case 1 => (r.nextInt(100).toDouble, null)
-      case _ => (Double.NaN, "worm-"+r.nextInt(1000))
+    val id = r.nextInt(4) match {
+      case 0 => r.nextInt(100).toString
+      case _ => "worm-"+r.nextInt(1000)
     }
     val ts = Array.fill(r.nextInt(10)+1)(0.1 + 0.9*r.nextDouble) match { case x =>
       x(0) = sigfig(x(0)); var i = 1; while (i < x.length) { x(i) = sigfig(x(i) + x(i-1)); i += 1 }; x
@@ -452,9 +451,8 @@ class TestWcon {
         }
         (a, b)
       }
-    val (oxs, oys) = r.nextInt(5) match {
+    val (oxs, oys) = r.nextInt(3) match {
       case 0 => (Data.emptyD, Data.emptyD)
-      case 1 => val a, b = Array(sigfig(100*(r.nextDouble - 0.5))); (a, b)
       case _ => val a, b = Array.fill(ts.length)(sigfig(100*(r.nextDouble - 0.5))); (a, b)
     }
     val xsb, ysb = Array.newBuilder[Array[Float]]
@@ -491,9 +489,9 @@ class TestWcon {
     }
     val unarr = ts.length == 1 && r.nextInt(3) == 0
     Data(
-      nid, sid, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, prms, wlks, genCustom(r)
+      id, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, prms, wlks, genCustom(r)
     )(
-      new Array[Double](ts.length), new Array[Double](ts.length), unarr, oxs.length == 1 && !unarr && r.nextInt(3) == 0
+      new Array[Double](ts.length), new Array[Double](ts.length), unarr
     )
   }
 
@@ -551,7 +549,7 @@ class TestWcon {
       val dss = wc.toUnderlying
       val Seq(dsnd, dssnd) =
         Seq(ds, dss).map(dx => dx.copy(data = dx.data.map{ d => 
-          Data.empty.copy(custom = d.custom)(Data.empty.rxs, Data.empty.rys, false, false)
+          Data.empty.copy(custom = d.custom)(Data.empty.rxs, Data.empty.rys, false)
         }))
       assertEquals(
         "", 
@@ -562,8 +560,8 @@ class TestWcon {
           println(x)
         }} +
         same(
-          ds.copy(data  = ds.data.map(x =>  x.copy(perims = None, walks = None)(x.rxs, x.rys, false, x.originUnarrayed))),
-          dss.copy(data = dss.data.map(x => x.copy(perims = None, walks = None)(x.rxs, x.rys, false, x.originUnarrayed)))
+          ds.copy(data  = ds.data.map(x =>  x.copy(perims = None, walks = None)(x.rxs, x.rys, false))),
+          dss.copy(data = dss.data.map(x => x.copy(perims = None, walks = None)(x.rxs, x.rys, false)))
         )
       )      
     }

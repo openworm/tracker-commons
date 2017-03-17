@@ -255,7 +255,7 @@ object Create {
 
   def software() = new MakeSoft(Software.empty)
 
-  final class DataBuilder[D <: HasData](nid: Double, sid: String) {
+  final class DataBuilder[D <: HasData](id: String) {
     private[this] var i = 0
     private[this] var ts = new Array[Double](1)
     private[this] var xs, ys = new Array[Array[Float]](1)
@@ -302,7 +302,6 @@ object Create {
 
     private[this] var oi = 0
     private[this] var oxs, oys = DataBuilder.emptyD
-    private[this] var oxunarr, oyunarr = Double.NaN
     private[this] def oFree(n: Int) {
       if (n+oi > oxs.length) {
         val m = math.min(Int.MaxValue - 1, math.max(2*oxs.length, n+oi))
@@ -314,14 +313,14 @@ object Create {
       if (oi < k) {
         oFree(k - oi)
         while (oi < k) {
-          oxs(oi) = oxunarr
-          oys(oi) = oyunarr
+          oxs(oi) = Double.NaN
+          oys(oi) = Double.NaN
           oi += 1
         }
       }
     }
     private[this] def oAdd(ox: Double, oy: Double) {
-      if (!(ox == oxunarr && oy == oyunarr) && !(ox.isNaN || oy.isNaN || ox.isInfinite || oy.isInfinite)) {
+      if (oi > 0 || !(ox.isNaN || oy.isNaN || ox.isInfinite || oy.isInfinite)) {
         oFill(i-1)
         oFree(1)
         oxs(oi) = ox
@@ -329,18 +328,8 @@ object Create {
         oi += 1
       }
     }
-    private[this] def oDefault(ox: Double, oy: Double) {
-      oxunarr = ox
-      oyunarr = oy
-    }
-    private[this] def oxsGet: Array[Double] = 
-      if (oi > 0) java.util.Arrays.copyOf(oxs, oi)
-      else if (oxunarr.isNaN || oyunarr.isNaN || oxunarr.isInfinite || oyunarr.isInfinite) DataBuilder.emptyD
-      else Array(oxunarr)
-    private[this] def oysGet: Array[Double] =
-      if (oi > 0) java.util.Arrays.copyOf(oys, oi)
-      else if (oxunarr.isNaN || oyunarr.isNaN || oxunarr.isInfinite || oyunarr.isInfinite) DataBuilder.emptyD
-      else Array(oyunarr)
+    private[this] def oxsGet: Array[Double] = if (oi > 0) java.util.Arrays.copyOf(oxs, oi) else DataBuilder.emptyD
+    private[this] def oysGet: Array[Double] = if (oi > 0) java.util.Arrays.copyOf(oys, oi) else DataBuilder.emptyD
 
     private[this] var ci = 0
     private[this] var cxs, cys = DataBuilder.emptyD
@@ -450,13 +439,7 @@ object Create {
       val ox = oxsGet
       val oy = oysGet
       val oneT = t.length == 1
-      val oneO = ox.length == 1
-      Data(nid, sid, t, xsGet, ysGet, cxsGet, cysGet, ox, oy, pGet, wGet, jGet)(rxsGet, rysGet, oneT, oneO)
-    }
-
-    private[trackercommons] def personalOrigin(ox: Double, oy: Double): this.type = {
-      if (i == 0 && !(ox.isNaN || oy.isNaN || ox.isInfinite || oy.isInfinite)) oDefault(ox, oy)
-      this
+      Data(id, t, xsGet, ysGet, cxsGet, cysGet, ox, oy, pGet, wGet, jGet)(rxsGet, rysGet, oneT)
     }
 
     private[trackercommons] def personalCustom(j: Json.Obj): this.type = {
@@ -598,16 +581,8 @@ object Create {
     private[trackercommons] val emptyW = new Array[PixelWalk](0)
   }
 
-  def worm(id: String) = new DataBuilder[NoData](Double.NaN, id)
-  def worm(id: Double) = new DataBuilder[NoData](id, null)
-  def worm(id: String, ox: Double, oy: Double) = (new DataBuilder[NoData](Double.NaN, id)).personalOrigin(ox, oy)
-  def worm(id: Double, ox: Double, oy: Double) = (new DataBuilder[NoData](id, null)).personalOrigin(ox, oy)
-  def worm(id: String, j: Json.Obj) = (new DataBuilder[NoData](Double.NaN, id)).personalCustom(j)
-  def worm(id: Double, j: Json.Obj) = (new DataBuilder[NoData](id, null)).personalCustom(j)
-  def worm(id: String, ox: Double, oy: Double, j: Json.Obj) = 
-    (new DataBuilder[NoData](Double.NaN, id)).personalOrigin(ox, oy).personalCustom(j)
-  def worm(id: Double, ox: Double, oy: Double, j: Json.Obj) =
-    (new DataBuilder[NoData](id, null)).personalOrigin(ox, oy).personalCustom(j)
+  def worm(id: String) = new DataBuilder[NoData](id)
+  def worm(id: String, j: Json.Obj) = (new DataBuilder[NoData](id)).personalCustom(j)
 
   private[trackercommons] final class JArB() {
     private[this] var i = 0

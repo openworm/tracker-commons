@@ -1,5 +1,5 @@
 { "units": {"t":"s", "x":"mm", "y":"mm", "temperature":"Centigrade"},
-  "data": [{"id": 0, "t": 0, "x":[0], "y":[0]}],
+  "data": [{"id": "0", "t": 0, "x":[0], "y":[0]}],
   "metadata": { "temperature": 20 },
   "comment": "All files should report the same temperature."
 }

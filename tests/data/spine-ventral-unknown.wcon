@@ -1,6 +1,6 @@
 { "units":{ "t":"s", "x":"mm", "y":"mm" },
   "data":[{
-    "id":123, "t":0, "ventral":"?",
+    "id":"123", "t":0, "ventral":"?",
     "x":[1.6, 1.8, 2.0, 2.2, 2.4], "y":[1.1, 1.4, 1.7, 2.0, 2.3] }],
   "comment": "Ventral side is not known"
 }

@@ -380,8 +380,6 @@ class Data(
 
   /** Converts this data record to the standard Scala format. */
   def toUnderlying = {
-    val nid = Jast.parse(id).double
-    val sid = if (nid.isNaN) id else ""
     val rxs = 
       if (cxs.length == 0) xss.map(_.min.toDouble)
       else java.util.Arrays.copyOf(cxs, cxs.length)
@@ -389,7 +387,7 @@ class Data(
       if (cys.length == 0) yss.map(_.min.toDouble)
       else java.util.Arrays.copyOf(cys, cys.length)
     new org.openworm.trackercommons.Data(
-      nid, sid,
+      id,
       java.util.Arrays.copyOf(ts, ts.length),
       xss.indices.toArray.map(i => original.Data.singly(xss(i), -rxs(i))),
       yss.indices.toArray.map(i => original.Data.singly(yss(i), -rys(i))),
@@ -400,7 +398,7 @@ class Data(
       None,
       None,
       custom
-    )(rxs,rys, false, false)
+    )(rxs,rys, false)
   }
 }
 object Data {
@@ -433,7 +431,7 @@ object Data {
   /** Generates data by translating from the standard Scala data format */
   def from(underlying: org.openworm.trackercommons.Data): Data =
     new Data(
-      if (underlying.nid.isNaN) underlying.sid else underlying.nid.toString,
+      underlying.id,
       new MemoizedGenerator(java.util.Arrays.copyOf(underlying.ts, underlying.ts.length)),
       new MemoizedGenerator(java.util.Arrays.copyOf(underlying.cxs, underlying.cxs.length)),
       new MemoizedGenerator(java.util.Arrays.copyOf(underlying.cys, underlying.cys.length)),

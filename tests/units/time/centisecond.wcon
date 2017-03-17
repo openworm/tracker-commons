@@ -1,4 +1,4 @@
 { "units": { "t":"centisecond", "x":"mm", "y":"mm" },
-  "data": [{"id": 0, "t": 17280000, "x":[0], "y":[0]}],
+  "data": [{"id": "0", "t": 17280000, "x":[0], "y":[0]}],
   "comment": "Timepoint 0 of animal 0 should be the same in all files."
 }
