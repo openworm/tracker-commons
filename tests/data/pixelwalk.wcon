@@ -1,0 +1,11 @@
+{ "units":{ "t":"s", "x":"mm", "y":"mm", "px":"mm", "py":"mm" },
+  "data":[{
+    "id":"123", "t":0, 
+    "x":[1.6, 1.8, 2.0, 2.2, 2.4], "y":[1.1, 1.4, 1.7, 2.0, 2.3] }],
+    "walk":{"px": [1.6, 1.1, 0.1], "n": [38, 19], "4": "iIgoomh3d9_9DQ"}
+  }],
+  "comments": [
+    "The perimeter touches the same points as the point-based version.",
+    "The step size is 0.1 mm."
+  ]
+}

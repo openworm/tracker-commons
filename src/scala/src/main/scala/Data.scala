@@ -91,6 +91,43 @@ object PixelWalk extends FromJson[PixelWalk] {
   val emptyBytes = new Array[Byte](0)
   val empty = new PixelWalk(emptyBytes, 0, 0, 0, 0, -1)(0, 0)
 
+  def bytesFromArrows(s: String): Array[Byte] = {
+    val bs = new Array[Byte]((s.length+3)/4)
+    var i = 0
+    while (i < s.length) {
+      val j = i/4
+      val shift = (i & 0x3)*2
+      val bits = s(i) match {
+        case '>' => 0x0
+        case '<' => 0x1
+        case '^' => 0x2
+        case 'v' => 0x3
+      }
+      bs(j) = (bs(j) | (bits << shift)).toByte
+      i += 1
+    }
+    bs
+  }
+
+  def arrowsFromBytes(bs: Array[Byte], n: Int): String = {
+    val cs = new Array[Char](n)
+    var i = 0
+    while (i < n) {
+      val j = i/4
+      val shift = (i & 0x3)*2
+      val bits = ((bs(j) & 0xFF) >>> shift) & 0x3
+      val c = bits match {
+        case 0 => '>'
+        case 1 => '<'
+        case 2 => '^'
+        case 3 => 'v'
+      }
+      cs(i) = c
+      i += 1
+    }
+    new String(cs)
+  }
+
   def parse(j: Json): Either[JastError, PixelWalk] = j match {
     case o: Json.Obj =>
       if (o.size != 3) return Left(JastError("PixelWalk must contain exactly three elements"))
