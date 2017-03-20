@@ -12,14 +12,17 @@ The following is an example of a very small WCON file consisting of a single ani
 {
     "units":{"t":"seconds", "x":"mm", "y":"mm"},
     "metadata":{"strain":"N2", "who":"Rex Kerr"},
-    "data":[
-        {"id":"1", "t":0.0, "x":[17.2, 17.3, 17.9, 18.6, 18.8], "y":[2, 2.8, 3.3, 3.7, 4.6]},
-        {"id":"1", "t":0.3, "x":[16.4, 16.9, 17.5, 18.1, 18.4], "y":[1.8, 2.4, 3, 3.4, 4.3]}
-    ]
+    "data":{
+        "id":"1", "t":[0.0, 0.3],
+        "x":[[17.2, 17.3, 17.9, 18.6, 18.8], [16.4, 16.9, 17.5, 18.1, 18.4]],
+        "y":[[2, 2.8, 3.3, 3.7, 4.6], [1.8, 2.4, 3, 3.4, 4.3]]
+    }
 }
 ```
 
-The key features of the format include a required *units* section so that it is clear what time and space values mean, an optional *metadata* section that can specify commonly-varied parameters such as strain or name of experimenter, and a *data* section that consists of entries that specify the animal (by *id*), the time point (or an array thereof), and the spine along the worm at that timepoint given by separate *x* and *y* coordinates.  (A single x and y value is permitted also, if for example the tracker does not have any shape information.)
+The key features of the format include a required *units* section so that it is clear what time and space values mean, an optional *metadata* section that can specify commonly-varied parameters such as strain or name of experimenter, and a *data* section that consists of entries that specify the animal (by *id*), the time points (in an array), and the spine along the worm at that timepoint given by separate *x* and *y* coordinates.  (A single x and y value is permitted at each timepoint also, if for example the tracker does not have any shape information.)
+
+In general, the `data` section can be an array to support tracking of multiple animals; in the example above, there is a only a single animal so it is just a single record.
 
 Since WCON files are valid JSON, any of a wide number of packages that read JSON can be used to import the data.
 
@@ -41,7 +44,9 @@ A JSON _object_ is a set of key-value pairs.  The key is always a string; the va
 
 A JSON _array_ is a list of values.  The values can be anything, and need not be the same as each other.  However, in the WCON specification, all arrays do contain the same type of value.
 
-A particular value may be _required_ or _optional_.  Optional values may simply be left out when not present (the whole key-value pair, if part of an object).  Values may also be _single-valued_ or _arrayed_.  A single value is just a single JSON entity of appropriate type.  An arrayed value is zero or more such values inside a JSON array.  If there is only one value, a JSON array need not be used to wrap that single value, though it is permitted.  If a value is required, and can be arrayed, then the array must not be empty.  If it is optional, an empty array is equivalent to the value being missing.
+A particular value may be _required_ or _optional_.  Optional values may simply be left out when not present (the whole key-value pair, if part of an object).  Values may also be _single-valued_ or _arrayed_.  A single value is just a single JSON entity of appropriate type.  An arrayed value is zero or more such values inside a JSON array.
+
+If a value must be stored in an array, the specification will say so.  Otherwise if the value is _arrayable_ it means that if there are multiple items (or zero items) they can be specified in an array, but single items can appear alone.  If a value is required and arrayable, then the array must not be empty.  If it is optional and arrayable, an empty array is equivalent to the value being missing.
 
 ### File structure
 
@@ -49,15 +54,15 @@ A WCON file contains a single JSON object with a minimum of two key-value pairs:
 
 #### Example
 
-A WCON file with single-valued `t` and arrayed `x` and `y`:
+A WCON file with separate entries for each timepoint and animal:
 
 ```JSON
 {
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[
-        { "id":"1", "t":1.3, "x":[15.11, 16.01], "y":[24.89, 24.63] },
-        { "id":"2", "t":1.3, "x":[22.01, 22.35], "y":[8.06, 8.96] },
-        { "id":"1", "t":1.4, "x":[15.21, 16.09], "y":[24.85, 24.58] }
+        { "id":"1", "t":[1.3], "x":[[15.11, 16.01]], "y":[[24.89, 24.63]] },
+        { "id":"2", "t":[1.3], "x":[[22.01, 22.35]], "y":[[8.06, 8.96]] },
+        { "id":"1", "t":[1.4], "x":[[15.21, 16.09]], "y":[[24.85, 24.58]] }
     ]
 }
 ```
@@ -88,19 +93,21 @@ For compound units, `*` can be used for multiplication, `/` for division, and `^
 
 Other numerical values may be used in the expressions: for instance, `"t":"0.04*s"` would allow frame indices in a data set gathered at 25 FPS to be interpreted as times.  Likewise, a program could report coordinates as raw pixel values and set "x" and "y" units accordingly.
 
-`"units"` is required and must be single-valued.  Units must be specified for all quantities used.  If the data set is non-empty, that means there must be units at least for `"t"`, `"x"`, and `"y"` since those are required.  It is permitted to specify units for variables that do not exist.  Although an empty `"data"` section is permitted (meaning there is no `"t"`, `"x"`, or `"y"`), but WCON readers are allowed to fail on this degenerate case if units for `"t"`, `"x"`, and `"y"` are not supplied.
+`"units"` is required and must be single-valued.  Units must be specified for all quantities used.  If the data set is non-empty, that means there must be units at least for `"t"`, `"x"`, and `"y"` since those are required.  It is permitted to specify units for variables that do not exist.  Although an empty `"data"` section is permitted (meaning there is no `"t"`, `"x"`, or `"y"`), WCON readers are allowed to fail if units for `"t"`, `"x"`, and `"y"` are not supplied.
 
 #### Data
 
-The `"data"` entry contains data for one or more animals at one or more timepoints.  It may be arrayed.
+A single data record is an object with four required keys, as described below, that contains data for one animal at one or more timepoints
 
-A single data entry is an object with four required keys.
+The `"data"` field in WCON is arrayable and contains data record objects.  The array may be empty if there is no data.
+
+The data record objects require these keys:
 
 1. Each worm is identified by an `id` field containing a JSON string.  (Software that generates numeric IDs should convert the number to its corresponding string.)
 
-2. The time of a recording is specified by `t` (a JSON number).  It may be single-valued, for a single timepoint, or arrayed for a series of timepoints in which case they should be increasing in value.  Every other numeric value must have the same number of entries as `t` has, where the `i`th entry corresponds to the value(s) at the `i`th time-point.
+2. The time of a recording is specified by `t` (a JSON number).  It is arrayed, even if there is only a single timepoint, and may not be empty.  For a series of timepoints, the times should be increasing in value.  Every other numeric value must have the same number of entries as `t` has, where the `i`th entry corresponds to the value(s) at the `i`th time-point.
 
-3. The body position of an animal is given by `x` and `y`.  These are typically arrayed and represent points along the midline of the body.  They must be the same size.  If `t` has multiple values, `x` and `y` are typically arrays of arrays.  However, if tracking is done at low resolution and the worm is defined using a single xy-coordinate, `x` and `y` may have a single numeric value at each time (as usual with quantities that may be arrayed).
+3. The body position of an animal is given by `x` and `y`.  These are arrayable at each timepoint so that `x` and `y` are arrays of arrays.  However, if tracking is done at low resolution and the worm is defined using a single xy-coordinate, `x` and `y` may have a single numeric value at each time (as usual with quantities that may be arrayed).  At each timepoint, the `x` and `y` entries must be the same length.
 
 Note: A data array may contain the same ID multiple times with different timepoints.  It should _not_ contain the same ID with the same timepoint multiple times.  Allowing repeats enables easy merging and splitting of data across several files or chunks of analysis.
 
@@ -109,25 +116,24 @@ A WCON file with arrayed t and corresponding nested arrays for `x` and `y`.
 ```JSON
 {
     "units":{"t":"s", "x":"mm", "y":"mm"},
-    "data":[
-        { "id":"1",
-          "t":[
-               1.3,
-               1.4,
-               1.5
-          ],
-          "x":[
-               [12.15, 13.01],
-               [12.09, 12.95],
-               [12.07, 12.92]
-          ],
-          "y":[
-               [2.34, 2.74],
-               [2.37, 2.76],
-               [2.39, 2.77]
-          ]
-        }
-    ]
+    "data":{ 
+        "id":"1",
+        "t":[
+             1.3,
+             1.4,
+             1.5
+        ],
+        "x":[
+             [12.15, 13.01],
+             [12.09, 12.95],
+             [12.07, 12.92]
+        ],
+        "y":[
+             [2.34, 2.74],
+             [2.37, 2.76],
+             [2.39, 2.77]
+        ]
+    }
 }
 ```
 
@@ -155,11 +161,7 @@ Even seemingly primitive features such as speed can have many variants (centroid
 
 For software developed in worm labs, use the lab's strain designation as a unique identifier.  A current list of lab strain designations (the first code in capital letters) is available from the [CGC](http://cbs.umn.edu/cgc/lab-code) or [WormBase](https://www.wormbase.org/resources/laboratory).  If a single group has multiple feature sets, the strain designation can be followed by a suffix separated from the lab code by a non-letter character (e.g. `"@CF Rex"` or `"@OMG_1.5"`).  For groups without a strain designation, choose an identifier that is clearly not a lab strain identifier (i.e. avoid an identifier which is two or three capital letters).
 
-If a feature could be interpreted by other programs and has units that are supported,
-it is preferable to list the feature by name and let the WCON reader convert the units
-if needed.  However, it is also possible to store features in other less-accessible
-forms, such as an array; this may be more compact or faster to read if one does not
-anticipate that any other software could make use of the feature.
+If a feature could be interpreted by other programs and has units that are supported, it is preferable to list the feature by name and let the WCON reader convert the units if needed.  However, it is also possible to store features in other less-accessible forms, such as an array; this may be more compact or faster to read if one does not anticipate that any other software could make use of the feature.
 
 Here is an example of a WCON file with three custom features with units:
 
@@ -171,16 +173,17 @@ Here is an example of a WCON file with three custom features with units:
         "curvature":"1/mm",
         "width":"mm"
     },
-    "data":[
-        { "id":"1",
-          "t":1.3,
-          "x":[12.11, 11.87],
-          "y":[5.72, 5.01],
-          "@OMG":{ "speed":0.34, "curvature":1.5, "width":0.103 }
-        }
-    ]
+    "data":{
+        "id":"1",
+        "t":[1.3],
+        "x":[[12.11, 11.87]],
+        "y":[[5.72, 5.01]],
+        "@OMG":{ "speed":[0.34], "curvature":[1.5], "width":[0.103] }
+    }
 }
 ```
+
+Note that the features are arrays of length 1 to match the time.
 
 Here is the same file but with an unconverted feature vector instead:
 
@@ -190,18 +193,19 @@ Here is the same file but with an unconverted feature vector instead:
         "t":"s", "x":"mm", "y":"mm"
     },
     "@OMG": { "feature_order":["speed", "curvature", "width"] },
-    "data":[
-        { "id":"1",
-          "t":1.3,
-          "x":[12.11, 11.87],
-          "y":[5.72, 5.01],
-          "@OMG":[0.34, 1.5, 0.103]
-        }
-    ]
+    "data":{
+        "id":"1",
+        "t":[1.3],
+        "x":[[12.11, 11.87]],
+        "y":[[5.72, 5.01]],
+        "@OMG":[[0.34, 1.5, 0.103]]
+    }
 }
 ```
 
 Note that the custom `"@OMG"` tag is used both at the top level (in this case, to specify for the custom reader the order of the parameters), and within each data entry.
+
+Custom features inside a data record may be any type of JSON value, but _if_ they are meant to apply to each timepoint they must either be an array of the same length as the number of timepoints, _or_ a JSON object whose keys map to arrays of the same length as the number of timepoints.  This is essential to allow WCON readers to select subsets of the data by time.
 
 For features that describe an entire plate rather than properties of individual worms (such as density or aggregate number), the values should be specified in a custom block outside of `data`:
 
@@ -221,14 +225,13 @@ For features that describe an entire plate rather than properties of individual 
         "aggregate number":8
       }
    },
-  "data":[
-      { "id":"1",
-        "t":1.3,
-        "x":[12.11, 11.87],
-        "y":[5.72, 5.01],
-        "@OMG":{ "speed":0.34, "curvature":1.5, "width":0.103 }
-      }
-  ]
+  "data":{
+      "id":"1",
+      "t":[1.3],
+      "x":[[12.11, 11.87]],
+      "y":[[5.72, 5.01]],
+      "@OMG":{ "speed":[0.34], "curvature":[1.5], "width":[0.103] }
+  }
 }
 ```
 
@@ -244,24 +247,60 @@ Some values vary by animal but not from time to time.  These may be specified as
 
 ### Manipulation of custom data
 
-Since data may be either for single timepoints or arrayed, and custom data presumably reflects this, merging and splitting data requires custom data to be merged and split also.  This will happen according to the following rules.
+Since custom data is associated with a set of timepoints, merging and splitting data by time requires custom data to be merged and split also.  This will happen according to the following rules in readers that supply facilities for merging and splitting data.
 
-1. If the JSON value associated with a custom key (i.e. starting with `"@"`) is an array of the same length as the number of timepoints, it will be merged and split along with the timepoints.
-2. If the JSON value is not an array or is an array of the wrong length, it will be treated as a local constant when merged with another timepoint if the values are the same, or expanded into an array containing the JSON value if the values are no longer the same after merging.
+Custom data values must be one of the following to participate in splitting and merging of data points:
 
-If we merge the data section of
+1. A simple value (not an array or object) that is the same for every data record with the same ID
+2. An array of the same length as the number of timepoints
+3. An object with values that are either arrays of the length of the number of timepoints, or are the same for every data record with the same ID
+
+To split this data, each array of the appropriate length retains each element corresponding to the retained timepoint(s); everything else is copied unchanged.  It is an error to have an array of an inappropriate length as custom value, or as a value for a key inside a custom object.  More deeply nested arrays are fine.
+
+For example, this can be split:
+
+```JSON
+"data":{
+    "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
+    "@XJ":{ "parameters": {"array": [1, 2, 3]} }
+}
+```
+
+but this cannot since `"parameters"` is an invalid length:
+
+```JSON
+"data":{
+    "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
+    "@XJ":{ "parameters": [1, 2, 3] }
+}
+```
+
+To merge this data, arrays are merged so that each element continues to correspond to the same timepoint, and everything else is copied unchanged.  It is an error to merge non-identical custom values or non-identical values for the same keys inside custom objects; or to merge custom objects with different sets of keys; or to have arrays that do not match the number of timepoints.
+
+Readers may optionally provide a way to relax this requirement by allowing a merge strategy to be specified in problematic cases.  In order of simplicity, these are
+
+1. In case two values that should be identical are not, each could be duplicated into an array of the correct length.
+2. In case a key is missing, it could be replaced by `null`, by an existing value, or by an array of `null`, as needed.
+3. If only some keys of a custom object can be merged, a custom function could be called to merge the rest.
+4. In the most general case, if anything goes wrong, a custom merge function could be called.
+
+Readers that supply the first two of these options can treat custom data the same way as the WCON specification treats local values.
+
+Readers are allowed to still merge or split with a best effort even in cases that fail, but they must somehow indicate that the process did not go smoothly.
+
+As an example of a non-problematic merge, if we merge the two data records in
 
 ```JSON
 {
-  "units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm"},
+  "units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm", "c":"%" },
   "data":[
     {
       "id":"0", "t":[1,2], "x":[0,1], "y":[1,0],
-      "@XJ z":[3,4], "@XJ g":9.8, "@XJ f":"salmon"
+      "@XJ z":[3,4], "@XJ g":9.8
     },
     {
       "id":"0", "t":[3,4,5], "x":[1,0,1], "y":[2,3,2],
-      "@XJ z":[5,6,5], "@XJ g":9.8, "@XJ f":"cod"
+      "@XJ z":[5,6,5], "@XJ g":9.8
     }
   ]
 }
@@ -274,8 +313,7 @@ we will get
   "units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm"},
   "data":[{
     "id":"0", "t":[1,2,3,4,5], "x":[0,1,1,0,1], "y":[1,0,2,3,2],
-    "@XJ z":[3,4,5,6,5], "@XJ g":9.8,
-    "@XJ f":["salmon", "salmon", "cod", "cod", "cod"]
+    "@XJ z":[3,4,5,6,5], "@XJ g":9.8
   }]
 }
 ```
@@ -361,11 +399,11 @@ An example WCON file with a complete metadata section is given below.
         "stage":"dauer",
         "age":38.4,
         "strain":"CB4856",
-        "interpolate":{ "method":"cubic", "values":["x", "y"] },
         "protocol":[
             "dauer induction by method in J. Doe, 'Get Dauers', J. of Stuff, v1 p234",
             "worm transferred to arena 1-2 minutes before recording started"
         ],
+        "interpolate":{ "method":"cubic", "values":["x", "y"] },
         "software":{
             "name":"Suzie's Worm Knower",
             "version":"1.1.3",
@@ -377,9 +415,9 @@ An example WCON file with a complete metadata section is given below.
         "t":"s", "x":"mm", "y":"mm", "temperature":"C",
         "humidity":"%", "size":"mm", "age":"h"
     },
-    "data":[
-        { "id":"1", "t":1.3, "x":-5.3, "y":6.4, "@suzq":[true, true, false, true] }
-    ]
+    "data":{
+        "id":"1", "t":[1.3], "x":[-5.3], "y":[6.4], "@suzq":[true, true, false, true]
+    }
 }
 ```
 
@@ -389,13 +427,13 @@ All entries in the metadata object are optional.  Custom tags may be included in
 
 | Field | Description |
 |-------|-------------|
+| **id** | This is a JSON string that identifies the experiment.  If it is essential to unambiguously identify an experiment on the basis of this entry, we recommend using a universally unique identifier (UUID). |
 | **lab** | This is a JSON object that specifies the laboratory in which the work was done.  Valid fields include _location_ (to specify physical location or address), _name_ (to indicate the name of the laboratory as necessary), _contact_ (text describing how to reach someone (e.g. address or email); may be arrayed), and _PI_ (to indicate the principal investigator of that lab).  Since it is conceivable that an experiment could be done jointly in more than one lab (e.g. in shared space), the lab field may be arrayed. |
 | **who** | This is an arrayed set of JSON strings that specify the name(s) of the experimenter(s). |
 | **timestamp** | This should specify the time corresponding to `t = 0` in the data, using the [ISO-8601 combined date/time format](https://en.wikipedia.org/wiki/ISO_8601).  Fractional seconds and time zones are optional.  The field is single-valued. |
 | **temperature** | The temperature at which the experiment takes place.  The units should be specified in the `units` block, but are assumed to be Celsius.  The field is single-valued. |
 | **humidity** | The relative humidity at which the experiment takes place.  Since this is normally expressed in percentage, but dimentionless units do not default to percentage, take care to specify units of `"%"` in the `units` block.  The field is single-valued. |
 | **arena** | This is a JSON object that specifies the place in which the worms are being recorded.  Subfields include _type_ which is a string description of the arena (e.g. "plate" or "slide"), _size_ which is either a single value or an array of two values which indicates the diameter or extent in each relevant direction, and _orientation_ which is a string describing how the plate or slide is oriented.  For `orientation`, use `"toward"` or `"away"` to indicate that the surface of a plate is pointing towards the camera or away from it (in the latter case one would be imaging through the agar).  The field is single-valued. |
-| **interpolate** | This is a JSON object that specifies how data may be interpolated via splines.  There are two fields: _method_ specifies the type of interpolation, e.g. `"quadratic"` or `"cubic"` for splines or `"pchip"` for piecewise cubic Hermite interpolating polynomial, and _values_ is an array of strings indicating which variables are included (in their natural pairs).  If `"t"` is included, it indicates that each other variable can be interpolated in time.  This may be arrayed to specify different interpolation for different values.  Note that WCON readers and writers are not expected to provide interpolation; this is information for analysis or visualization software. |
 | **food** | The food, if any, present during the experiment, as a JSON string.  If no food is present, and you wish others to know, write `""` or `"none"` rather than leaving the entry absent so it can be distinguished from the case where food is present but the metadata entry is not provided.  The field is single-valued. |
 | **media** | The media on which the animal is placed, as a JSON string.  The field is single-valued. |
 | **sex** | The sex of the animals, as a JSON string.  If there is a mixed population, it cannot be conveniently indicated here; instead, a custom tag should be used to specify on an animal-by-animal basis.  The field is single-valued. |
@@ -403,6 +441,7 @@ All entries in the metadata object are optional.  Custom tags may be included in
 | **age** |  The age of the animals, with time units as specified in `units`.  If used in aging studies, the value should be the total age of the animals, not "days of adulthood".  If the animals underwent an extended period of larval or dauer arrest, but are now a different stage, it is preferable to explain the details as text in the `protocol` section and leave this field blank.  The field is single-valued. |
 | **strain** | The name of the strain as a string.  It is recommended to just have the strain designation using standard nomenclature, not extended information about the genotype.  The field is single-valued. |
 | **protocol** | A text description of the protocol for the experiment.  This may be arrayed. Free-form comments regarding the experiment should typically go here. |
+| **interpolate** | This is a JSON object that specifies how data may be interpolated via splines.  There are two fields: _method_ specifies the type of interpolation, e.g. `"quadratic"` or `"cubic"` for splines or `"pchip"` for piecewise cubic Hermite interpolating polynomial, and _values_ is an array of strings indicating which variables are included (in their natural pairs).  If `"t"` is included, it indicates that each other variable can be interpolated in time.  This may be arrayed to specify different interpolation for different values.  Note that WCON readers and writers are not expected to provide interpolation; this is information for analysis or visualization software. |
 | **software** |  A JSON object that specifies relevant features of the software used to capture and/or analyze the data.  Valid subfields are _name_ (the name of the software package), _version_ (a string containing the version number), _featureID_ (an array of strings that state which custom tags the software produces, as a convenience for those wishing to know what to expect), and _settings_ which may be any JSON entity that describes parameters of the software (units will not be converted within this block).  The software field may be arrayed; the first value is presumed to be the software that captured the data, while later entries represent subsequent post-processing steps. |
 
 #### More on interpolation
@@ -420,12 +459,11 @@ An example WCON file with orientation information:
 ```JSON
 {
     "units":{"t":"s", "x":"mm", "y":"mm"},
-    "data":[
-        { "id":"1", "t":1.3, "x":[7.2, 7.8], "y":[0.5, -0.3],
-          "head":"L",
-          "ventral":"CCW"
-        }
-    ]
+    "data":{
+        "id":"1", "t":[1.3], "x":[[7.2, 7.8]], "y":[[0.5, -0.3]],
+        "head":"L",
+        "ventral":"CCW"
+    }
 }
 ```
 
@@ -435,7 +473,7 @@ The origin used to define the worm's xy-coordinates can change over time to redu
 
 It is often the case that the centroid of an animal is known with considerably greater accuracy than any other position.  The centroid positions can be specified by `cx` and `cy`, and must be given for every time point if given at all.
 
-Note that you must specify units for `cx`, `cy`, `ox`, and `oy` if you use them.  Also, note that they must be used in pairs: a `cx` without a `cy` is uninterpretable.  And `ox` and `oy` should have the same dimension: either both vectors or both a single value.
+Note that you must specify units for `cx`, `cy`, `ox`, and `oy` if you use them.  Also, note that they must be used in pairs: a `cx` without a `cy` is uninterpretable.
 
 Here is an example WCON file using origin and centroid points:
 
@@ -445,10 +483,10 @@ Here is an example WCON file using origin and centroid points:
         "t":"s", "x":"mm", "y":"mm",
         "cx":"mm", "cy":"mm", "ox":"mm", "oy":"mm"
     },
-    "data":[
-        {"id":"1", "t":1.3, "x":[7.2, 8.1], "y":[0.5, 0.3],
-         "ox":32.4, "oy":9.2, "cx":7.676, "cy": 0.384}
-    ]
+    "data":{
+        "id":"1", "t":[1.3], "x":[[7.2, 8.1]], "y":[[0.5, 0.3]],
+        "ox":[32.4], "oy":[9.2], "cx":[7.676], "cy": [0.384]
+    }
 }
 ```
 
@@ -464,8 +502,8 @@ Point-based perimeters are specified much like spines but using `"px"` and `"py"
 {
     "units":{"t":"s", "x":"mm", "y":"mm", "px":"mm", "py":"mm"},
     "data":{
-      "id":"1", "t":0, "x":4, "y":3,
-      "px":[4.5, 4.5, 3.5, 3.5], "py":[3.5, 2.5, 2.5, 3.5]
+      "id":"1", "t":[0], "x":[4], "y":[3],
+      "px":[[4.5, 4.5, 3.5, 3.5]], "py":[[3.5, 2.5, 2.5, 3.5]]
     }
 }
 ```
@@ -476,7 +514,7 @@ Point-based perimeters work with arrayed `t` values just like spines do: `px` an
 
 #### Walk-based perimeters
 
-Walk-based perimeters are useful to represent raw image segmentation results separating a worm from the background.  A `"walk"` is contained in its own JSON object with three fields.  `"px"` is an array of three numbers that represent the x,y starting pixel location and the side-length of a pixel.  `"n"` is either a single number representing the number of elements in the walk, or two numbers with the second indicating the pixel where the tail is (if known); if the tail is known, the walk must start at the head.  `"4"` is a string containing an encoded binary representation of a 4-connected set of steps over the pixels.  Counterclockwise vs. clockwise order of pixels cannot be assumed.
+Walk-based perimeters are useful to represent raw image segmentation results separating a worm from the background.  A `"walk"` is contained in its own JSON object with three fields with one such object per timepoint.  `"px"` is an array of three numbers that represent the x,y starting pixel location and the side-length of a pixel.  `"n"` is either a single number representing the number of elements in the walk, or two numbers with the second indicating the pixel where the tail is (if known); if the tail is known, the walk must start at the head.  `"4"` is a string containing an encoded binary representation of a 4-connected set of steps over the pixels.  Counterclockwise vs. clockwise order of pixels cannot be assumed.
 
 In detail, `"4"` contains a Base64-encoded representation (using standard MIME format without newlines) of an 8-bit binary array.  This array is to be read two bits at a time, starting from the lowest-order two bits in the first byte in the array.  Each two bits represent a step in one of four directions: `00` means a step in the negative x direction `01` is positive x, `10` is negative y, and `11` is positive y.  The same square as in the point-based example could be represented as follows: the steps are -y, -x, +y which is binary 110010; the Base64 encoding of an array containing only that is "Mg".  Thus, this represents a one mm square also:
 
@@ -484,15 +522,13 @@ In detail, `"4"` contains a Base64-encoded representation (using standard MIME f
 {
     "units":{"t":"s", "x":"mm", "y":"mm", "px":"mm", "py":"mm"},
     "data":{
-      "id":"1", "t":0, "x":4, "y":3,
-      "walk":{"px":[4.5, 3.5, 1], "n":3, "4":"Mg" }
+      "id":"1", "t":[0], "x":[4], "y":[3],
+      "walk":[{"px":[4.5, 3.5, 1], "n":3, "4":"Mg" }]
     }
 }
 ```
 
 Note that this represents three edge pixels per character as opposed to 10-20 characters per pixel for the point-based representation, so for large outlines of raw pixel coordinates this reduces the size of the data by 30-60 fold.
-
-If `t` is arrayed, the `walk` struct is repeated once per timepoint.  (The arrays do not propagate inside the struct.)
 
 #### Both perimeters in one data set
 
@@ -500,12 +536,11 @@ It is legal to have both pixel-walk perimeters and point-based perimeters.  Gene
 
 ### Splitting large WCON files into chunks
 
-For very long tracking experiments, it may be convenient to split a single experiment across multiple WCON files.  To make it easier to reconstruct tracks across files, we support a `files` entry in the main WCON object, that obeys the following rules:
+For very long tracking experiments, it may be convenient to split a single experiment across multiple WCON files.  To make it easier to reconstruct tracks across files, we support a `files` entry in the main WCON object, that has three fields, `this`, `prev`, and `next`, subject to the following rules:
 
-1. The variable part of the file name (for example a numerical suffix) is listed under `this`
-2. To find another file, take the current file name, delete the last instance of the variable part, and replace it with the string in `prev` or `next`
-3. There must be at least one `next`, and they occur in temporal order.  If the current file is the last in a series, the single value of `next` can be `null`, or it can be an empty array, or the `next` field can simply be missing.
-4. There must be at least one `prev`, and they occur in **reverse** temporal order.  If the current file is the first in a series, the single value of `prev` can be `null`, an empty array, or the field can be missing.
+1. The variable part of the file name (for example a numerical suffix) is listed under `this` and is a string.
+2. If there is a next file, it is listed in an array under `next`.  Not all files need to be listed (just the next one is enough), but the strings must be arrayed.  If there is no `next` file, the field can be missing or can have an empty array as its value.
+3. If there is a previous file, it is listed in an array under `prev`.  Again, not all files need to be listed.  If more than one is listed, it should be in **reverse** temporal order.
 
 If a WCON file is split into chunks, it is assumed that use of animal `id` values is consistent.
 
@@ -519,18 +554,18 @@ In this example, we imagine a directory containing files labelled `filename_0.wc
         "next":["_3"]
      },
     "units":{"t":"s", "x":"mm", "y":"mm"},
-    "data":[
-        { "id":"1", "t":1.3, "x":[7.2, 8.1], "y":[0.5, -0.1] }
-    ]
+    "data":{
+      "id":"1", "t":[1.3], "x":[[7.2, 8.1]], "y":[[0.5, -0.1]]
+    }
 }
 ```
 
 # Zipped files
 
-Compressing JSON files typically space savings of an order of magnitude or more.  For this reason it is recommended that implementations allow files to be loaded and saved as [Zip archives](https://en.wikipedia.org/wiki/Zip_(file_format)).  If so, files must end in `".zip"`.  It is further recommended (but not required) that they end in `".wcon.zip"`.  The extension of the WCON files within the `.zip` file must be `.wcon`.
+Compressing JSON files typically offers space savings of an order of magnitude or more.  For this reason it is recommended that implementations allow files to be loaded and saved as [Zip archives](https://en.wikipedia.org/wiki/Zip_(file_format)).  If so, files must end in `".zip"`.  It is further recommended (but not required) that they end in `".wcon.zip"`.  The extension of the WCON files within the `.zip` file must be `.wcon`.
 
 A Zip archive can contain one or more WCON files:
 
 - If an archive is loaded containing zero files, an error is raised.
 - If an archive contains exactly one file, this file is loaded.
-- If an archive contains more than one file, one file (not necessarily the first) is selected for loading.  If this file contains links via the "files" object in the specification (see above), then all linked files in the archive will be loaded.
+- If an archive contains more than one file, one file (not necessarily the first) is selected for loading.  If this file contains links via the "files" object in the specification (see above), then all linked files in the archive will be loaded.  Once all links are followed, if unread wcon files remain in the archive, an error is raised.
