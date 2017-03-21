@@ -245,79 +245,6 @@ It is expected that users will take advantage of the flexibility of the WCON spe
 
 Some values vary by animal but not from time to time.  These may be specified as _local constants_ even when the time is arrayed in order to save space: instead of repeating the value many times in an array, the value is only given once.  Entries that must be read by a minimal reader may _not_ be local constants in order to simplify interpretation.  Optional values that may be local constants are specified below.
 
-### Manipulation of custom data
-
-Since custom data is associated with a set of timepoints, merging and splitting data by time requires custom data to be merged and split also.  This will happen according to the following rules in readers that supply facilities for merging and splitting data.
-
-Custom data values must be one of the following to participate in splitting and merging of data points:
-
-1. A simple value (not an array or object) that is the same for every data record with the same ID
-2. An array of the same length as the number of timepoints
-3. An object with values that are either arrays of the length of the number of timepoints, or are the same for every data record with the same ID
-
-To split this data, each array of the appropriate length retains each element corresponding to the retained timepoint(s); everything else is copied unchanged.  It is an error to have an array of an inappropriate length as custom value, or as a value for a key inside a custom object.  More deeply nested arrays are fine.
-
-For example, this can be split:
-
-```JSON
-"data":{
-    "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
-    "@XJ":{ "parameters": {"array": [1, 2, 3]} }
-}
-```
-
-but this cannot since `"parameters"` is an invalid length:
-
-```JSON
-"data":{
-    "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
-    "@XJ":{ "parameters": [1, 2, 3] }
-}
-```
-
-To merge this data, arrays are merged so that each element continues to correspond to the same timepoint, and everything else is copied unchanged.  It is an error to merge non-identical custom values or non-identical values for the same keys inside custom objects; or to merge custom objects with different sets of keys; or to have arrays that do not match the number of timepoints.
-
-Readers may optionally provide a way to relax this requirement by allowing a merge strategy to be specified in problematic cases.  In order of simplicity, these are
-
-1. In case two values that should be identical are not, each could be duplicated into an array of the correct length.
-2. In case a key is missing, it could be replaced by `null`, by an existing value, or by an array of `null`, as needed.
-3. If only some keys of a custom object can be merged, a custom function could be called to merge the rest.
-4. In the most general case, if anything goes wrong, a custom merge function could be called.
-
-Readers that supply the first two of these options can treat custom data the same way as the WCON specification treats local values.
-
-Readers are allowed to still merge or split with a best effort even in cases that fail, but they must somehow indicate that the process did not go smoothly.
-
-As an example of a non-problematic merge, if we merge the two data records in
-
-```JSON
-{
-  "units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm", "c":"%" },
-  "data":[
-    {
-      "id":"0", "t":[1,2], "x":[0,1], "y":[1,0],
-      "@XJ z":[3,4], "@XJ g":9.8
-    },
-    {
-      "id":"0", "t":[3,4,5], "x":[1,0,1], "y":[2,3,2],
-      "@XJ z":[5,6,5], "@XJ g":9.8
-    }
-  ]
-}
-```
-
-we will get
-
-```JSON
-{
-  "units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm"},
-  "data":[{
-    "id":"0", "t":[1,2,3,4,5], "x":[0,1,1,0,1], "y":[1,0,2,3,2],
-    "@XJ z":[3,4,5,6,5], "@XJ g":9.8
-  }]
-}
-```
-
 ### Units
 
 We recommend sticking to seconds and millimetres for time and distance and denoting those with `"s"` and `"mm"` to make automated parsing as easy as possible.  However, we recognize that these units may not always be natural, so the following should be recognized as common variants for units.
@@ -534,13 +461,87 @@ Note that this represents three edge pixels per character as opposed to 10-20 ch
 
 It is legal to have both pixel-walk perimeters and point-based perimeters.  Generally, the point-based perimeter should be used preferentially as it is likely to be more fully processed (smoothed, fit, etc.).
 
+### Manipulation of custom data
+
+Since custom data is associated with a set of timepoints, merging and splitting data by time requires custom data to be merged and split also.  This will happen according to the following rules in readers that supply facilities for merging and splitting data.
+
+Custom data values must be one of the following to participate in splitting and merging of data points:
+
+1. A simple value (not an array or object) that is the same for every data record with the same ID
+2. An array of the same length as the number of timepoints
+3. An object with values that are either arrays of the length of the number of timepoints, or are the same for every data record with the same ID
+
+To split this data, each array of the appropriate length retains each element corresponding to the retained timepoint(s); everything else is copied unchanged.  It is an error to have an array of an inappropriate length as custom value, or as a value for a key inside a custom object.  More deeply nested arrays are fine.
+
+For example, this can be split:
+
+```JSON
+"data":{
+    "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
+    "@XJ":{ "parameters": {"array": [1, 2, 3]} }
+}
+```
+
+but this cannot since `"parameters"` is an invalid length:
+
+```JSON
+"data":{
+    "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
+    "@XJ":{ "parameters": [1, 2, 3] }
+}
+```
+
+To merge this data, arrays are merged so that each element continues to correspond to the same timepoint, and everything else is copied unchanged.
+
+Any custom data that is not in the specified form may be dropped to make a merge or split succeed.
+
+Readers may optionally provide better preservation of custom data by allowing a merge strategy to be specified in problematic cases.  In order of simplicity, these are
+
+1. In case two values that should be identical are not, each could be duplicated into an array of the correct length.
+2. In case a key is missing, it could be replaced by `null`, by a default value, or by an array of `null`s or defaults, as needed.
+3. If only some keys of a custom object can be merged, a custom function could be called to merge the rest.
+4. In the most general case, if anything goes wrong, a custom merge function could be called.
+
+Readers that supply the first two of these options can treat custom data the same way as the WCON specification treats local values.  Readers supplied in the Tracker Commons project will typically implement at least one of these, and in any case will provide a way to inform the user when custom data has been dropped.
+
+As an example of a non-problematic merge, if we merge the two data records in
+
+```JSON
+{
+  "units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm", "c":"%" },
+  "data":[
+    {
+      "id":"0", "t":[1,2], "x":[0,1], "y":[1,0],
+      "@XJ z":[3,4], "@XJ g":9.8
+    },
+    {
+      "id":"0", "t":[3,4,5], "x":[1,0,1], "y":[2,3,2],
+      "@XJ z":[5,6,5], "@XJ g":9.8
+    }
+  ]
+}
+```
+
+we will get
+
+```JSON
+{
+  "units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm"},
+  "data":[{
+    "id":"0", "t":[1,2,3,4,5], "x":[0,1,1,0,1], "y":[1,0,2,3,2],
+    "@XJ z":[3,4,5,6,5], "@XJ g":9.8
+  }]
+}
+```
+
 ### Splitting large WCON files into chunks
 
 For very long tracking experiments, it may be convenient to split a single experiment across multiple WCON files.  To make it easier to reconstruct tracks across files, we support a `files` entry in the main WCON object, that has three fields, `this`, `prev`, and `next`, subject to the following rules:
 
 1. The variable part of the file name (for example a numerical suffix) is listed under `this` and is a string.
-2. If there is a next file, it is listed in an array under `next`.  Not all files need to be listed (just the next one is enough), but the strings must be arrayed.  If there is no `next` file, the field can be missing or can have an empty array as its value.
-3. If there is a previous file, it is listed in an array under `prev`.  Again, not all files need to be listed.  If more than one is listed, it should be in **reverse** temporal order.
+2. Other full file names are generated by replacing the variable part with different text.  (If the variable part occurs multiple times, the last instance should be replaced.)
+3. If there is a next file, its variable part is listed in an array under `next`.  Not all files need to be listed (just the next one is enough), but the strings must be arrayed.  If there is no `next` file, the field can be missing or can have an empty array as its value.
+4. If there is a previous file, its variable part is listed in an array under `prev`.  Again, not all files need to be listed.  If more than one is listed, it should be in **reverse** temporal order.
 
 If a WCON file is split into chunks, it is assumed that use of animal `id` values is consistent.
 
