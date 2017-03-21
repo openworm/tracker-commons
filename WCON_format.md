@@ -471,38 +471,44 @@ Custom data values must be one of the following to participate in splitting and 
 2. An array of the same length as the number of timepoints
 3. An object with values that are either arrays of the length of the number of timepoints, or are the same for every data record with the same ID
 
-To split this data, each array of the appropriate length retains each element corresponding to the retained timepoint(s); everything else is copied unchanged.  It is an error to have an array of an inappropriate length as custom value, or as a value for a key inside a custom object.  More deeply nested arrays are fine.
+To split data, each array of the appropriate length retains each element corresponding to the retained timepoint(s); everything else is copied unchanged.  It is an error to have an array of an inappropriate length as custom value, or as a value for a key inside a custom object.  More deeply nested arrays are fine.
 
-For example, this can be split:
+For example, the data in this WCON file can be split:
 
 ```JSON
-"data":{
-    "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
-    "@XJ":{ "parameters": {"array": [1, 2, 3]} }
+{
+    "units":{"t":"s", "x":"mm", "y":"mm"},
+    "data":{
+        "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
+        "@XJ":{ "parameters": {"array": [1, 2, 3]} }
+    }
 }
 ```
 
 but this cannot since `"parameters"` is an invalid length:
 
 ```JSON
-"data":{
-    "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
-    "@XJ":{ "parameters": [1, 2, 3] }
+{
+    "units":{"t":"s", "x":"mm", "y":"mm"},
+    "data":{
+        "id":"1", "t":[0,1], "x":[2,3], "y":[4,5],
+        "@XJ":{ "parameters": [1, 2, 3] }
+    }
 }
 ```
 
-To merge this data, arrays are merged so that each element continues to correspond to the same timepoint, and everything else is copied unchanged.
+To merge custom data, arrays are merged so that each element continues to correspond to the same timepoint, and everything else is copied unchanged.
 
 Any custom data that is not in the specified form may be dropped to make a merge or split succeed.
 
 Readers may optionally provide better preservation of custom data by allowing a merge strategy to be specified in problematic cases.  In order of simplicity, these are
 
-1. In case two values that should be identical are not, each could be duplicated into an array of the correct length.
-2. In case a key is missing, it could be replaced by `null`, by a default value, or by an array of `null`s or defaults, as needed.
+1. In a case where two values that should be identical are not, each could be duplicated into an array of the correct length.
+2. In case a key is missing, it could be replaced a default value, or by an array of these defaults, as needed.
 3. If only some keys of a custom object can be merged, a custom function could be called to merge the rest.
 4. In the most general case, if anything goes wrong, a custom merge function could be called.
 
-Readers that supply the first two of these options can treat custom data the same way as the WCON specification treats local values.  Readers supplied in the Tracker Commons project will typically implement at least one of these, and in any case will provide a way to inform the user when custom data has been dropped.
+Readers that supply the first two of these options can treat custom data the same way as the WCON specification treats local values.  Readers supplied in the Tracker Commons project will typically implement these, and in any case will provide a way to inform the user when custom data has been dropped during a merge or split.
 
 As an example of a non-problematic merge, if we merge the two data records in
 
