@@ -189,7 +189,7 @@ case class Data(
   walks: Option[Array[PixelWalk]],
   custom: Json.Obj
 )(
-  val rxs: Array[Double], val rys: Array[Double], val unarrayed: Boolean
+  val rxs: Array[Double], val rys: Array[Double]
 )
 extends AsJson {
   assert(
@@ -267,7 +267,7 @@ extends AsJson {
     perims.flatMap(pms => if (pms(i).size == 0) None else Some(Array(pms(i)))),
     walks.flatMap(pws => if (pws(i).size == 0) None else Some(Array(pws(i)))),
     custom
-  )(Array(rxs(i)), Array(rys(i)), true)
+  )(Array(rxs(i)), Array(rys(i)))
 
   private def externalize(coords: Array[Float], r: Double, has: Boolean, oc: Double): Array[Double] = {
     val ext = new Array[Double](coords.length)
@@ -281,11 +281,8 @@ extends AsJson {
   }
 
   def json = {
-    val b = Json ~ ("id", id) ~ ("t", if (ts.length == 1 && unarrayed) Json(ts(0)) else Json(ts))
-    if (oxs.length > 0) {
-      if (oxs.length == 1 && unarrayed) b ~ ("ox", oxs(0)) ~ ("oy", oys(0))
-      else b ~ ("ox", Json(oxs)) ~ ("oy", Json(oys))
-    }
+    val b = Json ~ ("id", id) ~ ("t", Json(ts))
+    if (oxs.length > 0) b ~ ("ox", Json(oxs)) ~ ("oy", Json(oys))
     if (cxs.length > 0) {
       val kxs =
         if (oxs.length == 0) cxs
@@ -301,8 +298,7 @@ extends AsJson {
           var i = 0; while (i < cys.length) { qs(i) = Data.sig(cys(i) - oys(i)); i += 1 }
           qs
         }
-      if (kxs.length == 1 && unarrayed) b ~ ("cx", kxs(0)) ~ ("cy", kys(0))
-      else b ~ ("cx", Json(kxs)) ~ ("cy", Json(kys))
+      b ~ ("cx", Json(kxs)) ~ ("cy", Json(kys))
     }
     val dxs = ts.indices.map{ i =>
       val oi = if (oxs.length > 0) oxs(i) else 0.0
@@ -314,8 +310,7 @@ extends AsJson {
       val has = (oys.length > 0) && !oi.isNaN
       externalize(yDatas(i), rys(i), has, oi)
     }
-    if (dxs.length == 1 && unarrayed) b ~ ("x", Json(dxs(0))) ~ ("y", Json(dys(0)))
-    else b ~ ("x", Json(dxs)) ~ ("y", Json(dys))
+    b ~ ("x", Json(dxs)) ~ ("y", Json(dys))
     if (perims.isDefined) {
       val pms = perims.get
       val pxs = ts.indices.map{ i =>
@@ -328,13 +323,12 @@ extends AsJson {
         val has = (oys.length > 0) && !oi.isNaN
         externalize(pms(i).yData, pms(i).ry, has, oi)
       }
-      if (pxs.length == 1 && unarrayed) b ~ ("px", Json(pxs(0))) ~ ("py", Json(pys(0)))
-      else b ~ ("px", Json(pxs)) ~ ("py", Json(pys))
+      b ~ ("px", Json(pxs)) ~ ("py", Json(pys))
       if (pms.exists(_.tailIndex.isDefined)) {
         val tis = new Array[Double](n)
         var i = 0; while (i < tis.length) { tis(i) = pms(i).tailIndex match { case Some(i) => i.toDouble; case _ => Double.NaN }; i += 1 }
         i = 1; while (i < tis.length && tis(i) == tis(i-1)) i += 1
-        if (i == tis.length || (tis.length == 1 && unarrayed)) b ~ ("ptail", tis(0))
+        if (i == tis.length || (tis.length == 1)) b ~ ("ptail", tis(0))
         else b ~ ("ptail", Json(tis))
       }
     }
@@ -359,8 +353,7 @@ extends AsJson {
           }
           wz
         }
-        if (wks.length == 1 && unarrayed) b ~ ("walk", wks(0))
-        else b ~ ("walk", Json(wks))
+        b ~ ("walk", Json(wks))
       case _ =>
     }
     b ~~ custom ~ Json
@@ -457,7 +450,7 @@ object Data extends FromJson[Data] {
 
   val empty = new Data(
     "", emptyD, emptyFF, emptyFF, emptyD, emptyD, emptyD, emptyD, None, None, Json.Obj.empty
-  )(emptyD, emptyD, false)
+  )(emptyD, emptyD)
 
   private val someSingles = Option(Set("id", "t", "x", "y", "cx", "cy", "ox", "oy", "px", "py", "ptail", "walk"))
 
@@ -482,7 +475,9 @@ object Data extends FromJson[Data] {
     }
   }
 
-  def parse(j: Json): Either[JastError, Data] = {
+  def parse(j: Json): Either[JastError, Data] = parseFromJson(j, strict = true)
+
+  def parseFromJson(j: Json, strict: Boolean = true): Either[JastError, Data] = {
     implicit val pixelwalkFromJson: FromJson[PixelWalk] = PixelWalk
 
     val o = j match {
@@ -497,20 +492,18 @@ object Data extends FromJson[Data] {
       case _ => return BAD("no valid ID!")
     }
 
-    var unarrT = false
     val t: Array[Double] = o("t") match {
       case ja: Json.Arr.Dbl => ja.doubles
-      case n: Json.Num => unarrT = true; Array(n.double)
-      case _ => return BAD("no time array!")
+      case je: JastError => return BAD("no time array!")
+      case x => return BAD("time is not an array: " + x.toString)
     }
 
     var numO = 0
     val List(ox, oy) = List("ox", "oy").map(key => o.get(key) match {
       case None => emptyD
       case Some(j) => j match {
-        case n: Json.Num if t.length == 1 => Array(n.double)
-        case ja: Json.Arr.Dbl if !unarrT => 
-          if (ja.size != 1 && ja.size != t.length)
+        case ja: Json.Arr.Dbl => 
+          if (ja.size != t.length)
              return IBAD(id, f"$key array size does not match time series size!") 
           numO += 1
           ja.doubles
@@ -524,7 +517,6 @@ object Data extends FromJson[Data] {
     val List(cx, cy) = List("cx", "cy").map(key => o.get(key) match {
       case None => emptyD
       case Some(j) => j match {
-        case n: Json.Num if t.length == 1 => numC += 1; Array(n.double)
         case ja: Json.Arr.Dbl =>
           if (ja.size != t.length) return IBAD(id, f"$key array size does not match time series size!")
           numC += 1
@@ -543,12 +535,8 @@ object Data extends FromJson[Data] {
               case Json.Null => 
                 if (kk.startsWith("p")) null
                 else return IBAD(id, f"no $key!")
-              case n: Json.Num =>
-                if (t.length != 1 || !unarrT) return IBAD(id, f"$key size does not match time series size!")
-                Array(Array(n.double))
               case ja: Json.Arr.Dbl => 
-                if (t.length == 1) Array(ja.doubles)
-                else if (t.length == ja.size) ja.doubles.map(x => Array(x))
+                if (t.length == ja.size) ja.doubles.map(x => Array(x))
                 else return IBAD(id, f"$key size does not match time series size!")
               case jall: Json.Arr.All =>
                 if (jall.size != t.length) return IBAD(id, f"$key size does not match time series size!")
@@ -574,7 +562,7 @@ object Data extends FromJson[Data] {
     val walk = o.get("walk") match {
       case None => None
       case Some(j) => j match {
-        case o: Json.Obj if t.length == 1 && unarrT =>
+        case o: Json.Obj if t.length == 1 =>
           o.to[PixelWalk] match {
             case Right(pw) => Some(Array(pw))
             case Left(je) => return MYBAD(id, t(0), "Can't read walk: " + je.toString)
@@ -637,6 +625,6 @@ object Data extends FromJson[Data] {
       }
       i += 1
     }
-    Right(new Data(id, t, x, y, cx, cy, ox, oy, opms, walk, o.filter((k,_) => k.startsWith("@")))(rx, ry, unarrT))
+    Right(new Data(id, t, x, y, cx, cy, ox, oy, opms, walk, o.filter((k,_) => k.startsWith("@")))(rx, ry))
   }
 }

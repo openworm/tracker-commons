@@ -516,11 +516,10 @@ class TestWcon {
         PixelWalk(w, n, x0, y0, s, t)(0, 0).globalizeFrom(rx, ry)
       })
     }
-    val unarr = ts.length == 1 && r.nextInt(3) == 0
     Data(
       id, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, prms, wlks, genCustom(r)
     )(
-      new Array[Double](ts.length), new Array[Double](ts.length), unarr
+      new Array[Double](ts.length), new Array[Double](ts.length)
     )
   }
 
@@ -578,7 +577,7 @@ class TestWcon {
       val dss = wc.toUnderlying
       val Seq(dsnd, dssnd) =
         Seq(ds, dss).map(dx => dx.copy(data = dx.data.map{ d => 
-          Data.empty.copy(custom = d.custom)(Data.empty.rxs, Data.empty.rys, false)
+          Data.empty.copy(custom = d.custom)(Data.empty.rxs, Data.empty.rys)
         }))
       assertEquals(
         "", 
@@ -589,8 +588,8 @@ class TestWcon {
           println(x)
         }} +
         same(
-          ds.copy(data  = ds.data.map(x =>  x.copy(perims = None, walks = None)(x.rxs, x.rys, false))),
-          dss.copy(data = dss.data.map(x => x.copy(perims = None, walks = None)(x.rxs, x.rys, false)))
+          ds.copy(data  = ds.data.map(x =>  x.copy(perims = None, walks = None)(x.rxs, x.rys))),
+          dss.copy(data = dss.data.map(x => x.copy(perims = None, walks = None)(x.rxs, x.rys)))
         )
       )      
     }

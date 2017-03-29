@@ -458,8 +458,7 @@ object Create {
       val t = tsGet
       val ox = oxsGet
       val oy = oysGet
-      val oneT = t.length == 1
-      Data(id, t, xsGet, ysGet, cxsGet, cysGet, ox, oy, pGet, wGet, jGet)(rxsGet, rysGet, oneT)
+      Data(id, t, xsGet, ysGet, cxsGet, cysGet, ox, oy, pGet, wGet, jGet)(rxsGet, rysGet)
     }
 
     private[trackercommons] def personalCustom(j: Json.Obj): this.type = {
