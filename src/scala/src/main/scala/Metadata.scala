@@ -66,7 +66,7 @@ extends AsJson with MightBeEmpty[Arena] with Customizable[Arena] {
   import Arena.jsonizeDoublePair
   def json = (Json
     ~? ("type", kind)
-    ~ ("diameter", Json either diameter)
+    ~ ("size", Json either diameter)
     ~? ("orient", orient)
     ~~ custom ~ Json)
 }
@@ -88,14 +88,14 @@ object Arena extends FromJson[Arena] {
         if (kind ne null) return BAD("multiple type entries")
         kind = v stringOr { return BAD("type is not expressed as text") }
       }
-      else if (k == "diameter") {
-        if (diam ne null) return BAD("multiple diameter entries (two entries should be in an array)")
+      else if (k == "size") {
+        if (diam ne null) return BAD("multiple size entries (two entries should be in an array)")
         diam = v.to[Either[Array[Double], Double]] match {
           case Right(Right(x)) => Right(x)
           case Right(Left(xs)) => if (xs.length == 1) Right(xs(0))
             else if (xs.length == 2) Left((xs(0), xs(1)))
-            else return BAD("wrong number of diameter entries: " + xs.length)
-          case _ => return BAD("diameter is neither a number nor an array of two numbers")
+            else return BAD("wrong number of size entries: " + xs.length)
+          case _ => return BAD("size is neither a number nor an array of two numbers")
         }
       }
       else if (k == "orient") {

@@ -612,8 +612,8 @@ class TestWcon {
 
   @Test
   def test_FormatSpecExamples() {
-    val path = "../../WCON_format.md"
-    val lines = { val s = scala.io.Source.fromFile(path); try { s.getLines.toVector } finally { s.close } }
+    val paths = Vector("../../WCON_format.md", "../../README.md", "../../discuss/Formats.md")
+    val lines = paths.flatMap{ p => val s = scala.io.Source.fromFile(p); try { s.getLines.toVector } finally { s.close } }
     val codes = pull_Examples_From_MD(lines)
     codes.foreach{ c =>
       if (c.text.trim.startsWith("{")) {
@@ -672,5 +672,27 @@ class TestWcon {
         }
       }))
     })
+  }
+
+  @Test
+  def test_read_variants() {
+    var paths = Array((new java.io.File("../../tests")).getCanonicalFile)
+    var seen = Set.empty[java.io.File]
+    var leaves = Vector.empty[java.io.File]
+    while (paths.nonEmpty) {
+      seen = seen ++ paths
+      val children = paths.flatMap(_.listFiles).filterNot(seen)
+      paths = children.filter(_.isDirectory)
+      val wcons = children.filter(f => !f.isDirectory && f.getName.toLowerCase.endsWith(".wcon"))
+      leaves = leaves ++ wcons
+      seen = seen ++ wcons
+    }
+    leaves.foreach{ f =>
+      val j = Jast parse f
+      assertTrue("File did not parse as json: "+f, j.isInstanceOf[Json])
+      assertTrue("File did not parse as wcon: "+f, {
+        j.to(DataSet) match { case Right(ds) => true; case Left(je) => println(je); false }
+      })
+    }
   }
 }
