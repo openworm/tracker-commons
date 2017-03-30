@@ -335,7 +335,6 @@ extends AsJson {
       }
     val (noxs, noys) =
       if (oxs.length == 0 || n == 0) (Data.empty.oxs, Data.empty.oys)
-      else if (oxs.length == 1 && ts.length > 0) (oxs, oys)
       else {
         val toxs, toys = new Array[Double](n)
         var j = 0
@@ -357,9 +356,8 @@ extends AsJson {
       var j = 0; while (j < picks.length) { nwk(j) = wk(picks(j)); j += 1 }
       nwk
     }
-    val nuO = noxs.length == 1 && n > 1
     val ncust = pickCustomIndices(picks)
-    Some(new Data(nid, sid, nts, nxs, nys, ncxs, ncys, noxs, noys, nper, nwlk, ncust)(nrx, nry, n == 1, nuO))
+    Some(new Data(id, nts, nxs, nys, ncxs, ncys, noxs, noys, nper, nwlk, ncust)(nrx, nry))
   }
 
   def filterByTime(p: Double => Boolean): Option[Data] = {
