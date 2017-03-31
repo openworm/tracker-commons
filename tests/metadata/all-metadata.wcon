@@ -7,7 +7,7 @@
     "timestamp":"2000-01-02T03:04:05",
     "temperature":22,
     "humidity":54000,
-    "arena":{"type":"island", "orientation":"toward", "size":7400000 },
+    "arena":{"style":"island", "orientation":"toward", "size":7400000 },
     "food":"fish",
     "media":"liquid",
     "sex":"decline to state",

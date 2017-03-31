@@ -9,8 +9,10 @@ import kse.jsonal._
 import kse.jsonal.JsonConverters._
 
 case class FileSet(names: Vector[String], index: Int, custom: Json.Obj)
-extends AsJson {
+extends AsJson with Customizable[FileSet] {
   if (index < 0 || index >= math.max(1,names.length)) throw new NoSuchElementException("FileSet index out of range")
+
+  def customFn(f: Json.Obj => Json.Obj) = copy(custom = f(custom))
 
   val files = collection.mutable.LongMap.empty[File]
   def lookup(i: Int): Option[File] = 

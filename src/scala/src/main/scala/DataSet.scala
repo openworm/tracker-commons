@@ -4,10 +4,12 @@ import kse.jsonal._
 import kse.jsonal.JsonConverters._
 
 case class DataSet(meta: Metadata, unitmap: UnitMap, data: Array[Data], files: FileSet = FileSet.empty, custom: Json.Obj = Json.Obj.empty)
-extends AsJson {
+extends AsJson with Customizable[DataSet] {
   def foreach[U](f: Data => U) { data.foreach(f) }
   def map(f: Data => Data) = new DataSet(meta, unitmap, data.map(f), files, custom)
   def flatMap(f: Data => Option[Data]) = new DataSet(meta, unitmap, data.flatMap(x => f(x)), files, custom)
+
+  def customFn(f: Json.Obj => Json.Obj) = copy(custom = f(custom))
 
   def json = unitmap.unfix(
     Json
@@ -26,7 +28,7 @@ object DataSet extends FromJson[DataSet] {
   val convertedParts = UnitMap.Nested(Map(
     ("files", UnitMap.OnlyCustom),
     ("data", UnitMap.Leaves(Set("walk"))),
-    ("metadata", UnitMap.Leaves(Set("lab", "arena", "software")))
+    ("metadata", UnitMap.Leaves(Set("lab", "arena", "software", "interpolate")))
   ))
 
   def parse(j: Json): Either[JastError, DataSet] = {
