@@ -42,5 +42,5 @@ The Tracker Commons repository contains implementations for reading and writing 
 | [Matlab](src/Matlab)  | Jim Hokanson  | Runnable implementation (alpha) | n/a | no |
 | [R](src/R)  | Rex Kerr  | Lightweight wrapper using rscala (alpha) | none | no |
 | [Julia](src/julia)  | Rex Kerr  | Runnable implementation (alpha) | none | no |
-| [Octave](src/octave)  | Chee Lee Wai  | Lightweight wrapper to Python version | none | no |
+| [Octave](src/octave)  | Chee Wai Lee  | Lightweight wrapper to Python version | none | no |
 | [Rust](src/Rust)  | n/a  | Preliminary notes only | n/a | no |
