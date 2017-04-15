@@ -6,7 +6,7 @@ Copyright © 2015 by
   Calico Life Sciences,
   Michael Currie,
   Chee Wai Lee,
-  OpenWorm Foundation (Delaware #5785727)
+  OpenWorm Foundation (Delaware #5787527)
 
 The software component of **tracker_commons**, like all software that is
 part of the [OpenWorm](https://github.com/openworm) project, is free
