@@ -9,3 +9,4 @@ src/Python/wcon.egg*
 
 #Matlab
 *.asv
+/tests/sibernetic/none.wcon
