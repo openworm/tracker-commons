@@ -116,7 +116,7 @@ A WCON file with arrayed t and corresponding nested arrays for `x` and `y`.
 ```JSON
 {
     "units":{"t":"s", "x":"mm", "y":"mm"},
-    "data":{ 
+    "data":{
         "id":"1",
         "t":[
              1.3,
@@ -319,7 +319,7 @@ An example WCON file with a complete metadata section is given below.
         "timestamp":"2012-04-23T18:25:43.511Z",
         "temperature": 20,
         "humidity": 40,
-        "arena":{ "type":"petri", "size":35 },
+        "arena":{ "style":"petri", "size":35 },
         "food":"OP50",
         "media":"NGM",
         "sex":"hermaphrodite",
@@ -360,7 +360,7 @@ All entries in the metadata object are optional.  Custom tags may be included in
 | **timestamp** | This should specify the time corresponding to `t = 0` in the data, using the [ISO-8601 combined date/time format](https://en.wikipedia.org/wiki/ISO_8601).  Fractional seconds and time zones are optional.  The field is single-valued. |
 | **temperature** | The temperature at which the experiment takes place.  The units should be specified in the `units` block, but are assumed to be Celsius.  The field is single-valued. |
 | **humidity** | The relative humidity at which the experiment takes place.  Since this is normally expressed in percentage, but dimentionless units do not default to percentage, take care to specify units of `"%"` in the `units` block.  The field is single-valued. |
-| **arena** | This is a JSON object that specifies the place in which the worms are being recorded.  Subfields include _type_ which is a string description of the arena (e.g. "plate" or "slide"), _size_ which is either a single value or an array of two values which indicates the diameter or extent in each relevant direction, and _orientation_ which is a string describing how the plate or slide is oriented.  For `orientation`, use `"toward"` or `"away"` to indicate that the surface of a plate is pointing towards the camera or away from it (in the latter case one would be imaging through the agar).  The field is single-valued. |
+| **arena** | This is a JSON object that specifies the place in which the worms are being recorded.  Subfields include _style_ which is a string description of the arena (e.g. "plate" or "slide"), _size_ which is either a single value or an array of two values which indicates the diameter or extent in each relevant direction, and _orientation_ which is a string describing how the plate or slide is oriented.  For `orientation`, use `"toward"` or `"away"` to indicate that the surface of a plate is pointing towards the camera or away from it (in the latter case one would be imaging through the agar).  The field is single-valued. |
 | **food** | The food, if any, present during the experiment, as a JSON string.  If no food is present, and you wish others to know, write `""` or `"none"` rather than leaving the entry absent so it can be distinguished from the case where food is present but the metadata entry is not provided.  The field is single-valued. |
 | **media** | The media on which the animal is placed, as a JSON string.  The field is single-valued. |
 | **sex** | The sex of the animals, as a JSON string.  If there is a mixed population, it cannot be conveniently indicated here; instead, a custom tag should be used to specify on an animal-by-animal basis.  The field is single-valued. |
