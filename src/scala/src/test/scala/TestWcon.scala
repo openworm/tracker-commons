@@ -176,6 +176,13 @@ class TestWcon {
     ""
   }
 
+  def sameJ(a: Option[Json], b: Option[Json], where: String): String = (a, b) match {
+    case (None, None) => ""
+    case (Some(x), None) => where + ".only-one-set(" + x + ", _)"
+    case (None, Some(y)) => where + ".only-one-set(_, " + y + ")"
+    case (Some(ja), Some(jb)) => same(ja, jb, where)
+  }
+
   def sameTS(
     a: Option[Either[java.time.OffsetDateTime, java.time.LocalDateTime]],
     b: Option[Either[java.time.OffsetDateTime, java.time.LocalDateTime]]
@@ -199,12 +206,21 @@ class TestWcon {
       same(aa.custom, ba.custom, "arena.custom")
   }
 
+  def sameI(a: Vector[Interpolate], b: Vector[Interpolate]) =
+    if (a.length != b.length) " interpolate-length-mismatch(" + a.length + ", " + b.length + ") "
+    else (a zip b).map{ case (ia, ib) =>
+      same(ia.method, ib.method, "interpolate.method") +
+      same(ia.values.toSet, ib.values.toSet, "interpolate.values") +
+      same(ia.custom, ib.custom, "software.custom")
+    }.filter(_.length > 0).mkString("; ")
+
   def sameS(a: Vector[Software], b: Vector[Software]): String = 
     if (a.length != b.length) " software-length-mismatch(" + a.length + ", " + b.length + ") "
     else (a zip b).map{ case (sa, sb) =>
       same(sa.name, sb.name, "software.name") +
       same(sa.version, sb.version, "software.version") +
       same(sa.featureID, sb.featureID, "software.featureID") +
+      sameJ(sa.settings, sb.settings, "software.settings") +
       same(sa.custom, sb.custom, "software.custom")
     }.filter(_.length > 0).mkString("; ")
 
@@ -222,8 +238,8 @@ class TestWcon {
     same(a.age.getOrElse(Double.NaN), b.age.getOrElse(Double.NaN), "age") +
     same(a.strain, b.strain, "strain") +
     same(a.protocol, b.protocol, "protocol") +
+    sameI(a.interpolate, b.interpolate) +
     sameS(a.software, b.software) +
-    same(a.settings getOrElse Json.Null, b.settings getOrElse Json.Null, "settings") +
     same(a.custom, b.custom, "custom")
 
   def same(a: UnitMap, b: UnitMap): String = same(a.json, b.json, "unitmap")
@@ -248,7 +264,7 @@ class TestWcon {
   }
 
   def same(a: Data, b: Data, where: String): String =
-    same(a.idJSON, b.idJSON, where + ".id") +
+    same(a.id, b.id, where + ".id") +
     same(Json.Arr.Dbl(a.ts), Json.Arr.Dbl(b.ts), where + ".ts") +
     same(
       Json.Arr.All((0 until a.xDatas.length).map(i => Json.Arr.Dbl(a.spinePoints(i)._1)).toArray), 
@@ -347,8 +363,8 @@ class TestWcon {
   def genFish(r: R) = fish(r.nextInt(fish.length))
 
   def genLab(r: R): Laboratory = Iterator.
-    continually(Laboratory(genFish(r), genFish(r), genFish(r), genCustom(r))).
-    dropWhile(x => x.pi.isEmpty && x.name.isEmpty && x.location.isEmpty).next
+    continually(Laboratory(genFish(r), genFish(r), genFish(r), Vector.fill(r.nextInt(3))(genFish(r)), genCustom(r))).
+    dropWhile(x => x.pi.isEmpty && x.name.isEmpty && x.location.isEmpty && x.contact.isEmpty).next
 
   def genLDT(r: R): Either[java.time.OffsetDateTime, java.time.LocalDateTime] =
     if (r.nextBoolean) Right({
@@ -384,11 +400,24 @@ class TestWcon {
     case true => r.nextInt(1000000)/3600.0   // In hours
   }
 
-  def genSoft(r: R): Software = Iterator.continually{
-    Software(genFish(r), genFish(r), Vector.fill(r.nextInt(4))("@" + genFish(r)).toSet, genCustom(r))
-    }.dropWhile(x => x.name.isEmpty && x.version.isEmpty && x.featureID.isEmpty).next
+  def genInterp(r: R): Interpolate = Iterator.continually{
+    Interpolate(
+      r.nextInt(4) match { case 0 => ""; case 1 => "quadratic"; case 2 => "pchip"; case _ => "cubic" },
+      r.nextInt(6) match {
+        case 0 => Vector.empty[String]
+        case 1 => Vector("t", "x")
+        case 2 => Vector("t", "y")
+        case _ => Vector("x", "y") 
+      },
+      genCustom(r)
+    )
+  }.dropWhile(i => i.method.isEmpty && i.values.isEmpty).next
 
   def genJSON(r: R): Json = genJSON(r, 0)
+
+  def genSoft(r: R): Software = Iterator.continually{
+    Software(genFish(r), genFish(r), Vector.fill(r.nextInt(4))("@" + genFish(r)).toSet, opt(r)(genJSON(r)), genCustom(r))
+    }.dropWhile(x => x.name.isEmpty && x.version.isEmpty && x.featureID.isEmpty).next
 
   def genMetadata(r: R): Metadata = if (r.nextDouble < 0.33) Metadata.empty else Metadata(
     Vector.fill(r.nextInt(3))(genLab(r)),
@@ -404,8 +433,8 @@ class TestWcon {
     opt(r)(genAge(r)),
     opt(r)(genFish(r)),
     Vector.fill(r.nextInt(3))(genFish(r)),
+    Vector.fill(r.nextInt(3))(genInterp(r)),
     Vector.fill(r.nextInt(3))(genSoft(r)),
-    opt(r)(genJSON(r)),
     genCustom(r)
   )
 
@@ -436,10 +465,9 @@ class TestWcon {
   }
 
   def genData(r: R): Data = {
-    val (nid, sid) = r.nextInt(4) match {
-      case 0 => (sigfig(r.nextDouble), null)
-      case 1 => (r.nextInt(100).toDouble, null)
-      case _ => (Double.NaN, "worm-"+r.nextInt(1000))
+    val id = r.nextInt(4) match {
+      case 0 => r.nextInt(100).toString
+      case _ => "worm-"+r.nextInt(1000)
     }
     val ts = Array.fill(r.nextInt(10)+1)(0.1 + 0.9*r.nextDouble) match { case x =>
       x(0) = sigfig(x(0)); var i = 1; while (i < x.length) { x(i) = sigfig(x(i) + x(i-1)); i += 1 }; x
@@ -452,9 +480,8 @@ class TestWcon {
         }
         (a, b)
       }
-    val (oxs, oys) = r.nextInt(5) match {
+    val (oxs, oys) = r.nextInt(3) match {
       case 0 => (Data.emptyD, Data.emptyD)
-      case 1 => val a, b = Array(sigfig(100*(r.nextDouble - 0.5))); (a, b)
       case _ => val a, b = Array.fill(ts.length)(sigfig(100*(r.nextDouble - 0.5))); (a, b)
     }
     val xsb, ysb = Array.newBuilder[Array[Float]]
@@ -486,14 +513,13 @@ class TestWcon {
         val s = 0.02 + 0.18*r.nextDouble
         val rx = if (oxs.length == 0) 0 else if (oxs.length == 1) oxs(0) else oxs(i)
         val ry = if (oys.length == 0) 0 else if (oys.length == 1) oys(0) else oys(i)
-        PixelWalk(w, n, x0, y0, s, t)(0, 0).notRelativeTo(rx, ry)
+        PixelWalk(w, n, x0, y0, s, t)(0, 0).globalizeFrom(rx, ry)
       })
     }
-    val unarr = ts.length == 1 && r.nextInt(3) == 0
     Data(
-      nid, sid, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, prms, wlks, genCustom(r)
+      id, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, prms, wlks, genCustom(r)
     )(
-      new Array[Double](ts.length), new Array[Double](ts.length), unarr, oxs.length == 1 && !unarr && r.nextInt(3) == 0
+      new Array[Double](ts.length), new Array[Double](ts.length)
     )
   }
 
@@ -551,7 +577,7 @@ class TestWcon {
       val dss = wc.toUnderlying
       val Seq(dsnd, dssnd) =
         Seq(ds, dss).map(dx => dx.copy(data = dx.data.map{ d => 
-          Data.empty.copy(custom = d.custom)(Data.empty.rxs, Data.empty.rys, false, false)
+          Data.empty.copy(custom = d.custom)(Data.empty.rxs, Data.empty.rys)
         }))
       assertEquals(
         "", 
@@ -562,8 +588,8 @@ class TestWcon {
           println(x)
         }} +
         same(
-          ds.copy(data  = ds.data.map(x =>  x.copy(perims = None, walks = None)(x.rxs, x.rys, false, x.originUnarrayed))),
-          dss.copy(data = dss.data.map(x => x.copy(perims = None, walks = None)(x.rxs, x.rys, false, x.originUnarrayed)))
+          ds.copy(data  = ds.data.map(x =>  x.copy(perims = None, walks = None)(x.rxs, x.rys))),
+          dss.copy(data = dss.data.map(x => x.copy(perims = None, walks = None)(x.rxs, x.rys)))
         )
       )      
     }
@@ -586,8 +612,8 @@ class TestWcon {
 
   @Test
   def test_FormatSpecExamples() {
-    val path = "../../WCON_format.md"
-    val lines = { val s = scala.io.Source.fromFile(path); try { s.getLines.toVector } finally { s.close } }
+    val paths = Vector("../../WCON_format.md", "../../README.md", "../../discuss/Formats.md")
+    val lines = paths.flatMap{ p => val s = scala.io.Source.fromFile(p); try { s.getLines.toVector } finally { s.close } }
     val codes = pull_Examples_From_MD(lines)
     codes.foreach{ c =>
       if (c.text.trim.startsWith("{")) {
@@ -646,5 +672,27 @@ class TestWcon {
         }
       }))
     })
+  }
+
+  @Test
+  def test_read_variants() {
+    var paths = Array((new java.io.File("../../tests")).getCanonicalFile)
+    var seen = Set.empty[java.io.File]
+    var leaves = Vector.empty[java.io.File]
+    while (paths.nonEmpty) {
+      seen = seen ++ paths
+      val children = paths.flatMap(_.listFiles).filterNot(seen)
+      paths = children.filter(_.isDirectory)
+      val wcons = children.filter(f => !f.isDirectory && f.getName.toLowerCase.endsWith(".wcon"))
+      leaves = leaves ++ wcons
+      seen = seen ++ wcons
+    }
+    leaves.foreach{ f =>
+      val j = Jast parse f
+      assertTrue("File did not parse as json: "+f, j.isInstanceOf[Json])
+      assertTrue("File did not parse as wcon: "+f, {
+        j.to(DataSet) match { case Right(ds) => true; case Left(je) => println(je); false }
+      })
+    }
   }
 }

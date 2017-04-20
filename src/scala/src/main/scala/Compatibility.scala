@@ -55,6 +55,9 @@ extends WrapsScalaWcon[original.Laboratory] {
   /** Sets the location of the laboratory */
   def location(l: String) = new Laboratory(underlying.copy(location = l))
 
+  def contacts = underlying.contact.toArray
+  def contacts(ss: Array[String]) = new Laboratory(underlying.copy(contact = ss.toVector))
+
   /** Custom laboratory information (as a `Json.Obj`) */
   def custom = underlying.custom
   /** Sets custom information for the laboratory (returns a new copy) */
@@ -71,8 +74,8 @@ object Laboratory {
     *
     * Leave strings empty, `""` if there is no information for that field.  `null` fields are not supported.
     */
-  def from(pi: String, name: String, location: String) =
-    new Laboratory(original.Laboratory(pi, name, location, Json.Obj.empty))
+  def from(pi: String, name: String, location: String, contact: Array[String]) =
+    new Laboratory(original.Laboratory(pi, name, location, contact.toVector, Json.Obj.empty))
 }
 
 /** Represents information for the environment of the animal during tracking */
@@ -182,17 +185,17 @@ object Software {
   def from(underlying: original.Software) = new Software(underlying)
 
   /** Specifies software by name only */
-  def from(name: String): Software = new Software(original.Software(name, "", Set(), Json.Obj.empty))
+  def from(name: String): Software = new Software(original.Software(name, "", Set(), None, Json.Obj.empty))
 
   /** Specifies software by name and version */
-  def from(name: String, version: String): Software = new Software(original.Software(name, version, Set(), Json.Obj.empty))
+  def from(name: String, version: String): Software = new Software(original.Software(name, version, Set(), None, Json.Obj.empty))
 
   /** Specifies software by name and tags handled */
-  def from(name: String, featureIDs: Array[String]) = new Software(original.Software(name, "", featureIDs.toSet, Json.Obj.empty))
+  def from(name: String, featureIDs: Array[String]) = new Software(original.Software(name, "", featureIDs.toSet, None, Json.Obj.empty))
 
   /** Specifies software by name, version, and tags handled */
   def from(name: String, version: String, featureIDs: Array[String]) =
-    new Software(original.Software(name, version, featureIDs.toSet, Json.Obj.empty))
+    new Software(original.Software(name, version, featureIDs.toSet, None, Json.Obj.empty))
 }
 
 /** Represents information associated with an experiment. */
@@ -294,14 +297,6 @@ extends WrapsScalaWcon[original.Metadata] {
   /** Specifies an additional software package used by adding it to the end of the list (returns a new copy) */
   def addSoftware(s: Software) = new Metadata(underlying.copy(software = underlying.software :+ s.underlying))
 
-  /** Arbitrary JSON containing settings used by the software that produced or analyzed this data.
-    *
-    * Note: If multiple packages were used, it is customary to place one set of settings per package in a JSON array.
-    */
-  def settings = underlying.settings.getOrElse(Json.Null)
-  /** Sets arbitrary JSON containing settings used by the software that produced or analyzed this data (returns a new copy). */
-  def settings(s: Json) = new Metadata(underlying.copy(settings = Option(s)))
-
   /** Custom metadata information (as a `Json.Obj`) */
   def custom = underlying.custom
   /** Sets the custom metadata information (returns a new copy) */
@@ -380,8 +375,6 @@ class Data(
 
   /** Converts this data record to the standard Scala format. */
   def toUnderlying = {
-    val nid = Jast.parse(id).double
-    val sid = if (nid.isNaN) id else ""
     val rxs = 
       if (cxs.length == 0) xss.map(_.min.toDouble)
       else java.util.Arrays.copyOf(cxs, cxs.length)
@@ -389,7 +382,7 @@ class Data(
       if (cys.length == 0) yss.map(_.min.toDouble)
       else java.util.Arrays.copyOf(cys, cys.length)
     new org.openworm.trackercommons.Data(
-      nid, sid,
+      id,
       java.util.Arrays.copyOf(ts, ts.length),
       xss.indices.toArray.map(i => original.Data.singly(xss(i), -rxs(i))),
       yss.indices.toArray.map(i => original.Data.singly(yss(i), -rys(i))),
@@ -400,7 +393,7 @@ class Data(
       None,
       None,
       custom
-    )(rxs,rys, false, false)
+    )(rxs,rys)
   }
 }
 object Data {
@@ -433,7 +426,7 @@ object Data {
   /** Generates data by translating from the standard Scala data format */
   def from(underlying: org.openworm.trackercommons.Data): Data =
     new Data(
-      if (underlying.nid.isNaN) underlying.sid else underlying.nid.toString,
+      underlying.id,
       new MemoizedGenerator(java.util.Arrays.copyOf(underlying.ts, underlying.ts.length)),
       new MemoizedGenerator(java.util.Arrays.copyOf(underlying.cxs, underlying.cxs.length)),
       new MemoizedGenerator(java.util.Arrays.copyOf(underlying.cys, underlying.cys.length)),

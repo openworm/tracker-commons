@@ -185,11 +185,15 @@ object Create {
     def setStrain(strain: String) = if (strain.isEmpty) dropStrain else new MakeMeta(result.copy(strain = Some(strain)))
     def dropStrain = if (result.strain.isEmpty) this else new MakeMeta(result.copy(strain = None))
 
-    def addProtocol(protocol: String): MakeMeta =
-      if (protocol.isEmpty) this
-      else new MakeMeta(result.copy(protocol = result.protocol :+ protocol))
+    def addProtocol(protocol: String): MakeMeta = new MakeMeta(result.copy(protocol = result.protocol :+ protocol))
     def setProtocol(protocols: Seq[String]): MakeMeta = new MakeMeta(result.copy(protocol = protocols.toVector))
     def dropProtocols = if (result.protocol.isEmpty) this else new MakeMeta(result.copy(protocol = Vector.empty))
+
+    def addInterpolate(interpolate: Interpolate): MakeMeta =
+      if (interpolate.isEmpty) this
+      else new MakeMeta(result.copy(interpolate = result.interpolate :+ interpolate))
+    def setInterpolate(interpolations: Seq[Interpolate]): MakeMeta = new MakeMeta(result.copy(interpolate = interpolations.toVector))
+    def dropInterpolations = if (result.interpolate.isEmpty) this else new MakeMeta(result.copy(interpolate = Vector.empty))
 
     def addSoftware(software: Software): MakeMeta =
       if (software.isEmpty) this
@@ -197,9 +201,6 @@ object Create {
     def addSoftware(software: MakeSoft): MakeMeta = addSoftware(software.result)
     def setSoftware(softwares: Seq[Software]): MakeMeta = new MakeMeta(result.copy(software = softwares.toVector))
     def dropSoftware = if (result.software.isEmpty) this else new MakeMeta(result.copy(software = Vector.empty))
-
-    def setSettings(settings: Json) = new MakeMeta(result.copy(settings = Some(settings)))
-    def dropSettings = if (result.settings.isEmpty) this else new MakeMeta(result.copy(settings = None))
 
     def putCustom(key: String, value: Json) = new MakeMeta(result.copy(custom = Json.Obj(result.custom.asMap + ((key, value)))))
     def setCustom(custom: Json.Obj) = new MakeMeta(result.copy(custom = custom))
@@ -225,10 +226,10 @@ object Create {
   final class MakeArena private[trackercommons] (val result: Arena) {
     def isEmpty = result.isEmpty
 
-    def kind(s: String) = result.copy(kind = s)
-    def orient(s: String) = result.copy(orient = s)
-    def diameter(d: Double) = result.copy(diameter = Right(d))
-    def diameter(d1: Double, d2: Double) = result.copy(diameter = Left((d1, d2)))
+    def kind(s: String) = new MakeArena(result.copy(kind = s))
+    def orient(s: String) = new MakeArena(result.copy(orient = s))
+    def diameter(d: Double) = new MakeArena(result.copy(diameter = Right(d)))
+    def diameter(d1: Double, d2: Double) = new MakeArena(result.copy(diameter = Left((d1, d2))))
 
     def putCustom(key: String, value: Json) = new MakeArena(result.copy(custom = Json.Obj(result.custom.asMap + ((key, value)))))
     def setCustom(custom: Json.Obj) = new MakeArena(result.copy(custom = custom))
@@ -236,6 +237,22 @@ object Create {
   }
 
   def arena() = new MakeArena(Arena.empty)
+
+  final class MakeInterp private[trackercommons] (val result: Interpolate) {
+    def isEmpty = result.isEmpty
+
+    def method(s: String) = new MakeInterp(result.copy(method = s))
+
+    def addValue(s: String): MakeInterp = new MakeInterp(result.copy(values = result.values :+ s))
+    def setValues(ss: Iterable[String]): MakeInterp = new MakeInterp(result.copy(values = ss.toVector))
+    def dropValues = if (result.values.isEmpty) this else new MakeInterp(result.copy(values = Vector.empty))
+
+    def putCustom(key: String, value: Json) = new MakeInterp(result.copy(custom = Json.Obj(result.custom.asMap + ((key, value)))))
+    def setCustom(custom: Json.Obj) = new MakeInterp(result.copy(custom = custom))
+    def dropCustom = if (result.custom.size == 0) this else new MakeInterp(result.copy(custom = Json.Obj.empty))
+  }
+
+  def interpolate() = new MakeInterp(Interpolate.empty)
 
   final class MakeSoft private[trackercommons] (val result: Software) {
     def isEmpty = result.isEmpty
@@ -248,6 +265,9 @@ object Create {
       new MakeSoft(result.copy(featureID = ss.map(s => if (s.startsWith("@")) s else "@" + s).toSet))
     def dropFeatures = new MakeSoft(result.copy(featureID = Set.empty))
 
+    def setSettings(j: Json) = new MakeSoft(result.copy(settings = Some(j)))
+    def dropSettings = new MakeSoft(result.copy(settings = None))
+
     def putCustom(key: String, value: Json) = new MakeSoft(result.copy(custom = Json.Obj(result.custom.asMap + ((key, value)))))
     def setCustom(custom: Json.Obj) = new MakeSoft(result.copy(custom = custom))
     def dropCustom = if (result.custom.size == 0) this else new MakeSoft(result.copy(custom = Json.Obj.empty))
@@ -255,7 +275,7 @@ object Create {
 
   def software() = new MakeSoft(Software.empty)
 
-  final class DataBuilder[D <: HasData](nid: Double, sid: String) {
+  final class DataBuilder[D <: HasData](id: String) {
     private[this] var i = 0
     private[this] var ts = new Array[Double](1)
     private[this] var xs, ys = new Array[Array[Float]](1)
@@ -302,7 +322,6 @@ object Create {
 
     private[this] var oi = 0
     private[this] var oxs, oys = DataBuilder.emptyD
-    private[this] var oxunarr, oyunarr = Double.NaN
     private[this] def oFree(n: Int) {
       if (n+oi > oxs.length) {
         val m = math.min(Int.MaxValue - 1, math.max(2*oxs.length, n+oi))
@@ -314,14 +333,14 @@ object Create {
       if (oi < k) {
         oFree(k - oi)
         while (oi < k) {
-          oxs(oi) = oxunarr
-          oys(oi) = oyunarr
+          oxs(oi) = Double.NaN
+          oys(oi) = Double.NaN
           oi += 1
         }
       }
     }
     private[this] def oAdd(ox: Double, oy: Double) {
-      if (!(ox == oxunarr && oy == oyunarr) && !(ox.isNaN || oy.isNaN || ox.isInfinite || oy.isInfinite)) {
+      if (oi > 0 || !(ox.isNaN || oy.isNaN || ox.isInfinite || oy.isInfinite)) {
         oFill(i-1)
         oFree(1)
         oxs(oi) = ox
@@ -329,18 +348,8 @@ object Create {
         oi += 1
       }
     }
-    private[this] def oDefault(ox: Double, oy: Double) {
-      oxunarr = ox
-      oyunarr = oy
-    }
-    private[this] def oxsGet: Array[Double] = 
-      if (oi > 0) java.util.Arrays.copyOf(oxs, oi)
-      else if (oxunarr.isNaN || oyunarr.isNaN || oxunarr.isInfinite || oyunarr.isInfinite) DataBuilder.emptyD
-      else Array(oxunarr)
-    private[this] def oysGet: Array[Double] =
-      if (oi > 0) java.util.Arrays.copyOf(oys, oi)
-      else if (oxunarr.isNaN || oyunarr.isNaN || oxunarr.isInfinite || oyunarr.isInfinite) DataBuilder.emptyD
-      else Array(oyunarr)
+    private[this] def oxsGet: Array[Double] = if (oi > 0) java.util.Arrays.copyOf(oxs, oi) else DataBuilder.emptyD
+    private[this] def oysGet: Array[Double] = if (oi > 0) java.util.Arrays.copyOf(oys, oi) else DataBuilder.emptyD
 
     private[this] var ci = 0
     private[this] var cxs, cys = DataBuilder.emptyD
@@ -449,14 +458,7 @@ object Create {
       val t = tsGet
       val ox = oxsGet
       val oy = oysGet
-      val oneT = t.length == 1
-      val oneO = ox.length == 1
-      Data(nid, sid, t, xsGet, ysGet, cxsGet, cysGet, ox, oy, pGet, wGet, jGet)(rxsGet, rysGet, oneT, oneO)
-    }
-
-    private[trackercommons] def personalOrigin(ox: Double, oy: Double): this.type = {
-      if (i == 0 && !(ox.isNaN || oy.isNaN || ox.isInfinite || oy.isInfinite)) oDefault(ox, oy)
-      this
+      Data(id, t, xsGet, ysGet, cxsGet, cysGet, ox, oy, pGet, wGet, jGet)(rxsGet, rysGet)
     }
 
     private[trackercommons] def personalCustom(j: Json.Obj): this.type = {
@@ -598,16 +600,8 @@ object Create {
     private[trackercommons] val emptyW = new Array[PixelWalk](0)
   }
 
-  def worm(id: String) = new DataBuilder[NoData](Double.NaN, id)
-  def worm(id: Double) = new DataBuilder[NoData](id, null)
-  def worm(id: String, ox: Double, oy: Double) = (new DataBuilder[NoData](Double.NaN, id)).personalOrigin(ox, oy)
-  def worm(id: Double, ox: Double, oy: Double) = (new DataBuilder[NoData](id, null)).personalOrigin(ox, oy)
-  def worm(id: String, j: Json.Obj) = (new DataBuilder[NoData](Double.NaN, id)).personalCustom(j)
-  def worm(id: Double, j: Json.Obj) = (new DataBuilder[NoData](id, null)).personalCustom(j)
-  def worm(id: String, ox: Double, oy: Double, j: Json.Obj) = 
-    (new DataBuilder[NoData](Double.NaN, id)).personalOrigin(ox, oy).personalCustom(j)
-  def worm(id: Double, ox: Double, oy: Double, j: Json.Obj) =
-    (new DataBuilder[NoData](id, null)).personalOrigin(ox, oy).personalCustom(j)
+  def worm(id: String) = new DataBuilder[NoData](id)
+  def worm(id: String, j: Json.Obj) = (new DataBuilder[NoData](id)).personalCustom(j)
 
   private[trackercommons] final class JArB() {
     private[this] var i = 0

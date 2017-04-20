@@ -115,15 +115,15 @@ package units {
       (LongPrefix ~ LongLinBase).map{ case (a,b) => b e a } |
       LongLinBase
     val ShortLinBase =
-      P("m").map(_ => meter) |
-      P("in").map(_ => inch) |
-      P("ft").map(_ => foot) |
+      P("rad").map(_ => radian) |
+      P("deg").map(_ => degree) |  // Must go above "d"!
       P("s").map(_ => second) |
-      P("min").map(_ => minute) |
+      P("min").map(_ => minute) |  // Must go above "m"!
       P("hr" | "h").map(_ => hour) |
       P("d").map(_ => day) |
-      P("rad").map(_ => radian) |
-      P("deg").map(_ => degree)
+      P("m").map(_ => meter) |
+      P("in").map(_ => inch) |
+      P("ft").map(_ => foot)
     val ShortPrefix =
       P("c").map(_ => -2) |
       P("m").map(_ => -3) |
