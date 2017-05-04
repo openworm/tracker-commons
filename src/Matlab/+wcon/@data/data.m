@@ -3,6 +3,8 @@ classdef data < json.objs.dict
     %   Class:
     %   wcon.loaded_data
     %
+    %   https://github.com/openworm/tracker-commons/blob/master/WCON_format.md#data   
+    %
     %   Improvements:
     %   -------------
     %   1) Fix print in sl.obj.dict
@@ -114,13 +116,34 @@ classdef data < json.objs.dict
             %
             %   Inputs
             %   ------
-            %   t
+            %   t : json.objs.token.array OR? json.objs.token.object
             %   options : struct
             %       See wcon.loadDataset
             %
             
-            %
-            temp = t.getParsedData();
+            %OPTIONS
+            %-------
+%             	in.max_numeric_collapse_depth = [];
+%                 in.max_string_collape_depth = [];
+%                 in.max_bool_collapse_depth = [];
+%                 in.column_major = [];
+%                 in.collapse_objects = [];
+            
+            keyboard
+            
+            %JAH: At this point.
+            
+            
+            %? Can this ever be an object or is it always an array?
+            
+            %Parsing strategy?
+            %--------------------------------------
+            %1) pass options to getParsedData
+            
+            temp = t.getParsedData(...
+                'collapse_objects',false,... %
+                'column_major',true,...
+                'max_numeric_collapse_depth',1);
             
             if strcmp(t.type,'array')
                 n_objs = t.n_elements;

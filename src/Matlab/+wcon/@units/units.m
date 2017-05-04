@@ -3,18 +3,18 @@ classdef units < json.objs.dict
     %   Class:
     %   wcon.units
     %
+    %   https://github.com/openworm/tracker-commons/blob/master/WCON_format.md#units
+    %
     %   Canonical Units:
     %   ----------------
     %   s
     %   mm
-    %   ? temp?
     
     %{
-    properties
+    Standard Properties:
         t
         x
         y
-    end
     %}
     
     %{
@@ -36,27 +36,11 @@ classdef units < json.objs.dict
             %
             %   Input
             %   -----
-            %   t: 
+            %   t : json.objs.token.object
             
             obj = wcon.units;
             obj.props = t.getParsedData();
             
-%             props = obj.props;
-%             
-%             
-%             setField = @wcon.sl.struct.setField;
-%             
-%             names = t.key_names;
-%             for iName = 1:length(names)
-%                 cur_name = names{iName};
-%                 value = t.getTokenString(cur_name);
-%                 try
-%                     props.(cur_name) = value;
-%                 catch
-%                     props = setField(props,cur_name,value);  
-%                 end
-%             end
-%             obj.props = props;
         end
     end
     

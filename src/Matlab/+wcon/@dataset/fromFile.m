@@ -57,6 +57,7 @@ props.units = wcon.units.fromFile(root.getToken('units'));
 if ~isfield(props,'data') 
     error('WCON file must contain data')
 end
+
 %TODO: We could make this lazy again ...
 %This needs to go at the end ...
 %obj.addLazyField('data',@()wcon.data.fromFile(root.getToken('data'),options));
