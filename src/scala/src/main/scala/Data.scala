@@ -5,30 +5,6 @@ import kse.jsonal.JsonConverters._
 
 import WconImplicits._
 
-trait HasId extends math.Ordered[HasId] {
-  def nid: Double
-  def sid: String
-  def idEither: Either[Double, String] = if (nid.isNaN) Right(sid) else Left(nid)
-  def idJSON: Json = if (nid.isNaN || nid.isInfinite) { if (sid == null) Json.Null else Json.Str(sid) } else Json.Num(nid)
-  def compare(them: HasId) =
-    if (nid.isNaN)
-      if (them.nid.isNaN)
-        if (sid == null)
-          if (them.sid == null) 0
-          else -1
-        else if (them.sid == null) 1
-        else sid compareTo them.sid
-      else 1
-    else
-      if (them.nid.isNaN) -1
-      else if (them.nid.isNaN) 1
-      else if (nid < them.nid) -1
-      else if (nid > them.nid) 1
-      else 0
-}
-
-case class IdOnly(nid: Double, sid: String) extends HasId {}
-
 /** Trait to specify the perimeter of a single animal. */
 trait Perimeter {
   def tailIndex: Option[Int]
@@ -68,10 +44,10 @@ extends Perimeter with AsJson {
     if (myI < i) {
       while (myI < i) { 
         step(myI) match {
-          case 0 => myGxn += 1
-          case 1 => myGyn += 1
-          case 2 => myGxn -= 1
-          case _ => myGyn -= 1
+          case 0 => myGxn -= 1
+          case 1 => myGxn += 1
+          case 2 => myGyn -= 1
+          case _ => myGyn += 1
         }
         myI += 1
       }
@@ -80,10 +56,10 @@ extends Perimeter with AsJson {
       while (myI > i) {
         myI -= 1
         step(myI) match {
-          case 0 => myGxn -= 1
-          case 1 => myGyn -= 1
-          case 2 => myGxn += 1
-          case _ => myGyn += 1
+          case 0 => myGxn += 1
+          case 1 => myGxn -= 1
+          case 2 => myGyn += 1
+          case _ => myGyn -= 1
         }
       }
     }
@@ -102,18 +78,55 @@ extends Perimeter with AsJson {
     while (i < n) { xs(i) = x(i); ys(i) = y(i); i += 1 }
     (xs, ys)
   }
-  def notRelativeTo(xo: Double, yo: Double) = new PixelWalk(path, n, x0+xo, y0+yo, side, tail)(ox + xo, oy + yo)
+  def globalizeFrom(xo: Double, yo: Double) = new PixelWalk(path, n, x0+xo, y0+yo, side, tail)(ox + xo, oy + yo)
   def moveOrigin(xo: Double, yo: Double) = new PixelWalk(path, n, x0, y0, side, tail)(xo, yo)
   def json = {
     val b = Json ~ ("px", Json.Arr.Dbl(Array(Data.sig(x0-ox), Data.sig(y0-oy), side)))
     if (tail >= 0) b ~ ("n", Json(Array[Double](n, tail)))
     else b ~ ("n", n)
-    b ~ ("path", path) ~ Json
+    b ~ ("4", path) ~ Json
   }
 }
 object PixelWalk extends FromJson[PixelWalk] {
   val emptyBytes = new Array[Byte](0)
   val empty = new PixelWalk(emptyBytes, 0, 0, 0, 0, -1)(0, 0)
+
+  def bytesFromArrows(s: String): Array[Byte] = {
+    val bs = new Array[Byte]((s.length+3)/4)
+    var i = 0
+    while (i < s.length) {
+      val j = i/4
+      val shift = (i & 0x3)*2
+      val bits = s(i) match {
+        case '>' => 0x0
+        case '<' => 0x1
+        case '^' => 0x2
+        case 'v' => 0x3
+      }
+      bs(j) = (bs(j) | (bits << shift)).toByte
+      i += 1
+    }
+    bs
+  }
+
+  def arrowsFromBytes(bs: Array[Byte], n: Int): String = {
+    val cs = new Array[Char](n)
+    var i = 0
+    while (i < n) {
+      val j = i/4
+      val shift = (i & 0x3)*2
+      val bits = ((bs(j) & 0xFF) >>> shift) & 0x3
+      val c = bits match {
+        case 0 => '>'
+        case 1 => '<'
+        case 2 => '^'
+        case 3 => 'v'
+      }
+      cs(i) = c
+      i += 1
+    }
+    new String(cs)
+  }
 
   def parse(j: Json): Either[JastError, PixelWalk] = j match {
     case o: Json.Obj =>
@@ -131,7 +144,7 @@ object PixelWalk extends FromJson[PixelWalk] {
           return Left(JastError("PixelWalk must contain an 'n' field that is a single integer, or an array of two integers"))
       }
       val path =
-        if (n(0) > 0) o("path").to[Array[Byte]] match { case Left(je) => return Left(je); case Right(p) => p }
+        if (n(0) > 0) o("4").to[Array[Byte]] match { case Left(je) => return Left(je); case Right(p) => p }
         else emptyBytes
       if (n(0) > 4*path.length) return Left(JastError(f"path contains at most ${4*path.length} steps but ${n(0)} declared"))
       if (n(1) >= n(0)) return Left(JastError(f"tail index ${n(1)} is outside of path length ${n(0)}"))
@@ -167,7 +180,7 @@ object PerimeterPoints {
   * If all values of `ox` and `oy` are the same, they may be specified by an array of length 1 to save space.
   */
 case class Data(
-  nid: Double, sid: String,
+  id: String,
   ts: Array[Double], 
   xDatas: Array[Array[Float]], yDatas: Array[Array[Float]],
   cxs: Array[Double], cys: Array[Double],
@@ -176,16 +189,16 @@ case class Data(
   walks: Option[Array[PixelWalk]],
   custom: Json.Obj
 )(
-  val rxs: Array[Double], val rys: Array[Double], val allUnarrayed: Boolean, val originUnarrayed: Boolean
+  val rxs: Array[Double], val rys: Array[Double]
 )
-extends HasId with AsJson {
+extends AsJson {
   assert(
     (ts ne null) && (xDatas ne null) && (yDatas ne null) &&
     (cxs ne null) && (cys ne null) && (oxs ne null) && (oys ne null) && (rxs ne null) && (rys ne null) &&
     ts.length == xDatas.length &&
     ts.length == yDatas.length &&
     { cxs.length == ts.length || cxs.length == 0 } &&
-    { oxs.length == ts.length || oxs.length == 1 || oxs.length == 0 } &&
+    { oxs.length == ts.length || oxs.length == 0 } &&
     cxs.length == cys.length &&
     oxs.length == oys.length &&
     ts.length == rxs.length &&
@@ -246,15 +259,15 @@ extends HasId with AsJson {
   def perimPoints(i: Int): (Array[Double], Array[Double]) = myPerims(i).getPoints()
 
   def datum(i: Int): Data = new Data(
-    nid, sid, Array(ts(i)), Array(xDatas(i)), Array(yDatas(i)),
+    id, Array(ts(i)), Array(xDatas(i)), Array(yDatas(i)),
     Array(if (cxs.length == 0) Double.NaN else cxs(i)),
     Array(if (cys.length == 0) Double.NaN else cys(i)),
-    Array(if (oxs.length == 0) Double.NaN else if (oxs.length == 1) oxs(0) else oxs(i)),
-    Array(if (oys.length == 0) Double.NaN else if (oys.length == 1) oys(0) else oys(i)),
+    Array(if (oxs.length == 0) Double.NaN else oxs(i)),
+    Array(if (oys.length == 0) Double.NaN else oys(i)),
     perims.flatMap(pms => if (pms(i).size == 0) None else Some(Array(pms(i)))),
     walks.flatMap(pws => if (pws(i).size == 0) None else Some(Array(pws(i)))),
     custom
-  )(Array(rxs(i)), Array(rys(i)), true, oxs.length > 0)
+  )(Array(rxs(i)), Array(rys(i)))
 
   private def externalize(coords: Array[Float], r: Double, has: Boolean, oc: Double): Array[Double] = {
     val ext = new Array[Double](coords.length)
@@ -268,62 +281,54 @@ extends HasId with AsJson {
   }
 
   def json = {
-    val b = Json ~ ("id", idJSON) ~ ("t", if (ts.length == 1 && allUnarrayed) Json(ts(0)) else Json(ts))
-    if (oxs.length > 0) {
-      if (oxs.length == 1 && (originUnarrayed || allUnarrayed)) b ~ ("ox", oxs(0)) ~ ("oy", oys(0))
-      else b ~ ("ox", Json(oxs)) ~ ("oy", Json(oys))
-    }
+    val b = Json ~ ("id", id) ~ ("t", Json(ts))
+    if (oxs.length > 0) b ~ ("ox", Json(oxs)) ~ ("oy", Json(oys))
     if (cxs.length > 0) {
       val kxs =
-        if (oxs.length == 0 || (oxs.length == 1 && oxs(0) == 0)) cxs
+        if (oxs.length == 0) cxs
         else {
           var qs = new Array[Double](cxs.length)
-          if (oxs.length == 1) { var i = 0; while (i < cxs.length) { qs(i) = Data.sig(cxs(i) - oxs(0)); i += 1 } }
-          else                 { var i = 0; while (i < cxs.length) { qs(i) = Data.sig(cxs(i) - oxs(i)); i += 1 } }
+          var i = 0; while (i < cxs.length) { qs(i) = Data.sig(cxs(i) - oxs(i)); i += 1 }
           qs
         }
       val kys =
-        if (oys.length == 0 || (oys.length == 1 && oys(0) == 0)) cys
+        if (oys.length == 0) cys
         else {
           var qs = new Array[Double](cys.length)
-          if (oys.length == 1) { var i = 0; while (i < cys.length) { qs(i) = Data.sig(cys(i) - oys(0)); i += 1 } }
-          else                 { var i = 0; while (i < cys.length) { qs(i) = Data.sig(cys(i) - oys(i)); i += 1 } }
+          var i = 0; while (i < cys.length) { qs(i) = Data.sig(cys(i) - oys(i)); i += 1 }
           qs
         }
-      if (kxs.length == 1 && allUnarrayed) b ~ ("cx", kxs(0)) ~ ("cy", kys(0))
-      else b ~ ("cx", Json(kxs)) ~ ("cy", Json(kys))
+      b ~ ("cx", Json(kxs)) ~ ("cy", Json(kys))
     }
     val dxs = ts.indices.map{ i =>
-      val oi = if (oxs.length > 0) { if (oxs.length == 1) oxs(0) else oxs(i) } else 0.0
+      val oi = if (oxs.length > 0) oxs(i) else 0.0
       val has = (oxs.length > 0) && !oi.isNaN
       externalize(xDatas(i), rxs(i), has, oi)
     }
     val dys = ts.indices.map{ i =>
-      val oi = if (oys.length > 0) { if (oys.length == 1) oys(0) else oys(i) } else 0.0
+      val oi = if (oys.length > 0) oys(i) else 0.0
       val has = (oys.length > 0) && !oi.isNaN
       externalize(yDatas(i), rys(i), has, oi)
     }
-    if (dxs.length == 1 && allUnarrayed) b ~ ("x", Json(dxs(0))) ~ ("y", Json(dys(0)))
-    else b ~ ("x", Json(dxs)) ~ ("y", Json(dys))
+    b ~ ("x", Json(dxs)) ~ ("y", Json(dys))
     if (perims.isDefined) {
       val pms = perims.get
       val pxs = ts.indices.map{ i =>
-        val oi = if (oxs.length > 0) { if (oxs.length == 1) oxs(0) else oxs(i) } else 0.0
+        val oi = if (oxs.length > 0) oxs(i) else 0.0
         val has = (oxs.length > 0 ) && !oi.isNaN
         externalize(pms(i).xData, pms(i).rx, has, oi)
       }
       val pys = ts.indices.map{ i =>
-        val oi = if (oys.length > 0) { if (oys.length == 1) oys(0) else oys(i) } else 0.0
+        val oi = if (oys.length > 0) oys(i) else 0.0
         val has = (oys.length > 0) && !oi.isNaN
         externalize(pms(i).yData, pms(i).ry, has, oi)
       }
-      if (pxs.length == 1 && allUnarrayed) b ~ ("px", Json(pxs(0))) ~ ("py", Json(pys(0)))
-      else b ~ ("px", Json(pxs)) ~ ("py", Json(pys))
+      b ~ ("px", Json(pxs)) ~ ("py", Json(pys))
       if (pms.exists(_.tailIndex.isDefined)) {
         val tis = new Array[Double](n)
         var i = 0; while (i < tis.length) { tis(i) = pms(i).tailIndex match { case Some(i) => i.toDouble; case _ => Double.NaN }; i += 1 }
         i = 1; while (i < tis.length && tis(i) == tis(i-1)) i += 1
-        if (i == tis.length || (tis.length == 1 && allUnarrayed)) b ~ ("ptail", tis(0))
+        if (i == tis.length || (tis.length == 1)) b ~ ("ptail", tis(0))
         else b ~ ("ptail", Json(tis))
       }
     }
@@ -331,33 +336,24 @@ extends HasId with AsJson {
       case Some(ws) =>
         var i = 0
         var same = true
+        var oxi, oyi = 0.0
         while (same && i < rxs.length) {
-          var oxi, oyi = 0.0
-          if (oxs.length > 0) {
-            val j = if (oxs.length > 1) i else 0
-            oxi = oxs(j)
-            oyi = oys(j)
-          }
+          if (oxs.length > 0) { oxi = oxs(i); oyi = oys(i) }
           same = ws(i).size == 0 || (ws(i).ox == oxi && ws(i).oy == oyi)
           i += 1
         }
         val wks = if (same) ws else {
           val wz = java.util.Arrays.copyOf(ws, ws.length)
           var i = 0
+          var oxi, oyi = 0.0
           while (i < rxs.length) {
-            var oxi, oyi = 0.0
-            if (oxs.length > 0) {
-              val j = if (oxs.length > 1) i else 0
-              oxi = oxs(j)
-              oyi = oys(j)
-            }
+            if (oxs.length > 0) { oxi = oxs(i); oyi = oys(i) }
             if (!(wz(i).size == 0 || (wz(i).ox == oxi && wz(i).oy == oyi))) wz(i) = wz(i).moveOrigin(oxi, oyi)
             i += 1
           }
           wz
         }
-        if (wks.length == 1 && allUnarrayed) b ~ ("walk", wks(0))
-        else b ~ ("walk", Json(wks))
+        b ~ ("walk", Json(wks))
       case _ =>
     }
     b ~~ custom ~ Json
@@ -443,18 +439,18 @@ object Data extends FromJson[Data] {
   }
 
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid data entries: " + msg))
-  private def IBAD(nid: Double, sid: String, msg: String): Either[JastError, Nothing] =
-    BAD("Data points for " + IdOnly(nid,sid).idJSON.json + " have " + msg)
-  private def MYBAD(nid: Double, sid: String, t: Double, msg: String): Either[JastError, Nothing] =
-    BAD("Data point for " + IdOnly(nid,sid).idJSON.json + " at time " + t + " has " + msg)
+  private def IBAD(id: String, msg: String): Either[JastError, Nothing] =
+    BAD("Data points for " + id + " have " + msg)
+  private def MYBAD(id: String, t: Double, msg: String): Either[JastError, Nothing] =
+    BAD("Data point for " + id + " at time " + t + " has " + msg)
 
   private[trackercommons] val emptyD = new Array[Double](0)
   private[trackercommons] val zeroD = Array(0.0)
   private[trackercommons] val emptyFF = new Array[Array[Float]](0)
 
   val empty = new Data(
-    Double.NaN, "", emptyD, emptyFF, emptyFF, emptyD, emptyD, emptyD, emptyD, None, None, Json.Obj.empty
-  )(emptyD, emptyD, false, false)
+    "", emptyD, emptyFF, emptyFF, emptyD, emptyD, emptyD, emptyD, None, None, Json.Obj.empty
+  )(emptyD, emptyD)
 
   private val someSingles = Option(Set("id", "t", "x", "y", "cx", "cy", "ox", "oy", "px", "py", "ptail", "walk"))
 
@@ -479,7 +475,9 @@ object Data extends FromJson[Data] {
     }
   }
 
-  def parse(j: Json): Either[JastError, Data] = {
+  def parse(j: Json): Either[JastError, Data] = parseFromJson(j, strict = true)
+
+  def parseFromJson(j: Json, strict: Boolean = true): Either[JastError, Data] = {
     implicit val pixelwalkFromJson: FromJson[PixelWalk] = PixelWalk
 
     val o = j match {
@@ -488,97 +486,86 @@ object Data extends FromJson[Data] {
     }
     o.countKeys(someSingles).foreach{ case (key, n) => if (n > 1) return BAD("duplicate entries for " + key) }
 
-    val (nid, sid) = o("id") match {
-      case Json.Null => (Double.NaN, null: String)
-      case n: Json.Num => (n.double, null: String)
-      case Json.Str(s) => (Double.NaN, s)
+    val id = o("id") match {
+      case Json.Null => ""
+      case Json.Str(s) => s
       case _ => return BAD("no valid ID!")
     }
 
-    var unarrT = false
     val t: Array[Double] = o("t") match {
       case ja: Json.Arr.Dbl => ja.doubles
-      case n: Json.Num => unarrT = true; Array(n.double)
-      case _ => return BAD("no time array!")
+      case je: JastError => return BAD("no time array!")
+      case x => return BAD("time is not an array: " + x.toString)
     }
 
     var numO = 0
-    var unarrO = false
     val List(ox, oy) = List("ox", "oy").map(key => o.get(key) match {
       case None => emptyD
       case Some(j) => j match {
-        case n: Json.Num => unarrO = true; Array(n.double)
-        case ja: Json.Arr.Dbl if !unarrT => 
-          if (ja.size != 1 && ja.size != t.length)
-             return IBAD(nid, sid, f"$key array size does not match time series size!") 
+        case ja: Json.Arr.Dbl => 
+          if (ja.size != t.length)
+             return IBAD(id, f"$key array size does not match time series size!") 
           numO += 1
           ja.doubles
-        case _ => return IBAD(nid, sid, f"non-numeric $key origin")
+        case _ => return IBAD(id, f"non-numeric $key origin")
       }
     })
-    if (ox.length != oy.length) IBAD(nid, sid, "ox and oy sizes do not match")
-    if (numO == 1) return IBAD(nid, sid, "only one of ox, oy: include both or neither!")
+    if (ox.length != oy.length) IBAD(id, "ox and oy sizes do not match")
+    if (numO == 1) return IBAD(id, "only one of ox, oy: include both or neither!")
 
     var numC = 0
     val List(cx, cy) = List("cx", "cy").map(key => o.get(key) match {
       case None => emptyD
       case Some(j) => j match {
-        case ja: Json.Arr.Dbl if !unarrT =>
-          if (ja.size != t.length) return IBAD(nid, sid, f"$key array size does not match time series size!")
+        case ja: Json.Arr.Dbl =>
+          if (ja.size != t.length) return IBAD(id, f"$key array size does not match time series size!")
           numC += 1
           ja.doubles
-        case n: Json.Num if unarrT =>
-          numC += 1
-          Array(n.double)
-        case _=> return IBAD(nid, sid, f"non-numeric or improperly shaped $key")
+        case _=> return IBAD(id, f"non-numeric or improperly shaped $key")
       }
     })
-    if (numC == 1) return IBAD(nid, sid, "only one of cx, cy: include both or neither!")
+    if (numC == 1) return IBAD(id, "only one of cx, cy: include both or neither!")
 
     val List((x0, px0), (y0, py0)) =
       List(("x", "px"), ("y", "py")).map{ case (key, peri) =>
         val ans =
           List(key, peri).map{ kk => o.get(kk) match {
-            case None => if (kk.startsWith("p")) null else return IBAD(nid, sid, f"no $key!")
+            case None => if (kk.startsWith("p")) null else return IBAD(id, f"no $key!")
             case Some(j) => j match {
               case Json.Null => 
                 if (kk.startsWith("p")) null
-                else return IBAD(nid, sid, f"no $key!")
-              case n: Json.Num =>
-                if (t.length != 1 || !unarrT) return IBAD(nid, sid, f"$key size does not match time series size!")
-                Array(Array(n.double))
+                else return IBAD(id, f"no $key!")
               case ja: Json.Arr.Dbl => 
-                if (t.length == 1) Array(ja.doubles)
-                else if (t.length == ja.size) ja.doubles.map(x => Array(x))
-                else return IBAD(nid, sid, f"$key size does not match time series size!")
+                if (t.length == ja.size) ja.doubles.map(x => Array(x))
+                else return IBAD(id, f"$key size does not match time series size!")
               case jall: Json.Arr.All =>
-                if (jall.size != t.length) return IBAD(nid, sid, f"$key size does not match time series size!")
+                if (jall.size != t.length) return IBAD(id, f"$key size does not match time series size!")
                 jall.values.map(_ match {
                   case Json.Null => emptyD
                   case n: Json.Num => Array(n.double)
                   case ja: Json.Arr.Dbl => ja.doubles
-                  case _ => return IBAD(nid, sid, f"$key has non-numeric data elements!")
+                  case _ => return IBAD(id, f"$key has non-numeric data elements!")
                 })
-              case _ => return IBAD(nid, sid, f"non-numeric or improperly shaped $key")          
+              case _ => return IBAD(id, f"non-numeric or improperly shaped $key")          
             }
           }}
         (ans.head, ans.tail.head)
       }
-    if ((px0 eq null) != (py0 eq null)) return IBAD(nid, sid, "Only one of px or py present")
+    if ((px0 eq null) != (py0 eq null)) return IBAD(id, "Only one of px or py present")
     var i = 0
     while (i < x0.length) {
-      if (x0(i).length != y0(i).length) return MYBAD(nid, sid, t(i), "mismatch in x and y sizes!")
-      if ((px0 ne null) && px0(i).length != py0(i).length) return MYBAD(nid, sid, t(i), "mismatch in px and py sizes!")
+      if (x0(i).length != y0(i).length) return MYBAD(id, t(i), "mismatch in x and y sizes!")
+      if ((px0 ne null) && px0(i).length != py0(i).length) return MYBAD(id, t(i), "mismatch in px and py sizes!")
       i += 1
     }
 
     val walk = o.get("walk") match {
       case None => None
       case Some(j) => j match {
-        case o: Json.Obj if t.length == 1 && unarrT =>
+        case o: Json.Obj if t.length == 1 =>
           o.to[PixelWalk] match {
             case Right(pw) => Some(Array(pw))
-            case Left(je) => return MYBAD(nid, sid, t(0), "Can't read walk: " + je.toString)
+            case Left(je) => return MYBAD(id, t(0), "Can't read walk: " + je.toString)
           }
         case jaa: Json.Arr.All if jaa.size == t.length =>
           val pws = new Array[PixelWalk](t.length)
@@ -588,7 +575,7 @@ object Data extends FromJson[Data] {
               case Json.Null => PixelWalk.empty
               case j         => j.to[PixelWalk] match {
                 case Right(pw) => pw
-                case Left(je) => return MYBAD(nid, sid, t(i), "Can't read walk: " + je.toString)
+                case Left(je) => return MYBAD(id, t(i), "Can't read walk: " + je.toString)
               }
             }
             i += 1
@@ -605,9 +592,9 @@ object Data extends FromJson[Data] {
           case jad: Json.Arr.Dbl if jad.size == t.length => Some(jad.doubles.map(d =>
               if (d.isNaN) -1
               else if (d.toInt == d && d >= 0) d.toInt
-              else return IBAD(nid, sid, "ptail isn't an appropriate number of integers") 
+              else return IBAD(id, "ptail isn't an appropriate number of integers") 
             ))
-          case _ => return IBAD(nid, sid, "ptail isn't an appropriate number of integers")
+          case _ => return IBAD(id, "ptail isn't an appropriate number of integers")
         }}
       }
       else None
@@ -617,8 +604,8 @@ object Data extends FromJson[Data] {
     val opms = Option(if (px0 ne null) new Array[PerimeterPoints](t.length) else null)
     i = 0
     while (i < x.length) {
-      val oxi = if (ox.length < 1) Double.NaN else if (ox.length == 1) ox(0) else ox(i)
-      val oyi = if (oy.length < 1) Double.NaN else if (oy.length == 1) oy(0) else oy(i)
+      val oxi = if (ox.length < 1) Double.NaN else ox(i)
+      val oyi = if (oy.length < 1) Double.NaN else oy(i)
       val hasO = ox.length > 0
       val hasC = cx.length > 0
       if (hasC && hasO) {
@@ -629,7 +616,7 @@ object Data extends FromJson[Data] {
       ry(i) = sensiblyOffset(hasO, oyi, hasC, if (hasC) cy(i) else Double.NaN, y0(i), if (py0 eq null) null else py0(i))
       x(i) = Data.singly(x0(i))
       y(i) = Data.singly(y0(i))
-      walk.foreach{ w => if (w(i).size > 0) w(i) = w(i).notRelativeTo(if (hasO) oxi else 0, if (hasO) oyi else 0) }
+      walk.foreach{ w => if (w(i).size > 0) w(i) = w(i).globalizeFrom(if (hasO) oxi else 0, if (hasO) oyi else 0) }
       opms.foreach{ pms => 
         val ptaili = ptail.map(ai => if (ai.length == 1) ai(0) else ai(i))
         pms(i) = if (px0 ne null)
@@ -638,6 +625,6 @@ object Data extends FromJson[Data] {
       }
       i += 1
     }
-    Right(new Data(nid, sid, t, x, y, cx, cy, ox, oy, opms, walk, o.filter((k,_) => k.startsWith("@")))(rx, ry, unarrT, unarrO))
+    Right(new Data(id, t, x, y, cx, cy, ox, oy, opms, walk, o.filter((k,_) => k.startsWith("@")))(rx, ry))
   }
 }

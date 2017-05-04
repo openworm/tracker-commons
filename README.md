@@ -21,8 +21,8 @@ Here's an example!
     },
     "units":{"t":"s", "x":"mm", "y":"mm"},
     "data":[
-        {"id":"worm1", "t":0.1, "x":[0.33, 0.65, 0.8, 1.1, 1.2], "y":[2.31, 2.25, 2.0, 1.87, 1.66]},
-        {"id":"worm1", "t":0.3, "x":[0.27, 0.6, 0.75, 1.0, 1.1], "y":[2.4, 2.3, 2.07, 1.78, 1.75]}
+        {"id":"worm1", "t":[0.1], "x":[[0.33, 0.65, 0.8, 1.1, 1.2]], "y":[[2.31, 2.25, 2.0, 1.87, 1.66]]},
+        {"id":"worm1", "t":[0.3], "x":[[0.27, 0.6, 0.75, 1.0, 1.1]], "y":[[2.4, 2.3, 2.07, 1.78, 1.75]]}
     ]
 }
 ```
@@ -42,5 +42,5 @@ The Tracker Commons repository contains implementations for reading and writing 
 | [Matlab](src/Matlab)  | Jim Hokanson  | Runnable implementation (alpha) | n/a | no |
 | [R](src/R)  | Rex Kerr  | Lightweight wrapper using rscala (alpha) | none | no |
 | [Julia](src/julia)  | Rex Kerr  | Runnable implementation (alpha) | none | no |
-| [Octave](src/octave)  | Chee Lee Wai  | Lightweight wrapper to Python version | none | no |
+| [Octave](src/octave)  | Chee Wai Lee  | Lightweight wrapper to Python version | none | no |
 | [Rust](src/Rust)  | n/a  | Preliminary notes only | n/a | no |

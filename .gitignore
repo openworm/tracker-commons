@@ -1,3 +1,6 @@
+# Random editor stuff
+*~
+
 # Python byte-compiled / optimized / DLL files
 *.pyc
 __pycache__/*
@@ -9,3 +12,6 @@ src/Python/wcon.egg*
 
 #Matlab
 *.asv
+
+# Scala
+src/scala/target/*
