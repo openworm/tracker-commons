@@ -437,6 +437,29 @@ class TestWCONParser(unittest.TestCase):
         self.assertNotEqual(worm1, worm2)
         self.assertEqual(merged, merged2)
 
+        
+    def test_merge_user_defined_constants(self):
+        """ This example is pulled right from the specification"""
+        
+        w1 = WCONWorms.load(
+            StringIO(
+                '{"units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm"},'
+                '"data":[{"id":"0", "t":[1,2], "x":[0,1], "y":[1,0],'
+                '"@XJ z":[3,4], "@XJ g":9.8, "@XJ f":"salmon"},'
+                '{"id":"0", "t":[3,4,5], "x":[1,0,1], "y":[2,3,2],'
+                '"@XJ z":[5,6,5], "@XJ g":9.8, "@XJ f":"cod"}]}'))
+
+        w2 = WCONWorms.load(
+            StringIO(
+                '{"units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm"},'
+                '"data":[{"id":"0", "t":[1,2,3,4,5], '
+                '"x":[0,1,1,0,1], "y":[1,0,2,3,2],'
+                '"@XJ z":[3,4,5,6,5], "@XJ g":9.8, '
+                '"@XJ f":["salmon", "salmon", "cod", "cod", "cod"]}]}'))
+
+        self.assertEqual(w1, w2)
+        
+        
     def test_data2(self):
         WCON_string = \
             """
@@ -658,5 +681,34 @@ class TestWCONParser(unittest.TestCase):
         pass
 
 
+    +{
+ +  "units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm"},
+ +  "data":[
+ +    {
+ +      "id":"0", "t":[1,2], "x":[0,1], "y":[1,0],
+ +      "@XJ z":[3,4], "@XJ g":9.8, "@XJ f":"salmon"
+ +    },
+ +    {
+ +      "id":"0", "t":[3,4,5], "x":[1,0,1], "y":[2,3,2],
+ +      "@XJ z":[5,6,5], "@XJ g":9.8, "@XJ f":"cod"
+ +    }
+ +  ]
+ +}
+ +```
+ +
+ +we will get
+ +
+ +```JSON
+ +{
+ +  "units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm"},
+ +  "data":[{
+ +    "id":"0", "t":[1,2,3,4,5], "x":[0,1,1,0,1], "y":[1,0,2,3,2],
+ +    "@XJ z":[3,4,5,6,5], "@XJ g":9.8,
+ +    "@XJ f":["salmon", "salmon", "cod", "cod", "cod"]
+ +  }]
+ +}
+    
+    
+    
 if __name__ == '__main__':
     unittest.main()
