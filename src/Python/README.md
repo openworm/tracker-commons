@@ -93,7 +93,7 @@ w3 = w1 + w2  # Merge the two.  An exception is raised if the data clashes
       - This is the native representation of the data in this object, and thus the fastest to load.  Try to use this instead of `data`.
 - Class `MeasurementUnit`
   - Note: this class does not need to be used publicly, but it can be if desired.
-    - consequently it can be ommitted from a public API
+    - consequently it can be omitted from a public API
   - methods
     - `create`
       - [class method]
