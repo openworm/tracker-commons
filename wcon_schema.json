@@ -1,5 +1,5 @@
 {
-    "$schema": "http://json-schema.org/draft-04/schema#",
+    "$schema": "http://json-schema.org/schema",
     "title": "Worm tracker Commons Object Notation (WCON)",
     "description": "A text-based data interchange format for *C. elegans* trackers. It is a constrained subset of JSON. It is designed to be both human and machine readable and to facilitate data exchange and inter-operability for worm tracking data that is independent of platform and the language used for implementation.",
     "type": "object",
