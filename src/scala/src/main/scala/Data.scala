@@ -35,12 +35,7 @@ extends Perimeter with AsJson {
   private[this] var myI = 0
   def tailIndex = if (tail >= 0) Some(tail) else None
   def size = n
-  def step(i: Int) = {
-    if (i>=4*path.length || i < 0) {
-      println(f"This isn't going to work; asking for $i when length is ${path.length}")
-    }
-    ((path(i >>> 2) & 0xFF) >>> (i & 0x3)) & 0x3
-  }
+  def step(i: Int) = (path(i >>> 2) >>> (2*(i & 0x3))) & 0x3
   private[this] def findI(i: Int) {
     if (myI < i) {
       while (myI < i) { 
@@ -99,8 +94,8 @@ object PixelWalk extends FromJson[PixelWalk] {
       val j = i/4
       val shift = (i & 0x3)*2
       val bits = s(i) match {
-        case '>' => 0x0
-        case '<' => 0x1
+        case '<' => 0x0
+        case '>' => 0x1
         case '^' => 0x2
         case 'v' => 0x3
       }
@@ -118,8 +113,8 @@ object PixelWalk extends FromJson[PixelWalk] {
       val shift = (i & 0x3)*2
       val bits = ((bs(j) & 0xFF) >>> shift) & 0x3
       val c = bits match {
-        case 0 => '>'
-        case 1 => '<'
+        case 0 => '<'
+        case 1 => '>'
         case 2 => '^'
         case 3 => 'v'
       }

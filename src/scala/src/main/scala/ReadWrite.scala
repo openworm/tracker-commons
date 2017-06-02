@@ -202,7 +202,7 @@ object ReadWrite {
       case Failure(e) => return Left("Could not open output file " + fout)
     }
     try { pw.print( PrettyJson(ds.json) ); Right(()) }
-    catch { case NonFatal(e) => Left("Error while writing file " + fout + "\n" + e.toString + Option(e.getMessage).getOrElse("")) }
+    catch { case NonFatal(e) => e.printStackTrace; Left("Error while writing file " + fout + "\n" + e.toString + Option(e.getMessage).getOrElse("")) }
     finally Try { pw.close }
   }
 
