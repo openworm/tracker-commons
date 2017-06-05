@@ -82,33 +82,36 @@ object Laboratory {
 class Arena(val underlying: original.Arena)
 extends WrapsScalaWcon[original.Arena]
 {
-  /** The type of media, e.g. NGM agar, agarose, etc..
+  /** The style of media, e.g. NGM agar, agarose, etc.; is it a plate or slide or what, etc..
     *
     * Non-circular/elliptical shapes should be noted here also.
     */
-  def kind = underlying.kind
-  /** Sets the type of the media (returns a new copy) */
-  def kind(k: String) = new Arena(underlying.copy(kind = k))
+  def style = underlying.style
+  /** Sets the style of the arena (returns a new copy) */
+  def style(s: String) = new Arena(underlying.copy(style = s))
 
   /** The long axis of the arena (diameter if circular).*/
-  def majorDiameter = underlying.diameter match { case Right(d) => d;          case Left((d1, d2)) => d1 }
+  def majorSize = underlying.size match {
+    case None => Double.NaN
+    case Some(Right(d)) => d
+    case Some(Left((d1, d2))) => d1
+  }
   /** Sets the long axis of the arena (returns a new copy) */
-  def majorDiameter(d: Double) = new Arena(underlying.diameter match {
-    case Right(_) => underlying.copy(diameter = Right(d))
-    case Left((_, d2)) => underlying.copy(diameter = Left((d, d2)))
+  def majorSize(d: Double) = new Arena(underlying.size match {
+    case Some(Left((_, d2))) => underlying.copy(size = Some(Left((d, d2))))
+    case _                   => underlying.copy(size = if (!d.finite) None else Some(Right(d)))
   })
 
   /** The short axis of the arena; may be `NaN` if the arena is circular or square. */
-  def minorDiameter = underlying.diameter match { case Right(_) => Double.NaN; case Left((_, d2))  => d2 }
+  def minorSize = underlying.size match { 
+    case Some(Left((_, d2))) => d2
+    case _                   => Double.NaN
+  }
   /** Sets the short axis of the arena (returns a new copy) */
-  def minorDiameter(d: Double) = underlying.diameter match {
-    case Right(d1) => 
-      if (d.finite) new Arena(underlying.copy(diameter = Left((d1, d))))
-      else this
-    case Left((d1, d2)) =>
-      new Arena(underlying.copy(
-        diameter = if (d.finite) Left((d1, d)) else Right(d1)
-      ))
+  def minorSize(d: Double) = underlying.size match {
+    case Some(Left((d1, _))) => underlying.copy(size = Some(if (d.finite) Left((d1, d)) else Right(d1)))
+    case Some(Right(d1))     => if (d.finite) underlying.copy(size = Some(Left(d1, d))) else underlying
+    case None                => if (d.finite) underlying.copy(size = Some(Left(Double.NaN, d))) else underlying
   }
 
   /** The orientation of the arena relative to the camera.
@@ -118,9 +121,9 @@ extends WrapsScalaWcon[original.Arena]
     * briefly.  For example, an animal between two cover slips might be `"symmetric"` (but
     * it's less likely that an automatic parser will understand what is going on).
     */
-  def orient = underlying.orient
+  def orientation = underlying.orientation
   /** Specifies the orientation of the arena relative to the camera (returns a new copy) */
-  def orient(o: String) = new Arena(underlying.copy(orient = o))
+  def orientation(o: String) = new Arena(underlying.copy(orientation = o))
 
 
   /** Custom arena information (as a `Json.Obj`) */
@@ -135,21 +138,29 @@ object Arena {
   /** Wraps a standard Scala `Arena` in this compatibility object */
   def from(underlying: original.Arena) = new Arena(underlying)
 
-  /** Creates a new arena given a known type and diameter */
-  def from(kind: String, diameter: Double): Arena =
-    new Arena(original.Arena(kind, Right(diameter), "", Json.Obj.empty))
+  /** Creates a new arena given a known style */
+  def from(style: String): Arena =
+    new Arena(original.Arena(style, None, "", Json.Obj.empty))
 
-  /** Creates a new arena given a known type and major and minor axes */
-  def from(kind: String, dmajor: Double, dminor: Double) =
-    new Arena(original.Arena(kind, Left((dmajor, dminor)), "", Json.Obj.empty))
+  /** Creates a new arena given a known style and size */
+  def from(style: String, size: Double): Arena =
+    new Arena(original.Arena(style, Some(Right(size)), "", Json.Obj.empty))
 
-  /** Creates a new arena given a known type, diameter, and orientation */
-  def from(kind: String, diameter: Double, orient: String) =
-    new Arena(original.Arena(kind, Right(diameter), orient, Json.Obj.empty))
+  /** Creates a new arena given a known style and major and minor axes */
+  def from(style: String, major: Double, minor: Double) =
+    new Arena(original.Arena(style, Some(Left((major, minor))), "", Json.Obj.empty))
 
-  /** Creates a new arena given a known type, major and minor axes, and orientation */
-  def from(kind: String, dmajor: Double, dminor: Double, orient: String) =
-    new Arena(original.Arena(kind, Left((dmajor, dminor)), orient, Json.Obj.empty))
+  /** Creates a new arena given a known style and orientation */
+  def from(style: String, orientation: String) =
+    new Arena(original.Arena(style, None, orientation, Json.Obj.empty))
+
+  /** Creates a new arena given a known style, size, and orientation */
+  def from(style: String, size: Double, orientation: String) =
+    new Arena(original.Arena(style, Some(Right(size)), orientation, Json.Obj.empty))
+
+  /** Creates a new arena given a known style, major and minor axes, and orientation */
+  def from(style: String, major: Double, minor: Double, orientation: String) =
+    new Arena(original.Arena(style, Some(Left((major, minor))), orientation, Json.Obj.empty))
 }
 
 /** Represents information about the software that gathered and/or processed the data */
@@ -201,6 +212,11 @@ object Software {
 /** Represents information associated with an experiment. */
 class Metadata(val underlying: original.Metadata)
 extends WrapsScalaWcon[original.Metadata] {
+  /** An identifying string for the experiment */
+  def id: String = underlying.id
+  /** Sets the identifying string for the experiment */
+  def id(s: String): Metadata = new Metadata(underlying.copy(id = s))
+
   /** An array of the labs involved. */
   def labs: Array[Laboratory] = underlying.lab.map(l => new Laboratory(l)).toArray
   /** Sets the labs involved (returns a new copy) */
@@ -392,6 +408,8 @@ class Data(
       Data.emptyDoubleArray,
       None,
       None,
+      Data.emptyStringArray,
+      Data.emptyStringArray,
       custom
     )(rxs,rys)
   }
@@ -411,6 +429,8 @@ object Data {
   val emptyDoubleArrayArray = new Array[Array[Double]](0)
   /** A generator that produces an empty array of arrays of Doubles */
   val emptyDoublessGen = () => emptyDoubleArrayArray
+  /** An empty array of Strings (used for missing data) */
+  val emptyStringArray = new Array[String](0)
 
   /** A data set containing no data. */
   def empty = new Data("", emptyDoublesGen, emptyDoublesGen, emptyDoublesGen, emptyDoublessGen, emptyDoublessGen, Json.Obj.empty)

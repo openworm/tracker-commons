@@ -3,11 +3,14 @@ package org.openworm.trackercommons
 import kse.jsonal._
 import kse.jsonal.JsonConverters._
 
-case class UnitMap(lookup: Map[String, units.Convert], custom: Json.Obj) extends AsJson {
+case class UnitMap(lookup: Map[String, units.Convert], custom: Json.Obj)
+extends AsJson with Customizable[UnitMap] {
   import units._
   val json = Json ~~ lookup ~~ custom ~~ Json
   def has(s: String) = lookup contains s
   def missing(s: String) = !(lookup contains s)
+
+  def customFn(f: Json.Obj => Json.Obj) = copy(custom = f(custom))
 
   private def renum(n: Json.Num, u: units.Convert, from: Boolean): Json = {
     val x = n.double

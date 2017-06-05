@@ -10,11 +10,6 @@ trait MightBeEmpty[A] { self: A =>
   def nonEmptyOption: Option[A] = if (isEmpty) None else Some(this)
 }
 
-trait Customizable[A] { self: A =>
-  def custom: Json.Obj
-  def customFn(f: Json.Obj => Json.Obj): A
-}
-
 case class Laboratory(pi: String, name: String, location: String, contact: Vector[String], custom: Json.Obj)
 extends AsJson with MightBeEmpty[Laboratory] with Customizable[Laboratory] {
   def isEmpty = pi.isEmpty && name.isEmpty && location.isEmpty && contact.isEmpty && custom.size == 0
@@ -49,25 +44,29 @@ object Laboratory extends FromJson[Laboratory] {
         case Left(je) => return BAD("Invalid contact: " + je.toString)
       }
     }
-    Right(new Laboratory(pi, name, location, contact, o.filter((k,_) => k.startsWith("@"))))
+    Right(new Laboratory(pi, name, location, contact, Custom(o)))
   }
 }
 
-case class Arena(kind: String, diameter: Either[(Double, Double), Double], orient: String, custom: Json.Obj)
+case class Arena(style: String, size: Option[Either[(Double, Double), Double]], orientation: String, custom: Json.Obj)
 extends AsJson with MightBeEmpty[Arena] with Customizable[Arena] {
   def isEmpty =
-    kind.isEmpty &&
-    (diameter match { case Right(x) => !x.finite; case Left((x,y)) => !x.finite && !y.finite }) &&
-    orient.isEmpty &&
+    style.isEmpty &&
+    (size match { 
+      case None => true
+      case Some(Right(x)) => !x.finite
+      case Some(Left((x,y))) => !x.finite && !y.finite
+    }) &&
+    orientation.isEmpty &&
     custom.size == 0
 
-  def customFn(f: Json.Obj => Json.Obj) = new Arena(kind, diameter, orient, f(custom))
+  def customFn(f: Json.Obj => Json.Obj) = new Arena(style, size, orientation, f(custom))
 
   import Arena.jsonizeDoublePair
   def json = (Json
-    ~? ("type", kind)
-    ~ ("size", Json either diameter)
-    ~? ("orient", orient)
+    ~? ("style", style)
+    ~? ("size", size.map(Json either _))
+    ~? ("orientation", orientation)
     ~~ custom ~ Json)
 }
 object Arena extends FromJson[Arena] {
@@ -75,22 +74,22 @@ object Arena extends FromJson[Arena] {
     def jsonize(dd: (Double, Double)): Json = Json.Arr.Dbl(Array(dd._1, dd._2))
   }
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid arena: " + msg))
-  def empty = new Arena("", Right(Double.NaN), "", Json.Obj.empty)
+  def empty = new Arena("", None, "", Json.Obj.empty)
   def parse(j: Json): Either[JastError, Arena] = {
     val o = j match {
       case jo: Json.Obj => jo
       case _ => return BAD("not a JSON object")
     }
-    var kind, orient: String = null
-    var diam: Either[(Double, Double), Double] = null
+    var style, orientation: String = null
+    var size: Either[(Double, Double), Double] = null
     o.foreach{ case (k,v) =>
-      if (k == "type") {
-        if (kind ne null) return BAD("multiple type entries")
-        kind = v stringOr { return BAD("type is not expressed as text") }
+      if (k == "style") {
+        if (style ne null) return BAD("multiple type entries")
+        style = v stringOr { return BAD("type is not expressed as text") }
       }
       else if (k == "size") {
-        if (diam ne null) return BAD("multiple size entries (two entries should be in an array)")
-        diam = v.to[Either[Array[Double], Double]] match {
+        if (size ne null) return BAD("multiple size entries (two entries should be in an array)")
+        size = v.to[Either[Array[Double], Double]] match {
           case Right(Right(x)) => Right(x)
           case Right(Left(xs)) => if (xs.length == 1) Right(xs(0))
             else if (xs.length == 2) Left((xs(0), xs(1)))
@@ -98,13 +97,13 @@ object Arena extends FromJson[Arena] {
           case _ => return BAD("size is neither a number nor an array of two numbers")
         }
       }
-      else if (k == "orient") {
-        if (orient ne null) return BAD("multiple orientation entries")
-        orient = v stringOr { return BAD("orientation is not expressed as text") }
+      else if (k == "orientation") {
+        if (orientation ne null) return BAD("multiple orientation entries")
+        orientation = v stringOr { return BAD("orientation is not expressed as text") }
       }
     }
-    if ((kind eq null) && (orient eq null) && (diam eq null)) return BAD("No aspects of Arena are specified (type, diameter, orient)")
-    Right(new Arena(if (kind eq null) "" else kind, diam, if (orient eq null) "" else orient, o.filter((k, _) => k.startsWith("@"))))
+    if ((style eq null) && (orientation eq null) && (size eq null)) return BAD("No aspects of Arena are specified (style, size, orientation)")
+    Right(new Arena(if (style eq null) "" else style, Option(size), if (orientation eq null) "" else orientation, Custom(o)))
   }
 }
 
@@ -177,11 +176,12 @@ object Software extends FromJson[Software] {
       case j: Json => Some(j)
       case _       => None
     }
-    Right(new Software(name, version, features, settings, o.filter{ (k,_) => k.startsWith("@") }))
+    Right(new Software(name, version, features, settings, Custom(o)))
   }
 }
 
 case class Metadata(
+  id: String,
   lab: Vector[Laboratory],
   who: Vector[String],
   timestamp: Option[Either[java.time.OffsetDateTime, java.time.LocalDateTime]],
@@ -219,10 +219,13 @@ case class Metadata(
 
   def customFn(f: Json.Obj => Json.Obj) =
     new Metadata(
-      lab, who, timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain, protocol, interpolate, software, f(custom)
+      id, lab, who,
+      timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain,
+      protocol, interpolate, software, f(custom)
     )
     
   def json = (Json
+    ~? ("id", id)
     ~? ("lab", if (lab.length == 1) lab.head.json else Json(lab))
     ~? ("who", if (who.length == 1) Json(who.head) else Json(who))
     ~? ("timestamp", timestamp.map(e => Json either e))
@@ -246,7 +249,7 @@ object Metadata extends FromJson[Metadata] {
   private implicit val parseInterpolate: FromJson[Interpolate] = Interpolate
   private implicit val parseSoftware: FromJson[Software] = Software
 
-  val listKeyStrings = List("food", "media", "sex", "stage", "strain")
+  val listKeyStrings = List("id", "food", "media", "sex", "stage", "strain")
   val listKeyNumbers = List("temperature", "humidity", "age")
   val listKeyOtherSingles = List("timestamp", "arena", "settings")
   val listKeyStringVectors = List("who", "protocol")
@@ -258,7 +261,9 @@ object Metadata extends FromJson[Metadata] {
     Left(JastError("Invalid metadata: " + msg, because = because))
 
   val empty = new Metadata(
-    Vector.empty, Vector.empty, None, None, None, None, None, None, None, None, None, None, Vector.empty, Vector.empty, Vector.empty, Json.Obj.empty
+    "", Vector.empty, Vector.empty,
+    None, None, None, None, None, None, None, None, None, None,
+    Vector.empty, Vector.empty, Vector.empty, Json.Obj.empty
   )
 
   def parse(j: Json): Either[JastError, Metadata] = {
@@ -269,7 +274,7 @@ object Metadata extends FromJson[Metadata] {
     val count = o.countKeys(someSingles)
     count.foreach{ case (key, n) => if (n > 1) return BAD("duplicate entries in metadata for " + key) }
     val vcount = o.countKeys(someVectors)
-    val List(food, media, sex, stage, strain) = listKeyStrings.map{ key => o get_or_java_null key match {
+    val List(id, food, media, sex, stage, strain) = listKeyStrings.map{ key => o get_or_java_null key match {
       case null => None
       case s: Json.Str => Some(s.text)
       case _ => return BAD("non-string entry in metadata for " + key)
@@ -327,8 +332,9 @@ object Metadata extends FromJson[Metadata] {
       ss
     }.result
     Right(new Metadata(
-      lab, who, timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain, protocol, interpolate, software,
-      o.filter((k, _) => k.startsWith("@"))
+      id.getOrElse(""), lab, who,
+      timestamp, temperature, humidity, arena, food, media, sex, stage, age, strain,
+      protocol, interpolate, software, Custom(o)
     ))
   }
 }

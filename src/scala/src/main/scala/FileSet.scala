@@ -9,8 +9,10 @@ import kse.jsonal._
 import kse.jsonal.JsonConverters._
 
 case class FileSet(names: Vector[String], index: Int, custom: Json.Obj)
-extends AsJson {
+extends AsJson with Customizable[FileSet] {
   if (index < 0 || index >= math.max(1,names.length)) throw new NoSuchElementException("FileSet index out of range")
+
+  def customFn(f: Json.Obj => Json.Obj) = copy(custom = f(custom))
 
   val files = collection.mutable.LongMap.empty[File]
   def lookup(i: Int): Option[File] = 
@@ -132,11 +134,15 @@ object FileSet extends FromJson[FileSet] {
       case Json.Str(text) => text
       case _ => return Left(JastError("'this' entry not found or not a string"))
     }
-    val List(prev, next) = List("prev", "next").map{ key => o.get(key).map(_.to[Either[Array[String], String]]) match {
+    val List(prev, next) = List("prev", "next").map{ key => o.get(key) match {
       case None => Array.empty[String]
-      case Some(Right(Right(x))) => Array(x)
-      case Some(Right(Left(x))) => x
-      case Some(Left(e)) => return Left(JastError(f"Did not find strings of file names for $key key in file information", because = e))
+      case Some(Json.Null) => Array.empty[String]
+      case Some(s: Json.Str) => Array(s.text)
+      case Some(jaa: Json.Arr.All) => jaa.to[Array[String]] match {
+        case Right(x) => x
+        case Left(je) => return Left(JastError(f"Did not find strings of file names for key $key in file information", because = je))
+      }
+      case _ => return Left(JastError(f"Did not find strings of file names for $key key in file information"))
     }}
     Right(new FileSet((prev.reverse.toVector :+ me) ++ next, prev.length, o.filter((k, _) => k.startsWith("@"))))
   }
