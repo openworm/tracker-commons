@@ -25,18 +25,18 @@ object Create {
   final class MakeWcon[U <: HasUnits, D <: HasData, F <: HasFile] private[trackercommons] (building: DataSet, nData: Int) {
     private[this] var stale = false
 
-    def result(implicit evU: U =:= YesUnits, evD: D =:= YesData) =
+    def result()(implicit evU: U =:= YesUnits, evD: D =:= YesData) =
       building.copy(data = java.util.Arrays.copyOf(building.data, nData))
 
-    def write(implicit evU: U =:= YesUnits, evD: D =:= YesData, evF: F =:= YesFile): scala.util.Try[Unit] = scala.util.Try{
+    def write()(implicit evU: U =:= YesUnits, evD: D =:= YesData, evF: F =:= YesFile): scala.util.Try[Unit] = scala.util.Try{
       ReadWrite.write(result, building.files.lookup(0).get)
     }
 
-    def setUnits(u: UnitMap): MakeWcon[YesUnits, D, F] = {
+    def setUnits(u: UnitMap)(implicit evD: D =:= YesData): MakeWcon[YesUnits, D, F] = {
       stale = true
       new MakeWcon[YesUnits, D, F](building.copy(unitmap = u), nData)
     }
-    def setUnits(extra: Map[String, String]): Either[String, MakeWcon[YesUnits, D, F]] = {
+    def setUnits(extra: Map[String, String])(implicit evD: D =:= YesData): Either[String, MakeWcon[YesUnits, D, F]] = {
       val all = new collection.mutable.AnyRefMap[String, String]
       def sym(a: String, b: String) {
         val hasA = all contains a
@@ -90,7 +90,7 @@ object Create {
         Json.Obj.empty
       )))
     }
-    def setUnits(): MakeWcon[YesUnits, D, F] = setUnits(Map.empty[String, String]).right.get   // Always succeeds when no extras
+    def setUnits()(implicit evD: D =:= YesData): MakeWcon[YesUnits, D, F] = setUnits(Map.empty[String, String]).right.get   // Always succeeds when no extras
 
     def setFile(files: FileSet): MakeWcon[U, D, YesFile] = {
       stale = true
@@ -398,6 +398,7 @@ object Create {
           qi += 1
         }
       }
+      override def complete() { if (qi > 0) super.complete() }
     }
     private[this] val oxy = new AccXYQ
     private[this] val cxy = new AccXYQ
@@ -410,7 +411,7 @@ object Create {
       def size = ai
       def size_=(ii: Int) { ai = ii }
       def capacity = aa.length
-      def copyTo(m: Int) { val aaa = new Array[A](m); System.arraycopy(aa, 0, aaa, 0, m); aa = aaa }
+      def copyTo(m: Int) { val aaa = new Array[A](m); System.arraycopy(aa, 0, aaa, 0, math.min(aa.length, m)); aa = aaa }
       def zeroAt(j: Int) { aa(j) = zero }
       def add(a: A) {
         if (dedup && aa.length < 2 && ai == 1) {
@@ -457,9 +458,9 @@ object Create {
       if (jm eq null) jm = new collection.mutable.AnyRefMap[String, JArB]
       jm.getOrElseUpdate(key, new JArB).add(value, i)
     }
-    private[this] def jGet = 
+    private[this] def jGet = Json.Obj.empty/*
       if (jm eq null) Json.Obj.empty
-      else Json.Obj(jm.mapValues(b => Json(b.result)).toMap)
+      else Json.Obj(jm.mapValues(b => Json(b.result)).toMap)*/
 
     def validate: Either[DataBuilder[NoData], DataBuilder[YesData]] =
       if (i == 0) Left(this.asInstanceOf[DataBuilder[NoData]])
