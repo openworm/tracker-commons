@@ -298,8 +298,9 @@ class TestWcon {
     else (a zip b).zipWithIndex.map{ case ((ai, bi), i) => same(ai, bi, "data[" + i + "]") }.filter(_.length > 0).mkString("\n")
 
   def same(a: FileSet, b: FileSet): String =
-    same(a.me, b.me, "fileset.this") +
-    same(a.names, b.names, "fileset.names") +
+    same(a.current, b.current, "fileset.current") +
+    same(a.next, b.next, "fileset.next") +
+    same(a.prev, b.prev, "fileset.prev") +
     same(a.custom, b.custom, "fileset.custom")
 
   def same(a: DataSet, b: DataSet): String =
@@ -561,7 +562,7 @@ class TestWcon {
     val before = ((n-1) to 0 by -1).map("_" + _)
     val me = "_"+n
     val after = ((n+1) to m).map("_" + _)
-    FileSet((before.reverse.toVector :+ me) ++ after, before.length, genCustom(r))
+    FileSet(me, after.toArray, before.toArray, genCustom(r))
   }
 
   def genDataSet(r: R) = {
@@ -669,10 +670,7 @@ class TestWcon {
 
     val wcons: Array[DataSet] = (jsons.map(_.to(DataSet)) zip paths).map{
       case (Left(je), p) => println(je); println(p); fail("Error reading WCON data from JSON"); throw new Exception("Never here")
-      case (Right(ds), p) =>
-       val dsi = if (ds.files.names.length == 0) ds.copy(files = FileSet(Vector(p.getName), 0, Json.Obj.empty)) else ds
-       dsi.files.setRootFile(p)
-       dsi
+      case (Right(ds), p) => if (ds.files.prev.length + ds.files.next.length == 0) ds.copy(files = FileSet.empty) else ds
     }
 
     assertTrue("All coordinates not the same", {
@@ -688,10 +686,10 @@ class TestWcon {
             println("ISN'T")
             println(vi)
             println(f"Mismatch at data index $i; note rxs/rys")
-            println(f"In ${w.files.me}:")            
+            println(f"In ${w.files.current}:")            
             println(f"  ${wi.rxs.mkString(", ")}")
             println(f"  ${wi.rys.mkString(", ")}")
-            println(f"In ${v.files.me}:")
+            println(f"In ${v.files.current}:")
             println(f"  ${vi.rxs.mkString(", ")}")
             println(f"  ${vi.rys.mkString(", ")}")
           }

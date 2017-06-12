@@ -11,7 +11,7 @@
     "software":{ "featureID":"@example", "@example": { "q":0.1 } },
     "settings":{ "q": 1 },
     "@example":{ "q": 0.1 , "inner": { "q":1 }, "@": { "q": 0.1 } } },
-  "files":{"this":"q-is-one.wcon", "@example": { "q":0.1 }}
+  "files":{"current":"q-is-one.wcon", "@example": { "q":0.1 }},
   "@example": { "q":0.1 },
   "comments":[
     "This field is ignored because it's not part of the specification.",
