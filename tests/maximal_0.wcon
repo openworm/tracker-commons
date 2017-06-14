@@ -1,1 +1,1 @@
-{"files":{"this":"_0", "prev":[], "next":["_1", "_2"]},"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]}]}
+{"files":{"current":"maximal_0.wcon", "prev":[], "next":["maximal_1.wcon","maximal_2.wcon"]},"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]}]}

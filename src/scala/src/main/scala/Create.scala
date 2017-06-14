@@ -29,7 +29,7 @@ object Create {
       building.copy(data = java.util.Arrays.copyOf(building.data, nData))
 
     def write()(implicit evU: U =:= YesUnits, evD: D =:= YesData, evF: F =:= YesFile): scala.util.Try[Unit] = scala.util.Try{
-      ReadWrite.write(result, building.files.lookup(0).get)
+      ReadWrite.write(result, building.files.current)
     }
 
     def setUnits(u: UnitMap)(implicit evD: D =:= YesData): MakeWcon[YesUnits, D, F] = {
@@ -92,16 +92,12 @@ object Create {
     }
     def setUnits()(implicit evD: D =:= YesData): MakeWcon[YesUnits, D, F] = setUnits(Map.empty[String, String]).right.get   // Always succeeds when no extras
 
-    def setFile(files: FileSet): MakeWcon[U, D, YesFile] = {
+    def setFiles(files: FileSet): MakeWcon[U, D, YesFile] = {
       stale = true
       new MakeWcon[U, D, YesFile](building.copy(files = files), nData)
     }
-    def setFile(file: java.io.File): MakeWcon[U, D, YesFile] = {
-      val fs = FileSet(Vector(file.getName), 0, Json.Obj.empty)
-      fs.setRootFile(file)
-      setFile(fs)
-    }
-    def setFile(file: String): MakeWcon[U, D, YesFile] = setFile(new java.io.File(file))
+    def setOnlyFile(file: String): MakeWcon[U, D, YesFile] = setFiles(FileSet(file))
+    def setOnlyFile(file: java.io.File): MakeWcon[U, D, YesFile] = setFiles(FileSet(file.getPath))
 
     def setMeta(meta: Metadata): MakeWcon[U, D, F] = { stale = true; new MakeWcon[U, D, F](building.copy(meta = meta), nData) }
     def setMeta(meta: MakeMeta[YesID]): MakeWcon[U, D, F] = setMeta(meta.result)

@@ -643,6 +643,9 @@ class WCONWorms():
         # CASE 1: NO "files" OBJECT, hence no multiple files.  We are done.
         if w_current.files is None:
             return w_current
+        elif ('next' not in w_current.files) and ('prev' not in w.current.files):
+            # CASE 2: "files" object exists but no prev/next, assume nothing is there
+            return w_current
         else:
             # The merge operations below will blast away the .files attribute
             # so we need to save a local copy
@@ -651,20 +654,20 @@ class WCONWorms():
         # OTHERWISE, CASE 2: MULTIPLE FILES
 
         # The schema guarantees that if "files" is present,
-        # "this", "prev" and "next" will exist.  Also, that "this" is not
+        # "current", will exist.  Also, that "current" is not
         # null and whose corresponding value is a string at least one
         # character in length.
-        cur_ext = current_files['this']
+        cur_ext = current_files['current']
 
         # e.g. cur_filename = 'filename_2.wcon'
         # cur_ext = '_2', prefix = 'filename', suffix = '.wcon'
         cur_filename = JSON_path
-        if cur_filename.find(cur_ext) == -1:
-            raise AssertionError('Cannot find the current extension "' +
-                                 cur_ext + '" within the current filename "' +
+        name_offset = cur_filename.find(cur_ext)
+        if name_offset == -1:
+            raise AssertionError('Mismatch between the filename given in the file "' +
+                                 cur_ext + '" and the file we loaded from "' +
                                  cur_filename + '".')
-        prefix = cur_filename[:cur_filename.find(cur_ext)]
-        suffix = cur_filename[cur_filename.find(cur_ext) + len(cur_ext):]
+        path_string = cur_filename[:name_offset]
 
         load_chunks = {'prev': load_prev_chunks,
                        'next': load_next_chunks}
@@ -675,12 +678,13 @@ class WCONWorms():
             # Same with the "next" chunks
             if (load_chunks[direction] and
                     current_files is not None and
-                    current_files[direction] is not None):
+                    current_files[direction] is not None and
+                    len(current_files[direction]) > 0):
                 cur_load_prev_chunks = (direction == 'prev')
                 cur_load_next_chunks = (direction == 'next')
 
-                new_file_name = (prefix + current_files[direction][0] +
-                                 suffix)
+                new_file_name = path_string + current_files[direction][0]
+
                 w_new = cls.load_from_file(new_file_name,
                                            cur_load_prev_chunks,
                                            cur_load_next_chunks,

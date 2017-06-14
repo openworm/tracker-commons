@@ -272,13 +272,13 @@ class TestWCONParser(unittest.TestCase):
             """
             {
                 "units":{"t":"s", "x":"mm", "y":"mm"},
-                "data":[{ "id":2, "t":1.4, "x":[125.11, 126.14, 117.12],
-                          "y":[23.3, 22.23, 21135.08] },
-                        { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12],
+                "data":[{ "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
+                          "y":[[23.3, 22.23, 21135.08]] },
+                        { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]] },
+                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[234.89, 265.23, 235.08] },
-                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12],
-                          "y":[234.89, 265.23, 235.08] },
-                        { "id":1, "t":[1.3,1.5],
+                        { "id":"1", "t":[1.3,1.5],
                           "x":[[],[1215.11, 1216.14, 1217.12]],
                           "y":[[],[234.89, 265.23, 235.08]] }
                 ]
@@ -296,99 +296,72 @@ class TestWCONParser(unittest.TestCase):
         os.remove(test_path)
 
     def test_data1(self):
-        # Single-valued 't' subelement should be fine
-        WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
-                                '"data":[{"id":3, "t":1.3, '
-                                '"x":[3,4], "y":[5.4,3]}]}'))
-
         # Two values for 'x' but four values for 'y': error
         with self.assertRaises(AssertionError):
             WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
-                                    '"data":[{"id":3, "t":1.3, '
-                                    '"x":[3,4], '
-                                    '"y":[5.4,3,1,-3]}]}'))
+                                    '"data":[{"id":"3", "t":[1.3], '
+                                    '"x":[[3,4]], '
+                                    '"y":[[5.4,3,1,-3]]}]}'))
 
         # Two values for 't' but 3 for 'x' and 'y': error
         with self.assertRaises(AssertionError):
             WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
-                                    '"data":[{"id":3, "t":[1.3,8], '
+                                    '"data":[{"id":"3", "t":[1.3,8], '
                                     '"x":[3,4,5], "y":[5.4,3,5]}]}'))
 
         # Duplicated segments are OK if there are no differences
         WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm"},'
-                '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
-                '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
+                '"data":[{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]},'
+                '{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]}]}'))
 
         # Duplicated time indices are OK if the earlier entry was for a
         # different worm
         WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm"},'
-                '"data":[{"id":2, "t":1.3, "x":[3,4], "y":[5.4,3]},'
-                '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
+                '"data":[{"id":"2", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]},'
+                '{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]}]}'))
 
         # Duplicated time indices are OK if the earlier entry had those entries
         # missing
         WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm"},'
-                '"data":[{"id":1, "t":1.3, "x":[null,null], "y":[null,null]},'
-                '{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
+                '"data":[{"id":"1", "t":[1.3], "x":[[null,null]], "y":[[null,null]]},'
+                '{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]}]}'))
 
         # Error if data from a later segment conflicts with earlier segments
         with self.assertRaises(AssertionError):
             WCONWorms.load(
                 StringIO(
                     '{"units":{"t":"s","x":"mm","y":"mm"},'
-                    '"data":[{"id":1, "t":1.3, "x":[3,4], "y":[5.4,3]},'
-                    '{"id":1, "t":1.3, "x":[3,4], "y":[5.5,3]}]}'))
+                    '"data":[{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]},'
+                    '{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.5,3]]}]}'))
 
     def test_origin_offset(self):
-        # ox, without optional bracket
+        # ox and oy
         w1 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
-                '"data":[{"id":1, "t":1.3, "ox":5000, "oy":0,'
-                '"x":[3,4], "y":[5.4,3]}]}'))
+                '"data":[{"id":"1", "t":[1.3], "ox":[-500], "oy":[4000], '
+                '"x":[[3,4]], "y":[[5.4,3]]}]}'))
         w2 = WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
-                                     '"data":[{"id":1, "t":1.3, '
-                                     '"x":[5003,5004], "y":[5.4,3]}]}'))
+                                     '"data":[{"id":"1", "t":[1.3], '
+                                     '"x":[[-497,-496]], "y":[[4005.4,4003]]}]}'))
         self.assertEqual(w1, w2)
 
-        # oy, with optional bracket
+        # ox with two time points
         w1 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
-                '"data":[{"id":1, "t":1.3, "ox":0, "oy":[4000], '
-                '"x":[3,4], "y":[5.4,3]}]}'))
-        w2 = WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
-                                     '"data":[{"id":1, "t":1.3, '
-                                     '"x":[3,4], "y":[4005.4,4003]}]}'))
-        self.assertEqual(w1, w2)
-
-        # ox and oy, without optional brackets
-        w1 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
-                '"data":[{"id":1, "t":1.3, "ox":-500, "oy":4000, '
-                '"x":[3,4], "y":[5.4,3]}]}'))
-        w2 = WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
-                                     '"data":[{"id":1, "t":1.3, '
-                                     '"x":[-497,-496], "y":[4005.4,4003]}]}'))
-        self.assertEqual(w1, w2)
-
-        # ox, with two time points
-        w1 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, "oy":0,'
+                '"data":[{"id":"1", "t":[1.3,1.4], "ox":[5000, 5000], "oy":[0, 0],'
                 '"x":[[3],[4]], "y":[[5.4],[3]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], '
+                '"data":[{"id":"1", "t":[1.3,1.4], '
                 '"x":[[5003],[5004]], "y":[[5.4],[3]]}]}'))
         self.assertEqual(w1, w2)
 
@@ -398,82 +371,33 @@ class TestWCONParser(unittest.TestCase):
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
                 '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "ox":0, "oy":5000, "cx":10, '
-                '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
+                '"data":[{"id":"1", "t":[1.3,1.4], "ox":[0,0], "oy":[5000,4990], '
+                '"cx":[10, 11], "cy":[13, 12], "x":[[3, 5],[4, 5]], "y":[[5.4, 4],[3, 2]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm",'
                 '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
-                '"x":[[-7],[-6]], "y":[[-4.6],[-7]]}]}'))
+                '"data":[{"id":"1", "t":[1.3,1.4], "cx":[10, 11], "cy":[5013, 5002], '
+                '"x":[[3, 5],[4, 5]], "y":[[5005.4, 5004],[4993, 4992]]}]}'))
         self.assertEqual(w1, w2)
 
-        # oy with no oxy: assertionerror
+        # oy with no oy: assertionerror
         with self.assertRaises(AssertionError):
             w1 = WCONWorms.load(
                 StringIO(
                     '{"units":{"t":"s","x":"mm","y":"mm","oy":"mm",'
                     '"cx":"mm","cy":"mm"},'
-                    '"data":[{"id":1, "t":[1.3,1.4], "oy":5000,'
-                    '"cx":10, "cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], '
+                    '"data":[{"id":"1", "t":[1.3,1.4], "oy":[5000, 5000],'
+                    '"cx":[10, 10], "cy":[10, 10], "x":[[3, 3, 3],[4, 4, 4.2]], '
                     '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
-
-        # ox, with two time frames, three articulation points, with centroid
-        w1 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "ox":0, "oy":5000, "cx":10, '
-                '"cy":10, "x":[[3, 3, 3],[4, 4, 4.2]], '
-                '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
-        w2 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":5010, '
-                '"x":[[-7,-7,-7],[-6,-6,-5.8]], '
-                '"y":[[-4.6,-4.6,-4.5],[-7,-7,-3]]}]}'))
-
-        self.assertEqual(w1, w2)
-
-        # ox and centroid, different in different time frames
-        w1 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "ox": 0, '
-                '"oy":[5000, 1000], "cx":10, '
-                '"cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
-        w2 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":[5010, 1010], '
-                '"x":[[-7],[-6]], "y":[[-4.6],[-7.0]]}]}'))
-        self.assertEqual(w1, w2)
-
-        # ox and centroid, different in different time frames
-        w1 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "ox":0, "oy":[5000, 1000],'
-                '"cx":10, "cy":10, "x":[[3],[4]], "y":[[5.4],[3]]}]}'))
-        w2 = WCONWorms.load(
-            StringIO(
-                '{"units":{"t":"s","x":"mm","y":"mm",'
-                '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":1, "t":[1.3,1.4], "cx":10, "cy":[5010, 1010], '
-                '"x":[[-7],[-6]], "y":[[-4.6],[-7]]}]}'))
-        self.assertEqual(w1, w2)
 
         # units missing for centroid
         with self.assertRaises(AssertionError):
             WCONWorms.load(
                 StringIO(
                     '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
-                    '"data":[{"id":1, "t":[1.3,1.4], "ox":5000, "oy":0,'
-                    '         "cx":10, "cy":10, "x":[[3],[4]], '
+                    '"data":[{"id":"1", "t":[1.3,1.4], "ox":[5, 5], "oy":[0, 0],'
+                    '         "cx":[10, 10], "cy":[10, 10], "x":[[3],[4]], '
                     '         "y":[[5.4],[3]]}]}'))
 
     def test_merge(self):
@@ -499,10 +423,10 @@ class TestWCONParser(unittest.TestCase):
     def test_merge_commutativity(self):
         worm1 = WCONWorms.load(
             StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
-                     '"data":[{"id":3, "t":1.3, "x":[3,4], "y":[5.4,3]}]}'))
+                     '"data":[{"id":"3", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]}]}'))
         worm2 = WCONWorms.load(
             StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, '
-                     '"data":[{"id":4, "t":1.5, "x":[5,2], "y":[1.4,6]}]}'))
+                     '"data":[{"id":"4", "t":[1.5], "x":[[5,2]], "y":[[1.4,6]]}]}'))
 
         merged = worm1 + worm2
         # merged.save_to_file('pythonMerged.wcon', pretty_print=True)
@@ -518,13 +442,13 @@ class TestWCONParser(unittest.TestCase):
             """
             {
                 "units":{"t":"s", "x":"mm", "y":"mm"},
-                "data":[{ "id":2, "t":1.4, "x":[125.11, 126.14, 117.12],
-                          "y":[23.3, 22.23, 21135.08] },
-                        { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12],
-                          "y":[234.89, 265.23, 235.08] },
-                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12],
-                          "y":[234.89, 265.23, 235.08] },
-                        { "id":1, "t":[1.3,1.5],
+                "data":[{ "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
+                          "y":[[23.3, 22.23, 21135.08]] },
+                        { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]] },
+                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]] },
+                        { "id":"1", "t":[1.3,1.5],
                           "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
                           "y":[[2,2,2],[234.89, 265.23, 235.08]] }
                 ]
@@ -538,13 +462,13 @@ class TestWCONParser(unittest.TestCase):
             """
             {
                 "units":{"t":"s", "x":"mm", "y":"mm"},
-                "data":[{ "id":2, "t":1.4, "x":[125.11, 126.14, 117.12],
-                          "y":[23.3, 22.23, 21135.08] },
-                        { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12],
-                          "y":[234.89, 265.23, 235.08] },
-                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12],
-                          "y":[234.89, 265.23, 235.08], "ignorethat":"yes" },
-                        { "id":1, "t":[1.3,1.5], "ignorethis": 12,
+                "data":[{ "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
+                          "y":[[23.3, 22.23, 21135.08]] },
+                        { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]] },
+                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]], "ignorethat":"yes" },
+                        { "id":"1", "t":[1.3,1.5], "ignorethis": 12,
                           "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
                           "y":[[2,2,2],[234.89, 265.23, 235.08]] }
                 ]
@@ -559,15 +483,15 @@ class TestWCONParser(unittest.TestCase):
             """
             {
                 "units":{"t":"s", "x":"mm", "y":"mm"},
-                "data":[{ "id":1, "t":[1.3,1.5],
+                "data":[{ "id":"1", "t":[1.3,1.5],
                           "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
                           "y":[[2,2,2],[234.89, 265.23, 235.08]] },
-                        { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12],
-                          "y":[23.3, 22.23, 21135.08] },
-                         { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12],
-                          "y":[234.89, 265.23, 235.08] },
-                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12],
-                          "y":[234.89, 265.23, 235.08] }
+                        { "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
+                          "y":[[23.3, 22.23, 21135.08]] },
+                         { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]] },
+                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]] }
                 ]
             }
             """
@@ -579,16 +503,16 @@ class TestWCONParser(unittest.TestCase):
             """
             {
                 "units":{"t":"s", "x":"mm", "y":"mm", "ox":"mm", "oy":"mm"},
-                "data":[{ "id":1, "t":[1.3,1.5],
+                "data":[{ "id":"1", "t":[1.3,1.5],
                           "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
                           "y":[[2,2,2],[234.89, 265.23, 235.08]],
-                          "ox":5000, "oy":0 },
-                        { "id":2, "t":1.4, "x":[125.11, 126.14, 117.12],
-                          "y":[23.3, 22.23, 21135.08] },
-                        { "id":1, "t":1.4, "x":[1215.11, 1216.14, 1217.12],
-                          "y":[234.89, 265.23, 235.08]},
-                        { "id":2, "t":1.5, "x":[1215.11, 1216.14, 1217.12],
-                          "y":[234.89, 265.23, 235.08] }
+                          "ox":[5000, 5000], "oy":[0, 0] },
+                        { "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
+                          "y":[[23.3, 22.23, 21135.08]] },
+                        { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]]},
+                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]] }
                 ]
             }
             """
@@ -606,14 +530,13 @@ class TestWCONParser(unittest.TestCase):
                        "timestamp":"2012-04-23T18:25:43.511Z",
                        "temperature":23.8,
                        "humidity":40.3,
-                       "dish":{ "type":"petri", "size":35, "units":"mm" },
+                       "dish":{ "style":"petri", "size":35, "units":"mm" },
                        "food":"none",
                        "media":"agarose",
                        "sex":"hermaphrodite",
                        "stage":"adult",
                        "age":66.8,
                        "strain":"CB4856",
-                       "image_orientation":"imaged onto agar",
                        "protocol":"text description of protocol",
                        "software":{
                             "tracker":{"name":"Software Name",
@@ -626,7 +549,7 @@ class TestWCONParser(unittest.TestCase):
                 "units":{"t":"s", "x":"mm", "y":"mm", "humidity":"%",
                          "temperature":"C", "age":"h"},
                 "data":[
-                    { "id":1, "t":1.3, "x":[7.2, 5], "y":[0.5, 0.86] }
+                    { "id":"1", "t":[1.3], "x":[[7.2, 5]], "y":[[0.5, 0.86]] }
                 ]
             }
             """
@@ -640,19 +563,19 @@ class TestWCONParser(unittest.TestCase):
         Test that a badly specified "files" object will fail
 
         """
-        # "this":null should be disallowed by the schema
+        # "current":null should be disallowed by the schema
         worm_file_text1 = (
-            ('{"files":{"this":null, "prev":null, "next":["_1", "_2"]},'
-             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
-             '"x":[3,4], "y":[5.4,3]}]}'))
+            ('{"files":{"current":null, "prev":null, "next":["_1", "_2"]},'
+             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], '
+             '"x":[[3,4]], "y":[[5.4,3]]}]}'))
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorms.load(StringIO(worm_file_text1))
 
-        # "this":"" should be disallowed by the schema
+        # missing "current" should be disallowed by the schema
         worm_file_text2 = (
-            ('{"files":{"this":"", "prev":null, "next":["_1", "_2"]},'
-             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
-             '"x":[3,4], "y":[5.4,3]}]}'))
+            ('{"files":{"prev":null, "next":["_1", "_2"]},'
+             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], '
+             '"x":[[3,4]], "y":[[5.4,3]]}]}'))
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorms.load(StringIO(worm_file_text2))
 
@@ -662,8 +585,8 @@ class TestWCONParser(unittest.TestCase):
 
         """
         worm_file_text3 = (
-            ('{"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
-             '"x":[3,4], "y":[5.4,3]}]}'))
+            ('{"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], '
+             '"x":[[3,4]], "y":[[5.4,3]]}]}'))
 
         # STREAM
         worm_from_stream = WCONWorms.load(StringIO(worm_file_text3))
@@ -685,18 +608,18 @@ class TestWCONParser(unittest.TestCase):
         # Define our chunks
         chunks = []
         chunks.append(
-            ('{"files":{"this":"_0", "prev":null, "next":["_1", "_2"]},'
-             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":3, "t":1.3, '
-             '"x":[3,4], "y":[5.4,3]}]}'))
+            ('{"files":{"current":"0.wcon", "prev":null, "next":["1.wcon", "2.wcon"]},'
+             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], '
+             '"x":[[3,4]], "y":[[5.4,3]]}]}'))
         chunks.append(('{"units":{"t":"s","x":"mm","y":"mm"},'
-                       '"files":{"this":"_1", "prev":["_0"], "next":["_2"]},'
-                       '"data":[{"id":3, "t":1.4, '
-                       '"x":[5,1], "y":[15.4,3]}]}'))
+                       '"files":{"current":"1.wcon", "prev":["0.wcon"], "next":["2.wcon"]},'
+                       '"data":[{"id":"3", "t":[1.4], '
+                       '"x":[[5,1]], "y":[[15.4,3]]}]}'))
         chunks.append(
             ('{"units":{"t":"s","x":"mm","y":"mm"},'
-             '"files":{"this":"_2", "prev":["_1", "_0"], "next":null},'
-             '"data":[{"id":3, "t":1.5, '
-             '"x":[8,4.2], "y":[35.4,3]}]}'))
+             '"files":{"current":"2.wcon", "prev":["1.wcon", "0.wcon"], "next":null},'
+             '"data":[{"id":"3", "t":[1.5], '
+             '"x":[[8,4.2]], "y":[[35.4,3]]}]}'))
 
         # Create filenames for our chunks
         chunk_filenames = [''] * len(chunks)

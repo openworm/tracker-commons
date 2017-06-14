@@ -470,65 +470,69 @@ class Wcon(
   myMeta: Metadata,
   myDatas: Array[Data],
   val units: original.UnitMap,
-  myPreviousFiles: Array[String],
-  myNextFiles: Array[String],
   myOwnFile: String,
+  myNextFiles: Array[String],
+  myPreviousFiles: Array[String],
   myFileCustom: Json.Obj,
   myCustom: Json.Obj
 ) {
   /** The metadata associated with the experiment */
   def meta: Metadata = myMeta
   /** Sets the metadata for this experiment (returns a new copy) */
-  def meta(m: Metadata): Wcon = new Wcon(m, myDatas, units, myPreviousFiles, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def meta(m: Metadata): Wcon = new Wcon(m, myDatas, units, myOwnFile, myNextFiles, myPreviousFiles, myFileCustom, myCustom)
 
   /** The array of data associated with the experiment */
   def datas: Array[Data] = myDatas
   /** Sets the array of data associated with the experiment (returns a new copy) */
-  def datas(ds: Array[Data]): Wcon = new Wcon(myMeta, ds, units, myPreviousFiles, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def datas(ds: Array[Data]): Wcon = new Wcon(myMeta, ds, units, myOwnFile, myNextFiles, myPreviousFiles, myFileCustom, myCustom)
   /** Adds data for a single tracked object to the experiment (returns a new copy) */
-  def addData(d: Data): Wcon = new Wcon(myMeta, myDatas :+ d, units, myPreviousFiles, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def addData(d: Data): Wcon = new Wcon(myMeta, myDatas :+ d, units, myOwnFile, myNextFiles, myPreviousFiles, myFileCustom, myCustom)
 
   /** The names of files in the same experiment gathered before this one (most recent first) */
   def previousFiles = myPreviousFiles
   /** Set the names of files in the same experiment that were before this one (returns a new copy) */
-  def previousFiles(pf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, pf, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def previousFiles(pf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles, pf, myFileCustom, myCustom)
   /** Adds a new oldest previous file to the list (returns a new copy) */
-  def addPreviousFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles :+ f, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def addPreviousFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles, myPreviousFiles :+ f, myFileCustom, myCustom)
 
   /** The names of files in the same experiment gathered after this one (next one first) */
   def nextFiles = myNextFiles
   /** Set the names of files in the same experiment that were after this one (returns a new copy) */
-  def nextFiles(nf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, nf, myOwnFile, myFileCustom, myCustom)
+  def nextFiles(nf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, nf, myPreviousFiles, myFileCustom, myCustom)
   /** Adds a new next file after all the others (returns a new copy) */
-  def addNextFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles :+ f, myOwnFile, myFileCustom, myCustom)
+  def addNextFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles :+ f, myPreviousFiles, myFileCustom, myCustom)
 
   /** The name of this file (or the portion used to discriminate this from other files in the experiment) */
   def myFile: String = myOwnFile
   /** Sets the name of this file */
-  def myFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles, f, myFileCustom, myCustom)
+  def myFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, f, myNextFiles, myPreviousFiles, myFileCustom, myCustom)
 
   /** Custom information about the files in this experiment (as a Json.Obj) */
   def fileCustom = myFileCustom
   /** Sets custom information about files in this experiment (returns a new copy) */
-  def fileCustom(fc: Json.Obj): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles, myOwnFile, fc, myCustom)
+  def fileCustom(fc: Json.Obj): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles, myPreviousFiles, fc, myCustom)
 
   /** Custom information about this experiment (in a Json.Obj) */
   def custom = myCustom
   /** Sets the custom information about this experiment (returns a new copy) */
-  def custom(c: Json.Obj) = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles, myOwnFile, myFileCustom, c)
+  def custom(c: Json.Obj) = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles, myPreviousFiles, myFileCustom, c)
 
   /** Converts to standard Scala form for data */
-  def toUnderlying: original.DataSet = new original.DataSet(
-    meta.underlying,
-    units,
-    myDatas.map(_.toUnderlying),
-    original.FileSet(
-      previousFiles.reverse.toVector ++ (if (myFile.isEmpty) Vector() else Vector(myFile)) ++ nextFiles.toVector,
-      previousFiles.length,
-      myFileCustom
-    ),
-    myCustom
-  )
+  def toUnderlying: original.DataSet = {
+    val f = if (myFile eq null) null else new java.io.File(myFile)
+    new original.DataSet(
+      meta.underlying,
+      units,
+      myDatas.map(_.toUnderlying),
+      original.FileSet(
+        if (f eq null) "" else f.getName,
+        nextFiles,
+        previousFiles,
+        myFileCustom
+      ),
+      myCustom
+    )
+  }
 }
 object Wcon {
   /** An empty array of data */
@@ -537,7 +541,13 @@ object Wcon {
   val emptyStringArray = new Array[String](0)
 
   /** An empty experiment (no data, no metadata, no files, just a map for units) */
-  def empty = new Wcon(Metadata.empty, emptyDataArray, original.UnitMap.default, emptyStringArray, emptyStringArray, "", Json.Obj.empty, Json.Obj.empty)
+  def empty = new Wcon(
+    Metadata.empty,
+    emptyDataArray,
+    original.UnitMap.default,
+    "", emptyStringArray, emptyStringArray, Json.Obj.empty,
+    Json.Obj.empty
+  )
 
   /** Creates a view of this data set from a standard Scala data set.
     *
@@ -549,9 +559,9 @@ object Wcon {
       Metadata from u.meta,
       u.data.map{ da => Data from da },
       u.unitmap,
-      if (u.files.names.length > 0) u.files.names.take(u.files.index).reverse.toArray else emptyStringArray,
-      if (u.files.names.length > 0) u.files.names.drop(u.files.index+1).toArray else emptyStringArray,
-      u.files.me,
+      u.files.current,
+      u.files.next,
+      u.files.prev,
       u.files.custom,
       u.custom
     )
