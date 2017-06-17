@@ -87,6 +87,18 @@ class TestDocumentationExamples(unittest.TestCase):
 
 class TestMeasurementUnit(unittest.TestCase):
 
+    def test_custom_units(self):
+        # Custom units are new to Python WCON version 1.2.  Any unit prefixed
+        # by @ is not further processed, but simply accepted as-is.
+        # operations on such MUs raise an exception.
+        MU = MeasurementUnit
+        self.assertTrue(MU.create())
+        mu = MeasurementUnit.create('@counts')
+        self.assertTrue(mu.to_canon(1.6) == 1.6)
+        MeasurementUnit.create('@intensity')
+        MeasurementUnit.create('@degrees')
+        MeasurementUnit.create('@radians')
+
     def test_units_with_numbers(self):
         MU = MeasurementUnit
         self.assertTrue(MU.create('0.04*s').to_canon(1) == 0.04)

@@ -194,4 +194,13 @@ You can also check the equality of various unit expressions.  For example, all o
     MeasurementUnit.create('mm') == MeasurementUnit.create('millimetre')
     MeasurementUnit.create('Mm') == MeasurementUnit.create('megametre')
     MeasurementUnit.create('mm') != MeasurementUnit.create('Mm')
-  
+
+SI and non-SI units not in the WCON specification are also permitted; they must be prefixed by "@".  No further processing is performed on such units ("to_canon" always returns the same unit string).
+
+    MeasurementUnit.create('@counts')
+    MeasurementUnit.create('@intensity')
+    MeasurementUnit.create('@degrees')
+    MeasurementUnit.create('@radians')
+
+
+
