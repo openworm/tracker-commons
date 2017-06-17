@@ -267,6 +267,13 @@ class TestWCONParser(unittest.TestCase):
                                 '"software":[{"name":"a"}, '
                                 '{"name":"b"}]} }'))
 
+        # With "settings" field
+        WCONWorms.load(StringIO('{ "units":{"t":"s", "x":"mm", "y":"mm"}, '
+                                '"data":[], "metadata":{'
+                                '"software":[{"name":"a", "settings": '
+                                '{"h": 5}}, {"name":"b"}]} }'))
+
+
     def test_empty_aspect_size(self):
         # Worms with a segment that is empty should still parse without issue.
         WCON_string = \
