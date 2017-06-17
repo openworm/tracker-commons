@@ -242,8 +242,9 @@ class TestWCONParser(unittest.TestCase):
             # "ValueError: Expecting ',' delimiter: line 1 column 25 (char 24)"
             WCONWorms.load(StringIO('{"lalala":blahblah}'))
 
+        # The shortest possible WCON-compliant
         WCONWorms.load(
-            StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, "data":[]}'))
+            StringIO('{"units":{"t":"s","x":"mm","y":"mm"},"data":[]}'))
 
         # This should fail because "units" is required
         with self.assertRaises(jsonschema.exceptions.ValidationError):
@@ -553,7 +554,7 @@ class TestWCONParser(unittest.TestCase):
                        "timestamp":"2012-04-23T18:25:43.511Z",
                        "temperature":23.8,
                        "humidity":40.3,
-                       "dish":{ "style":"petri", "size":35, "units":"mm" },
+                       "arena":{ "style":"petri", "size":35, "units":"mm" },
                        "food":"none",
                        "media":"agarose",
                        "sex":"hermaphrodite",
@@ -579,7 +580,7 @@ class TestWCONParser(unittest.TestCase):
         w1 = WCONWorms.load(StringIO(WCON_string1))
 
         self.assertEqual(w1.metadata["strain"], "CB4856")
-        self.assertEqual(w1.metadata["dish"]["size"], 35)
+        self.assertEqual(w1.metadata["arena"]["size"], 35)
 
     def test_bad_files_object(self):
         """
