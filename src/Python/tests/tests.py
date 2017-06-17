@@ -676,6 +676,23 @@ class TestWCONParser(unittest.TestCase):
         for chunk_filename in chunk_filenames:
             os.remove(chunk_filename)
 
+    def test_offset_example_files(self):
+        """
+
+        All four .wcon test files starting with 'offset_' should represent
+        the same spine points.
+        """
+        offset_files = ['offset_and_centroid', 'offset_no_centroid_yes',
+                        'offset_none', 'offset_only'] 
+        
+        worm_list = [WCONWorms.load_from_file('../../../tests/%s.wcon' % f) 
+                     for f in offset_files]
+
+        # Assume neither commutativity nor transitivity, nor even identity
+        # i.e. test all worms against all others
+        for worm_pair in [(wA, wB) for wA in worm_list for wB in worm_list]:
+            self.assertEqual(worm_pair[0], worm_pair[1])
+
     # @unittest.skip("DEBUG: to see if tests pass if we skip these")
     def test_data3(self):
         pass
