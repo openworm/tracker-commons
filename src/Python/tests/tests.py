@@ -14,6 +14,7 @@ import filecmp
 import glob
 import collections
 import shutil
+from scipy.constants import pi
 
 sys.path.append('..')
 from wcon import WCONWorms, MeasurementUnit
@@ -87,17 +88,24 @@ class TestDocumentationExamples(unittest.TestCase):
 
 class TestMeasurementUnit(unittest.TestCase):
 
+    def test_dimensionless_units(self):
+        MU = MeasurementUnit
+        self.assertTrue(MU.create('%').canonical_unit_string == '')
+        self.assertTrue(MU.create('%').to_canon(40) == 0.4)
+        self.assertTrue(MU.create('%').from_canon(15) == 1500.0)
+        self.assertTrue(MU.create('').to_canon(40) == 40)
+        # Blank, dimensionless units are also allowed
+        MU.create('')
+
     def test_custom_units(self):
         # Custom units are new to Python WCON version 1.2.  Any unit prefixed
         # by @ is not further processed, but simply accepted as-is.
         # operations on such MUs raise an exception.
         MU = MeasurementUnit
-        self.assertTrue(MU.create())
         MU.create('@intensity')
-        MU.create('@degrees')
-        MU.create('@radians')
+        self.assertTrue(MU.create('@aa').canonical_unit_string == '@aa')
         self.assertTrue(MU.create('@counts').to_canon(4) == 4)
-        self.assertTrue(MU.create('@radians').from_canon(232.0) == 232.0)
+        self.assertTrue(MU.create('@alpacas').from_canon(232.0) == 232.0)
         with self.assertRaises(AssertionError):
             MU.create('dfwe@liejfwe')
         with self.assertRaises(AssertionError):
@@ -106,6 +114,13 @@ class TestMeasurementUnit(unittest.TestCase):
             MU.create('alielf')
         with self.assertRaises(ValueError):
             MU.create('@wef') * MU.create('2')
+
+    def test_angular_units(self):
+        # Degrees and radians are now first-class units as of Python WCON 1.2
+        MU = MeasurementUnit
+        self.assertTrue(MU.create('degrees').from_canon(2*pi) == 360)
+        self.assertTrue(MU.create('radians').from_canon(2*pi) == 2*pi)
+        self.assertTrue(MU.create('rad').from_canon(0) == 0)
 
     def test_units_with_numbers(self):
         MU = MeasurementUnit

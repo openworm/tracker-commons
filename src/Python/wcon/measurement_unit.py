@@ -21,7 +21,7 @@ Two classes:  (only the second of which is generally public-facing)
 import six
 import ast
 import operator as op
-from scipy.constants import F2C, K2C, C2F, C2K
+from scipy.constants import F2C, K2C, C2F, C2K, pi
 
 
 def C2C(x):
@@ -39,6 +39,7 @@ class MeasurementUnitAtom():
     Provides methods to convert to and from the canonical representation:
         Temporal data: seconds ('s')
         Spatial data: millimetres ('mm')
+        Angular data: radians ('r')
         Temperature data: degrees Celsius ('C')
         Dimensionless data: (no units) ('')
 
@@ -121,6 +122,9 @@ class MeasurementUnitAtom():
         'day': 60 * 60 * 24,
         'days': 60 * 60 * 24}
 
+    angular_units = {'radians': 1, 'rad': 1, 'r': 1,
+                     'degrees': pi/180}
+
     spatial_units = {'in': 0.0254, 'inch': 0.0254, 'inches': 0.0254,
                      'm': 1, 'metre': 1, 'meter': 1, 'metres': 1, 'meters': 1,
                      'micron': 1e-6, 'microns': 1e-6}
@@ -139,14 +143,15 @@ class MeasurementUnitAtom():
                          'centigrade': (C2C, C2C)}
 
     unit_types = {'m': 'spatial', 's': 'temporal', 'C': 'temperature',
-                  '': 'dimensionless'}
+                  '': 'dimensionless', 'r': 'angular'}
 
     def __init__(self, unit_string):
         """
         Canonical units:
            time: 's',
            space: 'mm',
-           temperature: 'C'
+           temperature: 'C',
+           angular: 'r'
 
         """
         # Reversing the kludge to fix that ast can't handle the reserved
@@ -155,13 +160,15 @@ class MeasurementUnitAtom():
 
         # The '@' prefix means we should not further process the unit;
         # it's just a custom unit and so it's already in canonical form.
-        if self.unit_string[0] == '@':
+        if len(self.unit_string) >= 1 and self.unit_string[0] == '@':
             self.prefix = ''
-            self.suffix = ''
+            self.suffix = self.unit_string
+            # This will just yield a d
             self.canonical_prefix = ''
-            self.canonical_suffix = ''
+            self.canonical_suffix = self.unit_string
             self.to_canon = lambda x: x
             self.from_canon = lambda x: x
+            
         elif '@' in self.unit_string:
             # Having '@' after the first character will raise a SyntaxError
             # when parsing in ast, but we'd like to raise an AssertionError
@@ -267,6 +274,16 @@ class MeasurementUnitAtom():
             def from_canon_func(x):
                 return x / self.spatial_units[self.suffix]
 
+        elif self.suffix in list(self.angular_units.keys()):
+            self.canonical_prefix = ''
+            self.canonical_suffix = 'r'
+
+            def to_canon_func(x):
+                return x * self.angular_units[self.suffix]
+
+            def from_canon_func(x):
+                return x / self.angular_units[self.suffix]
+
         elif self.suffix in list(self.temperature_units.keys()):
             self.canonical_prefix = ''
             self.canonical_suffix = 'C'
@@ -278,6 +295,7 @@ class MeasurementUnitAtom():
                 return self.temperature_units[self.suffix][1](x)
 
         else:
+            # Dimensionless units (other than custom units)
             self.canonical_prefix = ''
             self.canonical_suffix = ''
 
@@ -379,6 +397,7 @@ class MeasurementUnitAtom():
         except AttributeError:
             self._all_suffixes = (list(self.temporal_units.keys()) +
                                   list(self.spatial_units.keys()) +
+                                  list(self.angular_units.keys()) +
                                   list(self.temperature_units.keys()) +
                                   list(self.dimensionless_units.keys()))
 
@@ -396,7 +415,7 @@ class MeasurementUnitAtom():
     @property
     def canonical_unit_string(self):
         """
-        Return one of 's', 'mm', 'C', or '' (for dimensionless)
+        Return one of 's', 'mm', 'C', 'r', or '' (for dimensionless)
 
         """
         return self.canonical_prefix + self.canonical_suffix
@@ -468,16 +487,25 @@ class MeasurementUnit():
                         op.pow: '**',
                         op.pos: '', op.neg: '-'}
 
-    unit_types = {'m': 'spatial', 's': 'temporal', 'C': 'temperature',
-                  '': 'dimensionless'}
-
     def __repr__(self):
         """
         Pretty-print a nice summary of this unit.
 
         """
-        return ("||MeasurementUnit. original form '" + self.unit_string +
-                "' canonical form '" + self.canonical_unit_string + "'||")
+        unit_types = MeasurementUnitAtom.unit_types
+        # Special case: the one canonical unit that is not also a
+        # MeasurementUnitAtom
+        unit_types['mm'] = 'spatial'
+
+        repr_str = "||MeasurementUnit. "
+        # If it's not a composite unit, we can also give the unit type:
+        if self.canonical_unit_string in unit_types:
+            unit_type = unit_types[self.canonical_unit_string]
+            repr_str += "unit type %s " % unit_type
+        repr_str += ("original form '" + self.unit_string +
+                    "' canonical form '" + self.canonical_unit_string + "'||")
+        
+        return repr_str
 
     @property
     def unit_string(self):
@@ -531,14 +559,14 @@ class MeasurementUnit():
         # Ensure that unit_string is str in Python 3 or unicode in Python 2.
         assert(isinstance(unit_string, six.text_type))
 
-        # Do not attempt further processing with custom units
-        if unit_string[0] == '@':
-            return cls._create_from_atomic(unit_string)
-
         # ast can't handle parsing '', so just create the end product
         # ourselves
         if unit_string == '':
             return cls._create_from_atomic('')
+
+        # Do not attempt further processing with custom units
+        if unit_string[0] == '@':
+            return cls._create_from_atomic(unit_string)
 
         # ast can't handle treating '%' as a leaf node to be sent to
         # MeasurementUnitAtom's initializer. So we make the substitution
