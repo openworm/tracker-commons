@@ -279,6 +279,8 @@ The following units should be handled (including both variants of meter/metre an
 | centigrade | C             |
 | kelvin     | K             |
 | celsius    | C             |
+| degrees    | *(none)*      |
+| radians    | r rad         |
 | percent    | %             |
 
 Abbreviated and full versions must not be mixed.  For instance, both `"ms"` and `"milliseconds"` are okay, but `"msecond"` and `"millis"` are not.  Words may be pluralized or not.  Capitalization is significant: `"mm"` and `"Mm"` are not the same (millimetre vs megametre)!
