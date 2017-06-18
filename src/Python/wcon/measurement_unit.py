@@ -153,14 +153,32 @@ class MeasurementUnitAtom():
         # word 'in'; see MeasurementUnit.create below for more details
         self.unit_string = unit_string.replace('_in', 'in')
 
-        # Parse the string into a valid prefix and suffix
-        self.prefix, self.suffix = self._parse_unit_string(self.unit_string)
-
-        # Validate that our prefix and suffix don't mix abbreviations and
-        # long form, which is forbidden by the WCON specification
-        self._validate_no_mixed_abbreviations()
-
-        self._obtain_canonical_representation()
+        # The '@' prefix means we should not further process the unit;
+        # it's just a custom unit and so it's already in canonical form.
+        if self.unit_string[0] == '@':
+            self.prefix = ''
+            self.suffix = ''
+            self.canonical_prefix = ''
+            self.canonical_suffix = ''
+            self.to_canon = lambda x: x
+            self.from_canon = lambda x: x
+        elif '@' in self.unit_string:
+            # Having '@' after the first character will raise a SyntaxError
+            # when parsing in ast, but we'd like to raise an AssertionError
+            # to be consistent with other invalid units so
+            # 'welfijw' and 'wefw@wfw' raise the same type of error.
+            raise AssertionError("Error: '" + unit_string + "' is not a "
+                                 "valid unit")            
+        else:
+            # Parse the string into a valid prefix and suffix
+            self.prefix, self.suffix = self._parse_unit_string(
+                                                            self.unit_string)
+    
+            # Validate that our prefix and suffix don't mix abbreviations and
+            # long form, which is forbidden by the WCON specification
+            self._validate_no_mixed_abbreviations()
+    
+            self._obtain_canonical_representation()
 
     @property
     def unit_type(self):
@@ -513,6 +531,10 @@ class MeasurementUnit():
         # Ensure that unit_string is str in Python 3 or unicode in Python 2.
         assert(isinstance(unit_string, six.text_type))
 
+        # Do not attempt further processing with custom units
+        if unit_string[0] == '@':
+            return cls._create_from_atomic(unit_string)
+
         # ast can't handle parsing '', so just create the end product
         # ourselves
         if unit_string == '':
@@ -644,6 +666,10 @@ class MeasurementUnit():
         # use MeasurementUnit.create('m**2')
         assert(isinstance(l, cls))
         assert(isinstance(r, cls))
+        
+        if l.unit_string[0] == '@' or r.unit_string[0] == '@':
+            raise ValueError("Binary operations on custom units are not "
+                             "allowed.")
 
         # NOTE: This won't work with affine functions.  We should probably
         # raise an Assertion if there is a temperature somewhere in the mix.

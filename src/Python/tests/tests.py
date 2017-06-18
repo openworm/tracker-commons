@@ -93,11 +93,19 @@ class TestMeasurementUnit(unittest.TestCase):
         # operations on such MUs raise an exception.
         MU = MeasurementUnit
         self.assertTrue(MU.create())
-        mu = MeasurementUnit.create('@counts')
-        self.assertTrue(mu.to_canon(1.6) == 1.6)
-        MeasurementUnit.create('@intensity')
-        MeasurementUnit.create('@degrees')
-        MeasurementUnit.create('@radians')
+        MU.create('@intensity')
+        MU.create('@degrees')
+        MU.create('@radians')
+        self.assertTrue(MU.create('@counts').to_canon(4) == 4)
+        self.assertTrue(MU.create('@radians').from_canon(232.0) == 232.0)
+        with self.assertRaises(AssertionError):
+            MU.create('dfwe@liejfwe')
+        with self.assertRaises(AssertionError):
+            MU.create('alielf')
+        with self.assertRaises(AssertionError):
+            MU.create('alielf')
+        with self.assertRaises(ValueError):
+            MU.create('@wef') * MU.create('2')
 
     def test_units_with_numbers(self):
         MU = MeasurementUnit
