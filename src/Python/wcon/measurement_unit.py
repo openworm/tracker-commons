@@ -123,7 +123,7 @@ class MeasurementUnitAtom():
         'days': 60 * 60 * 24}
 
     angular_units = {'radians': 1, 'rad': 1, 'r': 1,
-                     'degrees': pi/180}
+                     'degrees': pi / 180}
 
     spatial_units = {'in': 0.0254, 'inch': 0.0254, 'inches': 0.0254,
                      'm': 1, 'metre': 1, 'meter': 1, 'metres': 1, 'meters': 1,
@@ -168,16 +168,16 @@ class MeasurementUnitAtom():
             self.canonical_suffix = self.unit_string
             self.to_canon = lambda x: x
             self.from_canon = lambda x: x
-            
+
         else:
             # Parse the string into a valid prefix and suffix
             self.prefix, self.suffix = self._parse_unit_string(
-                                                            self.unit_string)
-    
+                self.unit_string)
+
             # Validate that our prefix and suffix don't mix abbreviations and
             # long form, which is forbidden by the WCON specification
             self._validate_no_mixed_abbreviations()
-    
+
             self._obtain_canonical_representation()
 
     @property
@@ -430,6 +430,7 @@ class MeasurementUnitAtom():
     def __ne__(self, other):
         return not self.__eq__(other)
 
+
 """
 ###############################################################################
 ###############################################################################
@@ -496,8 +497,8 @@ class MeasurementUnit():
             unit_type = unit_types[self.canonical_unit_string]
             repr_str += "unit type %s " % unit_type
         repr_str += ("original form '" + self.unit_string +
-                    "' canonical form '" + self.canonical_unit_string + "'||")
-        
+                     "' canonical form '" + self.canonical_unit_string + "'||")
+
         return repr_str
 
     @property
@@ -566,7 +567,7 @@ class MeasurementUnit():
             # to be consistent with other invalid units so
             # 'welfijw' and 'wefw@wfw' raise the same type of error.
             raise AssertionError("Error: '" + unit_string + "' is not a "
-                                 "valid unit")            
+                                 "valid unit")
 
         # ast can't handle treating '%' as a leaf node to be sent to
         # MeasurementUnitAtom's initializer. So we make the substitution
@@ -694,7 +695,7 @@ class MeasurementUnit():
         # use MeasurementUnit.create('m**2')
         assert(isinstance(l, cls))
         assert(isinstance(r, cls))
-        
+
         if l.unit_string[0] == '@' or r.unit_string[0] == '@':
             raise ValueError("Binary operations on custom units are not "
                              "allowed.")

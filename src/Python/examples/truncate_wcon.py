@@ -15,10 +15,10 @@ w = WCONWorms.load_from_file(file_name)
 w.data_as_odict['1'] = w.data_as_odict['1'].ix[0:10]
 
 # Grab the first 10 frames (doesn't work since the first 3885 frames are NaN)
-#w.data_as_odict['1'] = w.data_as_odict['1'].iloc[:10]
+# w.data_as_odict['1'] = w.data_as_odict['1'].iloc[:10]
 
-# View the experiment data as a CSV (so it can be loaded in Excel, for instance)
-#w.data_as_odict['1'].to_csv('bbb.csv')
+# View the experiment data as a CSV (e.g. so it can be loaded in Excel)
+# w.data_as_odict['1'].to_csv('bbb.csv')
 
 # Save the smaller file
 w.save_to_file('smaller.wcon', pretty_print=True)

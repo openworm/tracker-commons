@@ -118,8 +118,8 @@ class TestMeasurementUnit(unittest.TestCase):
     def test_angular_units(self):
         # Degrees and radians are now first-class units as of Python WCON 1.2
         MU = MeasurementUnit
-        self.assertTrue(MU.create('degrees').from_canon(2*pi) == 360)
-        self.assertTrue(MU.create('radians').from_canon(2*pi) == 2*pi)
+        self.assertTrue(MU.create('degrees').from_canon(2 * pi) == 360)
+        self.assertTrue(MU.create('radians').from_canon(2 * pi) == 2 * pi)
         self.assertTrue(MU.create('rad').from_canon(0) == 0)
 
     def test_units_with_numbers(self):
@@ -308,7 +308,6 @@ class TestWCONParser(unittest.TestCase):
                                 '"software":[{"name":"a", "settings": '
                                 '{"h": 5}}, {"name":"b"}]} }'))
 
-
     @unittest.skip("Skip this for now")
     def test_empty_aspect_size(self):
         # Worms with a segment that is empty should still parse without issue.
@@ -374,7 +373,7 @@ class TestWCONParser(unittest.TestCase):
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm"},'
                 '"data":[{"id":"1", "t":[1.3], "x":[[null,null]],'
-                                              '"y":[[null,null]]},'
+                '"y":[[null,null]]},'
                 '{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]}]}'))
 
         # Error if data from a later segment conflicts with earlier segments
@@ -403,7 +402,7 @@ class TestWCONParser(unittest.TestCase):
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
                 '"data":[{"id":"1", "t":[1.3,1.4], "ox":[5000, 5000],'
-                                                  '"oy":[0, 0],'
+                '"oy":[0, 0],'
                 '"x":[[3],[4]], "y":[[5.4],[3]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
@@ -430,7 +429,6 @@ class TestWCONParser(unittest.TestCase):
                     '"data":[{"id":"1", "t":[1.3,1.4], "ox":[5000], "oy":[0],'
                     '"x":[[3],[4]], "y":[[5.4],[3]]}]}'))
 
-
     @unittest.skip("Skip this for now")
     def test_centroid(self):
         # ox, with two time frames, with centroid
@@ -439,15 +437,15 @@ class TestWCONParser(unittest.TestCase):
                 '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
                 '"cx":"mm","cy":"mm"},'
                 '"data":[{"id":"1", "t":[1.3,1.4], "ox":[0,0],'
-                                                  '"oy":[5000,4990], '
+                '"oy":[5000,4990], '
                 '"cx":[10, 11], "cy":[13, 12], "x":[[3, 5],[4, 5]],'
-                                              '"y":[[5.4, 4],[3, 2]]}]}'))
+                '"y":[[5.4, 4],[3, 2]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm",'
                 '"cx":"mm","cy":"mm"},'
                 '"data":[{"id":"1", "t":[1.3,1.4], "cx":[10, 11],'
-                                                  '"cy":[5013, 5002], '
+                '"cy":[5013, 5002], '
                 '"x":[[3, 5],[4, 5]], "y":[[5005.4, 5004],[4993, 4992]]}]}'))
         self.assertEqual(w1, w2)
 
@@ -495,11 +493,11 @@ class TestWCONParser(unittest.TestCase):
         worm1 = WCONWorms.load(
             StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
                      '"data":[{"id":"3", "t":[1.3], "x":[[3,4]], '
-                                                   '"y":[[5.4,3]]}]}'))
+                     '"y":[[5.4,3]]}]}'))
         worm2 = WCONWorms.load(
             StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, '
                      '"data":[{"id":"4", "t":[1.5], "x":[[5,2]], '
-                                                   '"y":[[1.4,6]]}]}'))
+                     '"y":[[1.4,6]]}]}'))
 
         merged = worm1 + worm2
         # merged.save_to_file('pythonMerged.wcon', pretty_print=True)
@@ -510,10 +508,9 @@ class TestWCONParser(unittest.TestCase):
         self.assertNotEqual(worm1, worm2)
         self.assertEqual(merged, merged2)
 
-        
     def test_merge_user_defined_constants(self):
         """ This example is pulled right from the specification"""
-        
+
         w1 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s", "x":"mm", "y":"mm", "@XJ z":"mm"},'
@@ -531,8 +528,7 @@ class TestWCONParser(unittest.TestCase):
                 '"@XJ f":["salmon", "salmon", "cod", "cod", "cod"]}]}'))
 
         self.assertEqual(w1, w2)
-        
-        
+
     def test_data2(self):
         WCON_string = \
             """
@@ -562,10 +558,10 @@ class TestWCONParser(unittest.TestCase):
                 "units":{"t":"s", "x":"mm", "y":"mm"},
                 "data":[{ "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
                           "y":[[23.3, 22.23, 21135.08]] },
-                        { "id":"1", "t":[1.4], 
+                        { "id":"1", "t":[1.4],
                           "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[[234.89, 265.23, 235.08]] },
-                        { "id":"2", "t":[1.5], 
+                        { "id":"2", "t":[1.5],
                           "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[[234.89, 265.23, 235.08]], "ignorethat":"yes"},
                         { "id":"1", "t":[1.3,1.5], "ignorethis": 12,
@@ -718,19 +714,19 @@ class TestWCONParser(unittest.TestCase):
         chunks = []
         chunks.append(
             ('{"files":{"current":"0.wcon", "prev":null,'
-                                           '"next":["1.wcon", "2.wcon"]},'
+             '"next":["1.wcon", "2.wcon"]},'
              '"units":{"t":"s","x":"mm","y":"mm"},'
              '"data":[{"id":"3", "t":[1.3], '
              '"x":[[3,4]], "y":[[5.4,3]]}]}'))
         chunks.append(('{"units":{"t":"s","x":"mm","y":"mm"},'
                        '"files":{"current":"1.wcon", "prev":["0.wcon"],'
-                                                    '"next":["2.wcon"]},'
+                       '"next":["2.wcon"]},'
                        '"data":[{"id":"3", "t":[1.4], '
                        '"x":[[5,1]], "y":[[15.4,3]]}]}'))
         chunks.append(
             ('{"units":{"t":"s","x":"mm","y":"mm"},'
              '"files":{"current":"2.wcon", "prev":["1.wcon", "0.wcon"],'
-                                          '"next":null},'
+             '"next":null},'
              '"data":[{"id":"3", "t":[1.5], '
              '"x":[[8,4.2]], "y":[[35.4,3]]}]}'))
 
@@ -774,9 +770,9 @@ class TestWCONParser(unittest.TestCase):
         the same spine points.
         """
         offset_files = ['offset_and_centroid', 'offset_no_centroid_yes',
-                        'offset_none', 'offset_only'] 
-        
-        worm_list = [WCONWorms.load_from_file('../../../tests/%s.wcon' % f) 
+                        'offset_none', 'offset_only']
+
+        worm_list = [WCONWorms.load_from_file('../../../tests/%s.wcon' % f)
                      for f in offset_files]
 
         # Assume neither commutativity nor transitivity, nor even identity
@@ -788,6 +784,6 @@ class TestWCONParser(unittest.TestCase):
     def test_data3(self):
         pass
 
-    
+
 if __name__ == '__main__':
     unittest.main()
