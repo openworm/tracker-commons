@@ -169,13 +169,6 @@ class MeasurementUnitAtom():
             self.to_canon = lambda x: x
             self.from_canon = lambda x: x
             
-        elif '@' in self.unit_string:
-            # Having '@' after the first character will raise a SyntaxError
-            # when parsing in ast, but we'd like to raise an AssertionError
-            # to be consistent with other invalid units so
-            # 'welfijw' and 'wefw@wfw' raise the same type of error.
-            raise AssertionError("Error: '" + unit_string + "' is not a "
-                                 "valid unit")            
         else:
             # Parse the string into a valid prefix and suffix
             self.prefix, self.suffix = self._parse_unit_string(
@@ -567,6 +560,13 @@ class MeasurementUnit():
         # Do not attempt further processing with custom units
         if unit_string[0] == '@':
             return cls._create_from_atomic(unit_string)
+        elif '@' in unit_string:
+            # Having '@' after the first character will raise a SyntaxError
+            # when parsing in ast, but we'd like to raise an AssertionError
+            # to be consistent with other invalid units so
+            # 'welfijw' and 'wefw@wfw' raise the same type of error.
+            raise AssertionError("Error: '" + unit_string + "' is not a "
+                                 "valid unit")            
 
         # ast can't handle treating '%' as a leaf node to be sent to
         # MeasurementUnitAtom's initializer. So we make the substitution
