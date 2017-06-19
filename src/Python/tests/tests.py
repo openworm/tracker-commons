@@ -317,9 +317,9 @@ class TestWCONParser(unittest.TestCase):
                 "units":{"t":"s", "x":"mm", "y":"mm"},
                 "data":[{ "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
                           "y":[[23.3, 22.23, 21135.08]] },
-                        { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                        { "id":"1", "t":[1.4], "x":[[1215.11,1216.14,1217.12]],
                           "y":[[234.89, 265.23, 235.08]] },
-                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
+                        { "id":"2", "t":[1.5], "x":[[1215.11,1216.14,1217.12]],
                           "y":[234.89, 265.23, 235.08] },
                         { "id":"1", "t":[1.3,1.5],
                           "x":[[],[1215.11, 1216.14, 1217.12]],
@@ -372,7 +372,8 @@ class TestWCONParser(unittest.TestCase):
         WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm"},'
-                '"data":[{"id":"1", "t":[1.3], "x":[[null,null]], "y":[[null,null]]},'
+                '"data":[{"id":"1", "t":[1.3], "x":[[null,null]],'
+                                              '"y":[[null,null]]},'
                 '{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]}]}'))
 
         # Error if data from a later segment conflicts with earlier segments
@@ -380,7 +381,7 @@ class TestWCONParser(unittest.TestCase):
             WCONWorms.load(
                 StringIO(
                     '{"units":{"t":"s","x":"mm","y":"mm"},'
-                    '"data":[{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]},'
+                    '"data":[{"id":"1", "t":[1.3], "x":[[3,4]],"y":[[5.4,3]]},'
                     '{"id":"1", "t":[1.3], "x":[[3,4]], "y":[[5.5,3]]}]}'))
 
     def test_origin_offset(self):
@@ -392,14 +393,16 @@ class TestWCONParser(unittest.TestCase):
                 '"x":[[3,4]], "y":[[5.4,3]]}]}'))
         w2 = WCONWorms.load(StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
                                      '"data":[{"id":"1", "t":[1.3], '
-                                     '"x":[[-497,-496]], "y":[[4005.4,4003]]}]}'))
+                                     '"x":[[-497,-496]],'
+                                     '"y":[[4005.4,4003]]}]}'))
         self.assertEqual(w1, w2)
 
         # ox with two time points
         w1 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
-                '"data":[{"id":"1", "t":[1.3,1.4], "ox":[5000, 5000], "oy":[0, 0],'
+                '"data":[{"id":"1", "t":[1.3,1.4], "ox":[5000, 5000],'
+                                                  '"oy":[0, 0],'
                 '"x":[[3],[4]], "y":[[5.4],[3]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
@@ -414,13 +417,16 @@ class TestWCONParser(unittest.TestCase):
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm",'
                 '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":"1", "t":[1.3,1.4], "ox":[0,0], "oy":[5000,4990], '
-                '"cx":[10, 11], "cy":[13, 12], "x":[[3, 5],[4, 5]], "y":[[5.4, 4],[3, 2]]}]}'))
+                '"data":[{"id":"1", "t":[1.3,1.4], "ox":[0,0],'
+                                                  '"oy":[5000,4990], '
+                '"cx":[10, 11], "cy":[13, 12], "x":[[3, 5],[4, 5]],'
+                                              '"y":[[5.4, 4],[3, 2]]}]}'))
         w2 = WCONWorms.load(
             StringIO(
                 '{"units":{"t":"s","x":"mm","y":"mm",'
                 '"cx":"mm","cy":"mm"},'
-                '"data":[{"id":"1", "t":[1.3,1.4], "cx":[10, 11], "cy":[5013, 5002], '
+                '"data":[{"id":"1", "t":[1.3,1.4], "cx":[10, 11],'
+                                                  '"cy":[5013, 5002], '
                 '"x":[[3, 5],[4, 5]], "y":[[5005.4, 5004],[4993, 4992]]}]}'))
         self.assertEqual(w1, w2)
 
@@ -431,7 +437,7 @@ class TestWCONParser(unittest.TestCase):
                     '{"units":{"t":"s","x":"mm","y":"mm","oy":"mm",'
                     '"cx":"mm","cy":"mm"},'
                     '"data":[{"id":"1", "t":[1.3,1.4], "oy":[5000, 5000],'
-                    '"cx":[10, 10], "cy":[10, 10], "x":[[3, 3, 3],[4, 4, 4.2]], '
+                    '"cx":[10, 10], "cy":[10, 10], "x":[[3,3,3],[4,4,4.2]], '
                     '"y":[[5.4, 5.4, 5.5],[3, 3, 7]]}]}'))
 
         # units missing for centroid
@@ -439,7 +445,7 @@ class TestWCONParser(unittest.TestCase):
             WCONWorms.load(
                 StringIO(
                     '{"units":{"t":"s","x":"mm","y":"mm","ox":"mm","oy":"mm"},'
-                    '"data":[{"id":"1", "t":[1.3,1.4], "ox":[5, 5], "oy":[0, 0],'
+                    '"data":[{"id":"1", "t":[1.3,1.4], "ox":[5,5], "oy":[0,0],'
                     '         "cx":[10, 10], "cy":[10, 10], "x":[[3],[4]], '
                     '         "y":[[5.4],[3]]}]}'))
 
@@ -453,23 +459,25 @@ class TestWCONParser(unittest.TestCase):
 
         # Modifying w2's data in just one spot is enough to make the data
         # clash and the merge should fail
-        w2._data[1].loc[1.3, (1, 'x', 0)] = 4000
+        w2._data['1'].loc[1.3, (1, 'x', 0)] = 4000
         with self.assertRaises(AssertionError):
             w4 = w2 + w3
 
         # But if we drop that entire row in w3, it should accomodate the new
         # figure
-        w3._data[1].drop(1.3, axis=0, inplace=True)
+        w3._data['1'].drop(1.3, axis=0, inplace=True)
         w4 = w2 + w3
         self.assertEqual(w4.data.loc[1.3, (1, 'x', 0)], 4000)
 
     def test_merge_commutativity(self):
         worm1 = WCONWorms.load(
             StringIO('{"units":{"t":"s","x":"mm","y":"mm"},'
-                     '"data":[{"id":"3", "t":[1.3], "x":[[3,4]], "y":[[5.4,3]]}]}'))
+                     '"data":[{"id":"3", "t":[1.3], "x":[[3,4]], '
+                                                   '"y":[[5.4,3]]}]}'))
         worm2 = WCONWorms.load(
             StringIO('{"units":{"t":"s","x":"mm","y":"mm"}, '
-                     '"data":[{"id":"4", "t":[1.5], "x":[[5,2]], "y":[[1.4,6]]}]}'))
+                     '"data":[{"id":"4", "t":[1.5], "x":[[5,2]], '
+                                                   '"y":[[1.4,6]]}]}'))
 
         merged = worm1 + worm2
         # merged.save_to_file('pythonMerged.wcon', pretty_print=True)
@@ -510,13 +518,15 @@ class TestWCONParser(unittest.TestCase):
                 "units":{"t":"s", "x":"mm", "y":"mm"},
                 "data":[{ "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
                           "y":[[23.3, 22.23, 21135.08]] },
-                        { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                        { "id":"1", "t":[1.4],
+                          "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[[234.89, 265.23, 235.08]] },
-                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
+                        { "id":"2", "t":[1.5],
+                          "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[[234.89, 265.23, 235.08]] },
                         { "id":"1", "t":[1.3,1.5],
-                          "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
-                          "y":[[2,2,2],[234.89, 265.23, 235.08]] }
+                          "x":[[1,1,1], [1215.11, 1216.14, 1217.12]],
+                          "y":[[2,2,2], [234.89, 265.23, 235.08]] }
                 ]
             }
             """
@@ -530,13 +540,15 @@ class TestWCONParser(unittest.TestCase):
                 "units":{"t":"s", "x":"mm", "y":"mm"},
                 "data":[{ "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
                           "y":[[23.3, 22.23, 21135.08]] },
-                        { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                        { "id":"1", "t":[1.4], 
+                          "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[[234.89, 265.23, 235.08]] },
-                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
-                          "y":[[234.89, 265.23, 235.08]], "ignorethat":"yes" },
+                        { "id":"2", "t":[1.5], 
+                          "x":[[1215.11, 1216.14, 1217.12]],
+                          "y":[[234.89, 265.23, 235.08]], "ignorethat":"yes"},
                         { "id":"1", "t":[1.3,1.5], "ignorethis": 12,
-                          "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
-                          "y":[[2,2,2],[234.89, 265.23, 235.08]] }
+                          "x":[[1,1,1], [1215.11, 1216.14, 1217.12]],
+                          "y":[[2,2,2], [234.89, 265.23, 235.08]] }
                 ]
             }
             """
@@ -552,11 +564,14 @@ class TestWCONParser(unittest.TestCase):
                 "data":[{ "id":"1", "t":[1.3,1.5],
                           "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
                           "y":[[2,2,2],[234.89, 265.23, 235.08]] },
-                        { "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
+                        { "id":"2", "t":[1.4],
+                          "x":[[125.11, 126.14, 117.12]],
                           "y":[[23.3, 22.23, 21135.08]] },
-                         { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                         { "id":"1", "t":[1.4],
+                          "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[[234.89, 265.23, 235.08]] },
-                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
+                        { "id":"2", "t":[1.5],
+                          "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[[234.89, 265.23, 235.08]] }
                 ]
             }
@@ -573,11 +588,14 @@ class TestWCONParser(unittest.TestCase):
                           "x":[[1,1,1],[1215.11, 1216.14, 1217.12]],
                           "y":[[2,2,2],[234.89, 265.23, 235.08]],
                           "ox":[5000, 5000], "oy":[0, 0] },
-                        { "id":"2", "t":[1.4], "x":[[125.11, 126.14, 117.12]],
+                        { "id":"2", "t":[1.4],
+                          "x":[[125.11, 126.14, 117.12]],
                           "y":[[23.3, 22.23, 21135.08]] },
-                        { "id":"1", "t":[1.4], "x":[[1215.11, 1216.14, 1217.12]],
+                        { "id":"1", "t":[1.4],
+                          "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[[234.89, 265.23, 235.08]]},
-                        { "id":"2", "t":[1.5], "x":[[1215.11, 1216.14, 1217.12]],
+                        { "id":"2", "t":[1.5],
+                          "x":[[1215.11, 1216.14, 1217.12]],
                           "y":[[234.89, 265.23, 235.08]] }
                 ]
             }
@@ -596,7 +614,7 @@ class TestWCONParser(unittest.TestCase):
                        "timestamp":"2012-04-23T18:25:43.511Z",
                        "temperature":23.8,
                        "humidity":40.3,
-                       "arena":{ "style":"petri", "size":35, "units":"mm" },
+                       "arena":{"style":"petri", "size":35, "units":"mm"},
                        "food":"none",
                        "media":"agarose",
                        "sex":"hermaphrodite",
@@ -632,7 +650,8 @@ class TestWCONParser(unittest.TestCase):
         # "current":null should be disallowed by the schema
         worm_file_text1 = (
             ('{"files":{"current":null, "prev":null, "next":["_1", "_2"]},'
-             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], '
+             '"units":{"t":"s","x":"mm","y":"mm"},'
+             '"data":[{"id":"3", "t":[1.3], '
              '"x":[[3,4]], "y":[[5.4,3]]}]}'))
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorms.load(StringIO(worm_file_text1))
@@ -640,7 +659,8 @@ class TestWCONParser(unittest.TestCase):
         # missing "current" should be disallowed by the schema
         worm_file_text2 = (
             ('{"files":{"prev":null, "next":["_1", "_2"]},'
-             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], '
+             '"units":{"t":"s","x":"mm","y":"mm"},'
+             '"data":[{"id":"3", "t":[1.3], '
              '"x":[[3,4]], "y":[[5.4,3]]}]}'))
         with self.assertRaises(jsonschema.exceptions.ValidationError):
             WCONWorms.load(StringIO(worm_file_text2))
@@ -651,7 +671,8 @@ class TestWCONParser(unittest.TestCase):
 
         """
         worm_file_text3 = (
-            ('{"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], '
+            ('{"units":{"t":"s","x":"mm","y":"mm"},'
+             '"data":[{"id":"3", "t":[1.3], '
              '"x":[[3,4]], "y":[[5.4,3]]}]}'))
 
         # STREAM
@@ -674,16 +695,20 @@ class TestWCONParser(unittest.TestCase):
         # Define our chunks
         chunks = []
         chunks.append(
-            ('{"files":{"current":"0.wcon", "prev":null, "next":["1.wcon", "2.wcon"]},'
-             '"units":{"t":"s","x":"mm","y":"mm"},"data":[{"id":"3", "t":[1.3], '
+            ('{"files":{"current":"0.wcon", "prev":null,'
+                                           '"next":["1.wcon", "2.wcon"]},'
+             '"units":{"t":"s","x":"mm","y":"mm"},'
+             '"data":[{"id":"3", "t":[1.3], '
              '"x":[[3,4]], "y":[[5.4,3]]}]}'))
         chunks.append(('{"units":{"t":"s","x":"mm","y":"mm"},'
-                       '"files":{"current":"1.wcon", "prev":["0.wcon"], "next":["2.wcon"]},'
+                       '"files":{"current":"1.wcon", "prev":["0.wcon"],'
+                                                    '"next":["2.wcon"]},'
                        '"data":[{"id":"3", "t":[1.4], '
                        '"x":[[5,1]], "y":[[15.4,3]]}]}'))
         chunks.append(
             ('{"units":{"t":"s","x":"mm","y":"mm"},'
-             '"files":{"current":"2.wcon", "prev":["1.wcon", "0.wcon"], "next":null},'
+             '"files":{"current":"2.wcon", "prev":["1.wcon", "0.wcon"],'
+                                          '"next":null},'
              '"data":[{"id":"3", "t":[1.5], '
              '"x":[[8,4.2]], "y":[[35.4,3]]}]}'))
 
