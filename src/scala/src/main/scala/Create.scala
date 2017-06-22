@@ -123,6 +123,9 @@ object Create {
       for (d <- more) w = w.addData(d)
       w
     }
+    def addData(builder: DataBuilder[YesData]): MakeWcon[U, YesData, F] = addData(builder.result)
+    def addData(builder1: DataBuilder[YesData], builder2: DataBuilder[YesData], more: DataBuilder[YesData]*): MakeWcon[U, YesData, F] =
+      addData(builder1.result, builder2.result, more.map(_.result): _*)
     def dropData: MakeWcon[U, NoData, F] = { stale = false; new MakeWcon[U, NoData, F](building.copy(data = Array.empty), 0) }
 
     def putCustom(key: String, value: Json) = {
@@ -221,7 +224,8 @@ object Create {
     def result(implicit ev: I =:= YesID) = underlying
   }
 
-  def meta() = new MakeMeta[NoID](Metadata.empty)
+  def meta(): MakeMeta[NoID] = new MakeMeta[NoID](Metadata.empty)
+  def meta(id: String): MakeMeta[YesID] = meta().setID(id)
 
   final class MakeLab private[trackercommons] (val result: Laboratory) {
     def isEmpty = result.isEmpty

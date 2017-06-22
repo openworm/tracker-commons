@@ -31,6 +31,8 @@ lazy val root: Project = (project in file(".")).
   dependsOn(minimal % "test->compile")
 
 // To build and run examples
+// run with sbt 'examples/runMain org.openworm.trackercommons.examples.ExampleName'
+// where `ExampleName` is one of the example files, e.g. `CountAnimals`
 lazy val examples: Project = (project in file("src/examples")).
   settings(commonSettings: _*).
   dependsOn(root)

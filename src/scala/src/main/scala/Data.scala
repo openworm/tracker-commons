@@ -279,8 +279,9 @@ extends AsJson with Customizable[Data] {
   }
 
   def reshaped(reshaper: Reshape, magic: Magic = Magic.expand, unshaped: Option[Unshaped] = None): Option[Data] = {
-    if (reshaper.length != 1) return None
+    if (reshaper.sizes.length != 1) return None
     val nts = reshaper(Array(ts))
+    if (nts.length == 0) return None
     val nxd = reshaper(Array(xDatas))
     val nyd = reshaper(Array(yDatas))
     val nrx = reshaper(Array(rxs))
@@ -476,9 +477,9 @@ object Data extends FromJson[Data] {
 
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid data entries: " + msg))
   private def IBAD(id: String, msg: String): Either[JastError, Nothing] =
-    BAD("Data points for " + id + " have " + msg)
+    BAD("Data points for " + id + " are wrong because " + msg)
   private def MYBAD(id: String, t: Double, msg: String): Either[JastError, Nothing] =
-    BAD("Data point for " + id + " at time " + t + " has " + msg)
+    BAD("Data point for " + id + " at time " + t + " is wrong because " + msg)
 
   private[trackercommons] val emptyD = new Array[Double](0)
   private[trackercommons] val zeroD = Array(0.0)
@@ -783,7 +784,7 @@ object Data extends FromJson[Data] {
         case Some(us) =>
           val u = new Unshaped
           val ans = concat(ds, magic, Some(u))
-          us += u
+          if (u.mistakes.nonEmpty) us += u
           id -> ans
         case _ =>
           id -> concat(ds, magic)
