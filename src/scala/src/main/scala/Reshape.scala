@@ -71,9 +71,9 @@ object Reshape {
       n
     }
     val elements = {
-      var a = new Array[Int](count)
+      var a = new Array[Int](2*count)
       var i, j = 0
-      while (i < indicator.length) { if (indicator(i)) { a(j) = i; j += 1 }; i +=1 }
+      while (i < indicator.length) { if (indicator(i)) { a(j) = 0; j += 1; a(j) = i; j += 1 }; i += 1 }
       a
     }
     new Reshape(elements, Array(indicator.length))

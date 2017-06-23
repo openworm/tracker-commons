@@ -9,6 +9,26 @@ extends AsJson with Customizable[DataSet] {
   def map(f: Data => Data) = new DataSet(meta, unitmap, data.map(f), files, custom)
   def flatMap(f: Data => Option[Data]) = new DataSet(meta, unitmap, data.flatMap(x => f(x)), files, custom)
 
+  def groupByIDs(unshaped: Option[collection.mutable.ArrayBuffer[Custom.Unshaped]] = None): DataSet = {
+    val groups = data.zipWithIndex.groupBy(_._1.id).toMap
+    if (groups.size == data.length) this
+    else {
+      val groupedData = groups.map{ case (_, vs) => 
+        val ix = vs.map(_._2).min
+        val ds = vs.map(_._1)
+        val re = Reshape.sortSet(ds.map(_.ts), deduplicate = true)
+        if (unshaped.nonEmpty) {
+          val u = new Custom.Unshaped
+          val join = Data.join(re, ds, unshaped = Some(u))
+          if (u.mistakes.nonEmpty) unshaped.get += u
+          ix -> join
+        }
+        else ix -> Data.join(re, ds)
+      }.toArray.sortBy(_._1).flatMap(_._2)
+      this.copy(data = groupedData)
+    }
+  }
+
   def customFn(f: Json.Obj => Json.Obj) = copy(custom = f(custom))
 
   def json = unitmap.unfix(
