@@ -140,6 +140,80 @@ object ReadWrite {
     finally Try { pw.close }
   }
 
+  def writeChunkedZip(
+    ds: DataSet, zip: java.io.File, name: String,
+    maxEntries: Int = 500000, timeMajor: Boolean = true,
+    slop: Double = 0.1
+  ): Either[String, Unit] = {
+    val tidyname = (if (name.toLowerCase.endsWith(".zip")) name.dropRight(4) else name) match {
+      case nm => if (nm.toLowerCase.endsWith(".wcon")) nm.dropRight(5) else nm                                   
+    }
+    val spacey = tidyname.contains(" ")
+    if (timeMajor) {
+      case class N(var value: Int) { def ++(): this.type = { value += 1; this } }
+      val tses = collection.mutable.TreeMap.empty[Double, N]
+      for { d <- ds; t <- d.ts } tses.getOrElseUpdate(t, N(0)).++
+      val counts = tses.toArray.map{ case (k, v) => k -> v.value }
+      val bins = counts.
+        scanLeft((0, 0, 0.0, 0.0)){ (s, x) =>
+          val (bin, si, t0, t1) = s
+          val (t, ni) = x
+          if (si == 0) (bin, ni, t, t)
+          else if (si + ni <= maxEntries) (bin, si + ni, math.min(t0, t), math.max(t1, t))
+          else (bin + 1, ni, t, t)
+        }.
+        drop(1)
+      val n = bins.lastOption.map(_._1).getOrElse(0)
+      if (n == 0 || (n == 1 && bins.last._2 < maxEntries*slop)) writeZip(ds, zip, tidyname+".wcon")
+      else {
+        val formatter = "%0"+n+"d"
+        writeAllZip(
+          zip,
+          bins.iterator.map{ case (i, _, t0, t1) =>
+            val namei = if (spacey) f"$tidyname - ${i+1}.wcon" else f"${tidyname}_${formatter.format(i+1)}.wcon"
+            (ds.flatMap(di => di.timeWindow(t0, t1)), namei)
+          }
+        )
+      }
+    }
+    else {
+      val idt = collection.mutable.AnyRefMap.empty[String, (Double, Int, List[Int])]
+      ds.data.zipWithIndex.foreach{ case (di, i) =>
+        if (di.ts.length > 0)
+          idt.get(di.id) match {
+            case None => if (di.ts.length > 0) idt(di.id) = (di.ts.head, di.ts.length, i :: Nil)
+            case Some((t, n, ii)) => idt(di.id) = (math.min(t, di.ts.head), n + di.ts.length, i :: ii)
+          }
+      }
+      val pieces = idt.toArray.
+        sortWith((l, r) => l._2._1 < r._2._1 || l._2._1 == r._2._1 && l._1 < r._1)
+      val bins = pieces.
+        scanLeft((0, 0)){ (s, x) => 
+          if (s._2 == 0) (s._1, x._2._2)
+          else if (s._2 + x._2._2 <= maxEntries) (s._1, s._2 + x._2._2)
+          else (s._1 + 1, x._2._2)
+        }.
+        drop(1)
+      val n = bins.lastOption.map(_._1).getOrElse(0)
+      if (n == 0 || (n == 1 && bins.last._2 < maxEntries*slop)) writeZip(ds, zip, tidyname+".wcon")
+      else {
+        val indexed = (bins.map(_._1) zip pieces).groupBy(_._1)
+        val formatter = "%0" + n + "d"
+        writeAllZip(
+          zip,
+          Iterator.range(0, n).map{ i =>
+            val parts = indexed(i).
+              map(_._2).
+              sortWith((a,b) => a._2._1 < b._2._1 || (a._2._1 == b._2._1 && Metadata.semanticOrder.lt(a._1, b._1))).
+              flatMap(_._2._3.reverse)
+            val namei = if (spacey) f"$tidyname - ${i+1}.wcon" else f"${tidyname}_${formatter.format(i+1)}.wcon"
+            (ds.copy(data = parts.map(i => ds.data(i))), namei)
+          }
+        )
+      }
+    }
+  }
+
   def writeZip(ds: DataSet, zip: java.io.File, fname: String): Either[String, Unit] = {
     try {
       val fos = new java.io.FileOutputStream(
@@ -184,8 +258,9 @@ object ReadWrite {
     Right(())
   }
 
-  def writeAllZip(zip: java.io.File, sets: Vector[(DataSet, String)]): Either[String, Unit] = {
-    val fileset = sets.map(_._2)
+  def writeAllZip(zip: java.io.File, sets: Iterator[(DataSet, String)]): Either[String, Unit] = {
+    val bsets = sets.buffered
+    var previousFname = ""
     try {
       val fos = new java.io.FileOutputStream(
         if (zip.getName.toLowerCase.endsWith(".zip")) zip
@@ -194,17 +269,20 @@ object ReadWrite {
       try {
         val zos = new java.util.zip.ZipOutputStream(fos)
         try {
-          sets.zipWithIndex.foreach{ case ((ds, fname), i) =>
+          var i = 0
+          while (bsets.hasNext) {
+            val (ds, fname) = bsets.next
             val ze = new java.util.zip.ZipEntry(fname)
             zos.putNextEntry(ze)
             zos.write(PrettyJson.bytes(
               ds.copy(files = new FileSet(
                 fname,
-                if (i+1 < sets.length) Array(sets(i+1)._2) else Array.empty,
-                if (i > 0) Array(sets(i-1)._2) else Array.empty,
+                if (bsets.hasNext) Array(bsets.head._2) else Array.empty,
+                if (i > 0) Array(previousFname) else Array.empty,
                 Json.Obj.empty
               )).json
             ))
+            previousFname = fname
             zos.closeEntry
           }
         }
@@ -217,4 +295,6 @@ object ReadWrite {
       case NonFatal(e) => Left("Error while writing zip file " + zip + "\n" + e.toString + Option(e.getMessage).getOrElse(""))
     }    
   }
+
+  def writeAllZip(zip: java.io.File, sets: Iterable[(DataSet, String)]): Either[String, Unit] = writeAllZip(zip, sets.iterator)
 }
