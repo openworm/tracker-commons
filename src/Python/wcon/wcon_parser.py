@@ -641,10 +641,12 @@ class WCONWorms():
                 w_current = cls.load(infile, validate_against_schema)
 
         # CASE 1: NO "files" OBJECT, hence no multiple files.  We are done.
+        w_cur = w_current
         if w_current.files is None:
             return w_current
-        elif ('next' not in w_current.files) and ('prev' not in w.current.files):
-            # CASE 2: "files" object exists but no prev/next, assume nothing is there
+        elif (('next' not in w_cur.files) and ('prev' not in w.cur.files)):
+            # CASE 2: "files" object exists but no prev/next, assume nothing is
+            # there
             return w_current
         else:
             # The merge operations below will blast away the .files attribute
@@ -664,9 +666,12 @@ class WCONWorms():
         cur_filename = JSON_path
         name_offset = cur_filename.find(cur_ext)
         if name_offset == -1:
-            raise AssertionError('Mismatch between the filename given in the file "' +
-                                 cur_ext + '" and the file we loaded from "' +
-                                 cur_filename + '".')
+            raise AssertionError(
+                'Mismatch between the filename given in the file "' +
+                cur_ext +
+                '" and the file we loaded from "' +
+                cur_filename +
+                '".')
         path_string = cur_filename[:name_offset]
 
         load_chunks = {'prev': load_prev_chunks,
@@ -771,8 +776,8 @@ class WCONWorms():
                 data_keys = set(df.columns.get_level_values(1))
 
             # "head" and "ventral" don't require units.
-            keys_missing_units = \
-                data_keys - units_keys - set(['head', 'ventral'])
+            keys_missing_units = data_keys - \
+                units_keys - set(['head', 'ventral'])
             if keys_missing_units != set():
                 raise AssertionError('In worm ' + str(worm_id) + ', the '
                                      'following data keys are missing '

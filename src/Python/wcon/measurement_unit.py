@@ -21,7 +21,7 @@ Two classes:  (only the second of which is generally public-facing)
 import six
 import ast
 import operator as op
-from scipy.constants import F2C, K2C, C2F, C2K
+from scipy.constants import F2C, K2C, C2F, C2K, pi
 
 
 def C2C(x):
@@ -39,6 +39,7 @@ class MeasurementUnitAtom():
     Provides methods to convert to and from the canonical representation:
         Temporal data: seconds ('s')
         Spatial data: millimetres ('mm')
+        Angular data: radians ('r')
         Temperature data: degrees Celsius ('C')
         Dimensionless data: (no units) ('')
 
@@ -121,6 +122,9 @@ class MeasurementUnitAtom():
         'day': 60 * 60 * 24,
         'days': 60 * 60 * 24}
 
+    angular_units = {'radians': 1, 'rad': 1, 'r': 1,
+                     'degrees': pi / 180}
+
     spatial_units = {'in': 0.0254, 'inch': 0.0254, 'inches': 0.0254,
                      'm': 1, 'metre': 1, 'meter': 1, 'metres': 1, 'meters': 1,
                      'micron': 1e-6, 'microns': 1e-6}
@@ -139,28 +143,42 @@ class MeasurementUnitAtom():
                          'centigrade': (C2C, C2C)}
 
     unit_types = {'m': 'spatial', 's': 'temporal', 'C': 'temperature',
-                  '': 'dimensionless'}
+                  '': 'dimensionless', 'r': 'angular'}
 
     def __init__(self, unit_string):
         """
         Canonical units:
            time: 's',
            space: 'mm',
-           temperature: 'C'
+           temperature: 'C',
+           angular: 'r'
 
         """
         # Reversing the kludge to fix that ast can't handle the reserved
         # word 'in'; see MeasurementUnit.create below for more details
         self.unit_string = unit_string.replace('_in', 'in')
 
-        # Parse the string into a valid prefix and suffix
-        self.prefix, self.suffix = self._parse_unit_string(self.unit_string)
+        # The '@' prefix means we should not further process the unit;
+        # it's just a custom unit and so it's already in canonical form.
+        if len(self.unit_string) >= 1 and self.unit_string[0] == '@':
+            self.prefix = ''
+            self.suffix = self.unit_string
+            # This will just yield a d
+            self.canonical_prefix = ''
+            self.canonical_suffix = self.unit_string
+            self.to_canon = lambda x: x
+            self.from_canon = lambda x: x
 
-        # Validate that our prefix and suffix don't mix abbreviations and
-        # long form, which is forbidden by the WCON specification
-        self._validate_no_mixed_abbreviations()
+        else:
+            # Parse the string into a valid prefix and suffix
+            self.prefix, self.suffix = self._parse_unit_string(
+                self.unit_string)
 
-        self._obtain_canonical_representation()
+            # Validate that our prefix and suffix don't mix abbreviations and
+            # long form, which is forbidden by the WCON specification
+            self._validate_no_mixed_abbreviations()
+
+            self._obtain_canonical_representation()
 
     @property
     def unit_type(self):
@@ -249,6 +267,16 @@ class MeasurementUnitAtom():
             def from_canon_func(x):
                 return x / self.spatial_units[self.suffix]
 
+        elif self.suffix in list(self.angular_units.keys()):
+            self.canonical_prefix = ''
+            self.canonical_suffix = 'r'
+
+            def to_canon_func(x):
+                return x * self.angular_units[self.suffix]
+
+            def from_canon_func(x):
+                return x / self.angular_units[self.suffix]
+
         elif self.suffix in list(self.temperature_units.keys()):
             self.canonical_prefix = ''
             self.canonical_suffix = 'C'
@@ -260,6 +288,7 @@ class MeasurementUnitAtom():
                 return self.temperature_units[self.suffix][1](x)
 
         else:
+            # Dimensionless units (other than custom units)
             self.canonical_prefix = ''
             self.canonical_suffix = ''
 
@@ -361,6 +390,7 @@ class MeasurementUnitAtom():
         except AttributeError:
             self._all_suffixes = (list(self.temporal_units.keys()) +
                                   list(self.spatial_units.keys()) +
+                                  list(self.angular_units.keys()) +
                                   list(self.temperature_units.keys()) +
                                   list(self.dimensionless_units.keys()))
 
@@ -378,7 +408,7 @@ class MeasurementUnitAtom():
     @property
     def canonical_unit_string(self):
         """
-        Return one of 's', 'mm', 'C', or '' (for dimensionless)
+        Return one of 's', 'mm', 'C', 'r', or '' (for dimensionless)
 
         """
         return self.canonical_prefix + self.canonical_suffix
@@ -399,6 +429,7 @@ class MeasurementUnitAtom():
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
 
 """
 ###############################################################################
@@ -450,16 +481,25 @@ class MeasurementUnit():
                         op.pow: '**',
                         op.pos: '', op.neg: '-'}
 
-    unit_types = {'m': 'spatial', 's': 'temporal', 'C': 'temperature',
-                  '': 'dimensionless'}
-
     def __repr__(self):
         """
         Pretty-print a nice summary of this unit.
 
         """
-        return ("||MeasurementUnit. original form '" + self.unit_string +
-                "' canonical form '" + self.canonical_unit_string + "'||")
+        unit_types = MeasurementUnitAtom.unit_types
+        # Special case: the one canonical unit that is not also a
+        # MeasurementUnitAtom
+        unit_types['mm'] = 'spatial'
+
+        repr_str = "||MeasurementUnit. "
+        # If it's not a composite unit, we can also give the unit type:
+        if self.canonical_unit_string in unit_types:
+            unit_type = unit_types[self.canonical_unit_string]
+            repr_str += "unit type %s " % unit_type
+        repr_str += ("original form '" + self.unit_string +
+                     "' canonical form '" + self.canonical_unit_string + "'||")
+
+        return repr_str
 
     @property
     def unit_string(self):
@@ -517,6 +557,17 @@ class MeasurementUnit():
         # ourselves
         if unit_string == '':
             return cls._create_from_atomic('')
+
+        # Do not attempt further processing with custom units
+        if unit_string[0] == '@':
+            return cls._create_from_atomic(unit_string)
+        elif '@' in unit_string:
+            # Having '@' after the first character will raise a SyntaxError
+            # when parsing in ast, but we'd like to raise an AssertionError
+            # to be consistent with other invalid units so
+            # 'welfijw' and 'wefw@wfw' raise the same type of error.
+            raise AssertionError("Error: '" + unit_string + "' is not a "
+                                 "valid unit")
 
         # ast can't handle treating '%' as a leaf node to be sent to
         # MeasurementUnitAtom's initializer. So we make the substitution
@@ -644,6 +695,10 @@ class MeasurementUnit():
         # use MeasurementUnit.create('m**2')
         assert(isinstance(l, cls))
         assert(isinstance(r, cls))
+
+        if l.unit_string[0] == '@' or r.unit_string[0] == '@':
+            raise ValueError("Binary operations on custom units are not "
+                             "allowed.")
 
         # NOTE: This won't work with affine functions.  We should probably
         # raise an Assertion if there is a temperature somewhere in the mix.

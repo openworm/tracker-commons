@@ -5,7 +5,7 @@
         "timestamp":"2012-04-23T18:25:43.511Z",
         "temperature":22,
         "humidity":40.2,
-        "dish":{ "style":"petri", "size":35, "units":"mm" },
+        "arena":{ "style":"petri", "size":35, "units":"mm" },
         "food":"none",
         "media":"agarose",
         "sex":"hermaphrodite",

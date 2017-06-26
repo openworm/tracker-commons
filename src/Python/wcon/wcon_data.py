@@ -189,7 +189,7 @@ def convert_origin(df):
             # `for` loop loops through both `x` and `y`.
 
             if offset in cur_worm.columns.get_level_values(0):
-                # Consider offset is 0 if not available in a certain frame
+                # Consider offset as 0 if not available in a certain frame
                 ox_column = cur_worm.loc[:, (offset)].fillna(0)
 
                 # Shift our 'x' values by offset

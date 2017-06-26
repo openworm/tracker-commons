@@ -93,7 +93,7 @@ w3 = w1 + w2  # Merge the two.  An exception is raised if the data clashes
       - This is the native representation of the data in this object, and thus the fastest to load.  Try to use this instead of `data`.
 - Class `MeasurementUnit`
   - Note: this class does not need to be used publicly, but it can be if desired.
-    - consequently it can be ommitted from a public API
+    - consequently it can be omitted from a public API
   - methods
     - `create`
       - [class method]
@@ -194,4 +194,13 @@ You can also check the equality of various unit expressions.  For example, all o
     MeasurementUnit.create('mm') == MeasurementUnit.create('millimetre')
     MeasurementUnit.create('Mm') == MeasurementUnit.create('megametre')
     MeasurementUnit.create('mm') != MeasurementUnit.create('Mm')
-  
+
+SI and non-SI units not in the WCON specification are also permitted; they must be prefixed by "@".  No further processing is performed on such units ("to_canon" always returns the same unit string).
+
+    MeasurementUnit.create('@counts')
+    MeasurementUnit.create('@intensity')
+    MeasurementUnit.create('@degrees')
+    MeasurementUnit.create('@radians')
+
+
+
