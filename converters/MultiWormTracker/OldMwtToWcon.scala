@@ -3,7 +3,7 @@ package mwt
 
 import org.openworm.trackercommons._
 
-import java.nio.file.{ FileVisitResult => Fvr, _ }
+import java.nio.file.{ FileVisitResult => Fvr, StandardOpenOption => Soo, _ }
 import java.nio.file.attribute.{ BasicFileAttributes => Bfa }
 import java.io._
 
@@ -35,6 +35,23 @@ object OldSummaryLine {
         flags
       }
     new OldSummaryLine(frame, time, count, events)
+  }
+  def allEvents(lines: Array[OldSummaryLine]): Json.Obj = {
+    val evs = lines.filter(_.events != 0L)
+    if (evs.isEmpty) Json.Obj.empty
+    else {
+      val bits = (0L /: evs)(_ | _.events)
+      val labeled = (0 until 64).
+        filter(bit => (bits & (1L << bit.toLong)) != 0).
+        map{
+          case 0 => ("tap", 1L)
+          case 1 => ("puff", 2L)
+          case n => ("custom "+(n-1), (1L <<  n.toLong))
+        }
+      val job = Json.Obj.builder
+      labeled.foreach{ case (name, bit) => job ~ (name, Json(evs.filter(e => (e.events & bit) != 0).map(_.time))) }
+      Json.Obj ~ ("@XJ", job.result) ~ Json.Obj
+    }
   }
 }
 
@@ -197,16 +214,21 @@ object OldMwtToWcon {
   val TimeStampMatcher = """(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)""".r
   val AgeTempMatcher = """[^_]+_\p{Alpha}*(\d+)h(\d+)C_.*""".r
 
-  def convertOldToWcon(summary: Option[Array[Byte]], blobs: Array[Array[Byte]], file: File, base: String, prefix: String) {
-    summary match {
+  def convertOldToWcon(
+    summary: Option[Array[Byte]], blobs: Array[Array[Byte]], settings: Option[String], picture: Option[Array[Byte]],
+    file: File, base: String, prefix: String,
+    mm_per_pixel: Double = 0.026
+  ) {
+    val events = summary match {
       case Some(bs) =>
-        println(f"Summary file is ${bs.length} bytes long")
         val g = Grok("").delimit(0)
         val slines = g{ implicit fail =>
           (new String(bs)).lines.map{ l => OldSummaryLine.parse(g input l) }.toArray
         }.yesOr(e => throw new Exception("Couldn't parse summary line:\n" + e.toString))
-        println(f"Times from ${slines.head.time}%.2f to ${slines.last.time}%.2f in ${slines.last.frame} frames")
-      case None     => println("No summary file!")
+        OldSummaryLine.allEvents(slines)
+      case None     =>
+        println("No summary file!")
+        Json.Obj.empty
     }
 
     println(f"${blobs.length} blobs files with a total of ${blobs.map(_.length).sum} bytes")
@@ -215,15 +237,18 @@ object OldMwtToWcon {
       val parsed = g{ implicit fail => 
         OldBlob.parseAll(g)
       }.yesOr(e => throw new Exception("Couldn't parse blobs file:\n" + e.toString))
-      println(f"Total number of pixels recorded in blobs: ${parsed.map(_.lines.map(_.a).sum).sum}")
       parsed
     }
-    val datas = parseds.flatten.map(_.toData(0.026))
+    val datas = parseds.flatten.map(_.toData(mm_per_pixel))
     println(f"Contours: ${datas.map(_.walks.map(_.length).getOrElse(0)).sum} vs Data Points: ${datas.map(_.ts.length).sum}")
 
     val id = base + "_" + prefix;
     var m = Create.meta.setID(id)
-    m = m.addSoftware(Create.software.name("Multi-Worm Tracker").version("1.x LabView").addFeature("@XJ"))
+    m = m.addSoftware({
+      var soft = Create.software.name("Multi-Worm Tracker").version("1.x LabView").addFeature("@XJ")
+      settings.foreach{ set => soft = soft.setSettings(Json(set)) }
+      soft
+    })
     prefix match {
       case StrainMatcher(strain) => m = m.setStrain(strain)
       case _ =>
@@ -238,33 +263,52 @@ object OldMwtToWcon {
         m = m.setAge(age.toDouble).setTemp(temp.toDouble)
       case _ => 
     }
-    var wcon = Create.wcon().setMeta(m).addData(datas.head)
+    var wcon = Create.wcon().setCustom(events).setMeta(m).addData(datas.head)
     var i = 1; while (i < datas.length) { wcon = wcon.addData(datas(i)); i += 1 }
-    val ans = wcon.setUnits().setOnlyFile(new File(file.getParent, id + ".wcon"))
+    val ans = wcon.setUnits().setOnlyFile(new File(""))
     val inMemory = ans.result
     println(f"Data has ${inMemory.data.length} entries from ${parseds.map(_.length).sum} records")
-    val onDisk = ReadWrite.write(inMemory, (new File(file.getParent, id + ".wcon")).getPath)
+    val target = (new File(file.getParent, id + ".wcon.zip"))
+    val onDisk = ReadWrite.writeChunkedZip(inMemory, target, prefix, 100000)
     println(f"$file is the source file")
     println(f"$base is the base file name")
     println(f"$prefix is the prefix")
-    println(f"Errors in writing: $onDisk")
+    onDisk match {
+      case Left(e) =>
+        println(f"Errors in writing: $e")
+        throw new Exception(f"Could not write data for $id")
+      case _ =>
+    }
+    picture match {
+      case Some(png) =>
+        val sys = FileSystems.newFileSystem(target.toPath, null)
+        try {
+          Files.write(sys.getPath(f"$prefix.png"), png, Soo.CREATE, Soo.TRUNCATE_EXISTING)
+        }
+        finally { sys.close }
+      case _ =>
+    }
   }
 
   def convertDirectoryToWcon(dir: File, opts: Set[String]) {
     val targets = dir.listFiles
     val sfile = targets.find(_.getName.endsWith(".summary"))
     val summary = sfile.map(f => Files.readAllBytes(f.toPath))
+    val settings = targets.find(_.getName.endsWith(".set")).map(f => new String(Files.readAllBytes(f.toPath)))
+    val png = targets.find(_.getName.endsWith(".png")).map(f => Files.readAllBytes(f.toPath))
     val bfiles = targets.filter(_.getName.endsWith(".blobs")).sortBy(_.getName)
     val blobs = bfiles.map(f => Files.readAllBytes(f.toPath))
     if (blobs.isEmpty) throw new Exception(f"No blobs files found in ${dir.getCanonicalFile.getPath}")
     val prefix = sfile.map(_.getName.dropRight(8)).getOrElse(bfiles.head.getName.split('_').dropRight(1).mkString("_"))
-    convertOldToWcon(summary, blobs, dir, dir.getName, prefix)
+    convertOldToWcon(summary, blobs, settings, png, dir, dir.getName, prefix)
   }
 
   def convertZippedOldToWcon(zip: File, opts: Set[String]) {
     val sys = FileSystems.newFileSystem(zip.toPath, null)
     val root = sys.getPath("/")
     var summaries = List.empty[Path]
+    var settings = List.empty[Path]
+    var pngs = List.empty[Path]
     var blobs = List.empty[Path]
     var depth = 0
     Files.walkFileTree(root, new FileVisitor[Path] {
@@ -280,12 +324,17 @@ object OldMwtToWcon {
         val name = file.getFileName.toString
         if (name.endsWith("summary")) summaries = file :: summaries
         else if (name.endsWith("blobs")) blobs = file :: blobs
+        else if (name.endsWith(".set")) settings = file :: settings
+        else if (name.endsWith(".png")) pngs = file :: pngs
         Fvr.CONTINUE
       }
       def visitFileFailed(file: Path, ioe: java.io.IOException) = Fvr.CONTINUE
     })
     if (summaries.drop(1).nonEmpty) {
       throw new Exception(f"Too many summary files in ${zip.getCanonicalFile.getName}: ${summaries.reverse.mkString(", ")}")
+    }
+    if (settings.drop(1).nonEmpty) {
+      throw new Exception(f"Too many settings files in ${zip.getCanonicalFile.getName}: ${settings.reverse.mkString(", ")}")
     }
     if (blobs.isEmpty) {
       throw new Exception(f"No blobs files found in ${zip.getCanonicalFile.getName}")
@@ -294,6 +343,8 @@ object OldMwtToWcon {
       throw new Exception(f"blobs files found in different places in ${zip.getCanonicalFile.getName}: ${blobs.reverse.mkString(", ")}")
     }
     val sdata = summaries.headOption.map(p => Files.readAllBytes(p))
+    val setdata = settings.headOption.map(p => new String(Files.readAllBytes(p)))
+    val png = pngs.headOption.map(p => Files.readAllBytes(p))
     val bdata = blobs.toArray.reverse.sortBy(_.getFileName.toString).map(p => Files.readAllBytes(p))
     val base = blobs.head.getParent match {
       case null => zip.getName.dropRight(4)
@@ -305,7 +356,7 @@ object OldMwtToWcon {
     val prefix = summaries.headOption.
       map(_.getFileName.toString.dropRight(8)).
       getOrElse(blobs.head.getFileName.toString.split('_').dropRight(1).mkString("_"))
-    convertOldToWcon(sdata, bdata, zip, base, prefix)
+    convertOldToWcon(sdata, bdata, setdata, png, zip, base, prefix)
   }
 
   def getOptions(args: Array[String]): (Set[String], Array[String]) = {
@@ -329,6 +380,7 @@ object OldMwtToWcon {
       else throw new Exception(f"No blobs files in directory to convert: ${fa.getCanonicalFile.getPath}")
     }
     files.foreach{ fa =>
+      if (files.length > 1 && (fa ne files.head)) println("##########")
       if (fa.isDirectory) convertDirectoryToWcon(fa, opts)
       else convertZippedOldToWcon(fa, opts)
     }    

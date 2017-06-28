@@ -162,7 +162,9 @@ object ReadWrite {
           else if (si + ni <= maxEntries) (bin, si + ni, math.min(t0, t), math.max(t1, t))
           else (bin + 1, ni, t, t)
         }.
-        drop(1)
+        drop(1).
+        groupBy(_._1).map{ case (k, vs) => vs.last }.toArray.
+        sortBy(_._1)
       val n = bins.lastOption.map(_._1).getOrElse(0)
       if (n == 0 || (n == 1 && bins.last._2 < maxEntries*slop)) writeZip(ds, zip, tidyname+".wcon")
       else {
