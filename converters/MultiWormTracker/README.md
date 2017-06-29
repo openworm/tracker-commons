@@ -47,6 +47,17 @@ be included.  `0` is equivalent to infinity (all data in one file).
 By default, the summary image will be copied.  To avoid this, use
 `--no-image`.
 
+If you want to elide data from potential animals that are not tracked for
+very long, use `--tracked-for=0.2` to, for example, set a minimum time of
+0.2 seconds.
+
+If you want to elide data from potential animals that do not move very far,
+use `--must-move=0.5` to insist that they move at least 0.5 mm.
+
+If you want the data to go somewhere other than next to the directory/.zip
+file it was from, use `--to=/path/to/new/directory` (use quotes or escapes
+to handle spaces in the path).  All output files will go there.
+
 Note that the input data must all fit in memory simultaneously.  You should
 use flags like `-Xmx3G` to the java command to increase the memory as needed
 (shown here, 3 gigabytes maximum allowed).

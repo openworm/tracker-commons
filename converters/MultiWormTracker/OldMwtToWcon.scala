@@ -12,6 +12,36 @@ import kse.eio._
 import kse.jsonal._
 import kse.jsonal.JsonConverters._
 
+case class ConversionOptions(
+  mm_per_pixel: Double = 0.026,
+  max_data: Int = 100000,
+  elide_png: Boolean = false,
+  tracked_for: Double = 0.0,
+  must_move: Double = 0.0,
+  to: Option[String] = None
+) {}
+object ConversionOptions {
+  val known = Vector("no-image".r, "pixel-size=.+".r, "max-data=\\d+".r, "tracked-for=.+".r, "must-move=.+".r, "to=.*".r)
+  def parse(opts: Set[String]): ConversionOptions = {
+    var answer = ConversionOptions()
+    opts.filter(x => known.forall(_.unapplySeq(x).isEmpty)).toList match {
+      case Nil =>
+      case xs =>
+        println("Unknown options: " + xs.mkString(", "))
+        println("Known options (in regular expression form) are:")
+        known.foreach(ki => println("  "+ki))
+        throw new Exception("Unknown command-line options")
+    }
+    if (opts contains "no-image") answer = answer.copy(elide_png = true)
+    opts.filter(_ startsWith "pixel-size=").map(s => s.drop(11).toDouble).foreach(x => answer = answer.copy(mm_per_pixel = x))
+    opts.filter(_ startsWith "max-data=").map(s => s.drop(9).toInt).foreach(x => answer = answer.copy(max_data = x))
+    opts.filter(_ startsWith "tracked-for=").map(s => s.drop(12).toDouble).foreach(x => answer = answer.copy(tracked_for = x))
+    opts.filter(_ startsWith "must-move=").map(s => s.drop(10).toDouble).foreach(x => answer = answer.copy(must_move = x))
+    opts.filter(_ startsWith "to=").map(s => s.drop(3)).foreach(x => answer = answer.copy(to = Some(x)))
+    answer
+  }
+}
+
 case class OldSummaryLine(frame: Int, time: Double, count: Int, events: Long)
 object OldSummaryLine {
   def parse(g: Grok)(implicit fail: GrokHop[g.type]): OldSummaryLine = {
@@ -214,10 +244,47 @@ object OldMwtToWcon {
   val TimeStampMatcher = """(\d\d\d\d)(\d\d)(\d\d)_(\d\d)(\d\d)(\d\d)""".r
   val AgeTempMatcher = """[^_]+_\p{Alpha}*(\d+)h(\d+)C_.*""".r
 
+  private def cxData(data: Data, i: Int): Double =
+    if (data.cxs.length > 0) data.cxs(i)
+    else {
+      var j = 0
+      val n = data.spineN(i)
+      var x = 0.0
+      while (j < n) { x += data.x(i, j); j += 1 }
+      x/n
+    }
+
+  private def cyData(data: Data, i: Int): Double =
+    if (data.cys.length > 0) data.cys(i)
+    else {
+      var j = 0
+      val n = data.spineN(i)
+      var y = 0.0
+      while (j < n) { y += data.y(i, j); j += 1 }
+      y/n
+    }
+
+  private def farthestIndex(data: Data, dsq: Double, x: Double, y: Double): Int = {
+    var fi = 0
+    var fsq = 0.0
+    var i = 0
+    while (i < data.ts.length) {
+      val cxi = cxData(data, i)
+      val cyi = cyData(data, i)
+      val isq = (x - cxi)*(x - cxi) + (y - cyi)*(y - cyi)
+      if (isq > fsq) {
+        fi = i
+        fsq = isq
+        if (isq >= dsq) return -1
+      }
+      i += 1
+    }
+    return fi
+  }
+
   def convertOldToWcon(
     summary: Option[Array[Byte]], blobs: Array[Array[Byte]], settings: Option[String], picture: Option[Array[Byte]],
-    file: File, base: String, prefix: String,
-    mm_per_pixel: Double = 0.026
+    file: File, base: String, prefix: String, opts: ConversionOptions
   ) {
     val events = summary match {
       case Some(bs) =>
@@ -239,8 +306,7 @@ object OldMwtToWcon {
       }.yesOr(e => throw new Exception("Couldn't parse blobs file:\n" + e.toString))
       parsed
     }
-    val datas = parseds.flatten.map(_.toData(mm_per_pixel))
-    println(f"Contours: ${datas.map(_.walks.map(_.length).getOrElse(0)).sum} vs Data Points: ${datas.map(_.ts.length).sum}")
+    val datas = parseds.flatten.map(_.toData(opts.mm_per_pixel))
 
     val id = base + "_" + prefix;
     var m = Create.meta.setID(id)
@@ -266,10 +332,44 @@ object OldMwtToWcon {
     var wcon = Create.wcon().setCustom(events).setMeta(m).addData(datas.head)
     var i = 1; while (i < datas.length) { wcon = wcon.addData(datas(i)); i += 1 }
     val ans = wcon.setUnits().setOnlyFile(new File(""))
-    val inMemory = ans.result
+    var inMemory = ans.result
+    if (
+      (opts.tracked_for > 0 && opts.tracked_for < Double.PositiveInfinity) ||
+      (opts.must_move > 0 && opts.must_move < Double.PositiveInfinity)
+    ) {
+      val ids = inMemory.data.map(_.id).toSet
+      val consolidated = if (ids.size == inMemory.data.length) inMemory.data else inMemory.groupByIDs().data
+      val rejected = collection.mutable.AnyRefMap.empty[String, Unit]
+      if (opts.tracked_for > 0 && opts.tracked_for < Double.PositiveInfinity)
+        consolidated.foreach{ data =>
+          if (data.ts.length > 0) {
+            val dt = data.ts.last - data.ts.head
+            if (dt < opts.tracked_for) rejected(data.id) = ()
+          }
+          else rejected(data.id) = ()
+        }
+      if (opts.must_move > 0 && opts.must_move < Double.PositiveInfinity)
+        consolidated.foreach{ data =>
+          if (!rejected.contains(data.id)) {
+            if (data.ts.length > 1) {
+              val must = opts.must_move * opts.must_move
+              val i = farthestIndex(data, must, cxData(data, 0), cyData(data, 0))
+              if (i >= 0) {
+                val ii = if (i == 0) 0 else farthestIndex(data, must, cxData(data, i), cyData(data, i))
+                if (ii >= 0) rejected(data.id) = ()
+              }
+            }
+            else rejected(data.id) = ()
+          }
+        }
+      if (rejected.nonEmpty) {
+        println("Skipping IDs " + rejected.map(_._1).toVector.sorted(Metadata.semanticOrder).mkString(", "))
+        inMemory = inMemory.flatMap(d => if (rejected.contains(d.id)) None else Some(d))
+      }
+    }
     println(f"Data has ${inMemory.data.length} entries from ${parseds.map(_.length).sum} records")
-    val target = (new File(file.getParent, id + ".wcon.zip"))
-    val onDisk = ReadWrite.writeChunkedZip(inMemory, target, prefix, 100000)
+    val target = (new File(opts.to.getOrElse(file.getParent), id + ".wcon.zip"))
+    val onDisk = ReadWrite.writeChunkedZip(inMemory, target, prefix, opts.max_data, false)
     println(f"$file is the source file")
     println(f"$base is the base file name")
     println(f"$prefix is the prefix")
@@ -279,7 +379,7 @@ object OldMwtToWcon {
         throw new Exception(f"Could not write data for $id")
       case _ =>
     }
-    picture match {
+    picture.filterNot(_ => opts.elide_png) match {
       case Some(png) =>
         val sys = FileSystems.newFileSystem(target.toPath, null)
         try {
@@ -290,7 +390,7 @@ object OldMwtToWcon {
     }
   }
 
-  def convertDirectoryToWcon(dir: File, opts: Set[String]) {
+  def convertDirectoryToWcon(dir: File, opts: ConversionOptions) {
     val targets = dir.listFiles
     val sfile = targets.find(_.getName.endsWith(".summary"))
     val summary = sfile.map(f => Files.readAllBytes(f.toPath))
@@ -300,10 +400,10 @@ object OldMwtToWcon {
     val blobs = bfiles.map(f => Files.readAllBytes(f.toPath))
     if (blobs.isEmpty) throw new Exception(f"No blobs files found in ${dir.getCanonicalFile.getPath}")
     val prefix = sfile.map(_.getName.dropRight(8)).getOrElse(bfiles.head.getName.split('_').dropRight(1).mkString("_"))
-    convertOldToWcon(summary, blobs, settings, png, dir, dir.getName, prefix)
+    convertOldToWcon(summary, blobs, settings, png, dir, dir.getName, prefix, opts)
   }
 
-  def convertZippedOldToWcon(zip: File, opts: Set[String]) {
+  def convertZippedOldToWcon(zip: File, opts: ConversionOptions) {
     val sys = FileSystems.newFileSystem(zip.toPath, null)
     val root = sys.getPath("/")
     var summaries = List.empty[Path]
@@ -356,14 +456,14 @@ object OldMwtToWcon {
     val prefix = summaries.headOption.
       map(_.getFileName.toString.dropRight(8)).
       getOrElse(blobs.head.getFileName.toString.split('_').dropRight(1).mkString("_"))
-    convertOldToWcon(sdata, bdata, setdata, png, zip, base, prefix)
+    convertOldToWcon(sdata, bdata, setdata, png, zip, base, prefix, opts)
   }
 
-  def getOptions(args: Array[String]): (Set[String], Array[String]) = {
+  def getOptions(args: Array[String]): (ConversionOptions, Array[String]) = {
     val preDashDash = args.takeWhile(_ != "--")
     val postDashDash = args.drop(preDashDash.length + 1)
     val (opts, notOpts) = preDashDash.partition(_.startsWith("--"))
-    (opts.map(_.drop(2)).toSet, notOpts ++ postDashDash)
+    (ConversionOptions.parse(opts.map(_.drop(2)).toSet), notOpts ++ postDashDash)
   }
 
   def main(argsAndOpts: Array[String]) {

@@ -159,7 +159,7 @@ object ReadWrite {
           val (bin, si, t0, t1) = s
           val (t, ni) = x
           if (si == 0) (bin, ni, t, t)
-          else if (si + ni <= maxEntries) (bin, si + ni, math.min(t0, t), math.max(t1, t))
+          else if (si + ni <= maxEntries && maxEntries > 0) (bin, si + ni, math.min(t0, t), math.max(t1, t))
           else (bin + 1, ni, t, t)
         }.
         drop(1).
@@ -192,7 +192,7 @@ object ReadWrite {
       val bins = pieces.
         scanLeft((0, 0)){ (s, x) => 
           if (s._2 == 0) (s._1, x._2._2)
-          else if (s._2 + x._2._2 <= maxEntries) (s._1, s._2 + x._2._2)
+          else if (s._2 + x._2._2 <= maxEntries && maxEntries > 0) (s._1, s._2 + x._2._2)
           else (s._1 + 1, x._2._2)
         }.
         drop(1)
