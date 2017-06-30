@@ -51,6 +51,35 @@ object DataSet extends FromJson[DataSet] {
     ("metadata", UnitMap.Leaves(Set("lab", "arena", "software", "interpolate")))
   ))
 
+  def join(dses: Array[DataSet]): Either[String, DataSet] = {
+    val m = Metadata.join(dses.map(_.meta)) match {
+      case Right(x) => x
+      case Left(e) => return Left(e)
+    }
+    val u = UnitMap.join(dses.map(_.unitmap)) match {
+      case Right(x) => x
+      case Left(e) => return Left(e)
+    }
+    val d = dses.flatMap(_.data)
+
+    // Files we only calculate for validity and custom information; cannot actually retain all the separate files!
+    val f =
+      if (dses.forall(ds => ds.files.next.isEmpty && ds.files.prev.isEmpty)) FileSet.linked(dses.map(_.files)) match {
+        case Some(x) => x
+        case None    => return Left("Could not create sensible file information")
+      }
+      else FileSet.join(dses.map(_.files)) match {
+        case Right(x) => x
+        case Left(e) => return Left(e)
+      }
+
+    val c = Custom.accumulate(dses.map(_.custom)) match {
+      case Some(x) => x
+      case None => return Left("Incompatible custom information in WCON files (top level)")
+    }
+    Right(new DataSet(m, u, d, if (f.custom.size > 0) FileSet.empty.copy(custom = f.custom) else FileSet.empty, c))
+  }
+
   def parse(j: Json): Either[JastError, DataSet] = {
     implicit val parseData: FromJson[Data] = Data
 

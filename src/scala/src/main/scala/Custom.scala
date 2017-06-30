@@ -15,6 +15,56 @@ trait Customizable[A] { self: A =>
 object Custom {
   def apply(o: Json.Obj) = o.filter{ case (k, _) => k startsWith "@" }
 
+  def accumulate(oes: Array[Json.Obj]): Option[Json.Obj] = {
+    if (oes.isEmpty) None
+    else {
+      val m = new collection.mutable.AnyRefMap[String, Json]
+      oes.foreach{ o =>
+        o.iterator.foreach{ case (k, v) =>
+          m.get(k) match {
+            case None => m(k) = v
+            case Some(j) if (!v.isNull) => j match {
+              case Json.Null => m(k) = v
+              case js: Json.Str => v match {
+                case vs: Json.Str =>
+                  if (js.text.nonEmpty) {
+                    if (vs.text.nonEmpty) { if (js != vs) return None }
+                    else m(k) = v
+                  }
+                case _ => return None
+              }
+              case ja: Json.Arr => v match {
+                case va: Json.Arr =>
+                  if (ja.size > 0) {
+                    if (va.size > 0) { if (ja != va) return None }
+                    else m(k) = v
+                  }
+                case _ => return None
+              }
+              case jo: Json.Obj => v match {
+                case vo: Json.Obj =>
+                  if (jo.size > 0) {
+                    if (vo.size > 0) {
+                      if (jo != vo) {
+                        accumulate(Array(jo, vo)) match {
+                          case None => return None
+                          case Some(oo) => m(k) = oo
+                        }
+                      }
+                    }
+                    else m(k) = v
+                  }
+                case _ => return None
+              }
+              case _ => return None
+            }
+          }
+        }
+      }
+      Some(Json.Obj(m))
+    }
+  }
+
   class Unshaped() {
     private[Custom] var myMistakes: Option[Array[Json.Obj]] = None
     def mistakes = myMistakes

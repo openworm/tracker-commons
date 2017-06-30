@@ -350,6 +350,62 @@ object Metadata extends FromJson[Metadata] {
     Vector.empty, Vector.empty, Vector.empty, Json.Obj.empty
   )
 
+  private def genericJoin[A, B](as: Array[A])(f: A => B)(z: B, msg: String): Either[String, B] =
+    Right(as.foldLeft(z){ (c, a) =>
+      val b = f(a)
+      if (c == z) b else if (b == z) c else if (b != c) return Left("Inconsistent " + msg) else c
+    })
+
+  private def joinTimestamps(
+    ts: Array[Either[java.time.OffsetDateTime, java.time.LocalDateTime]]
+  ): Either[String, Option[Either[java.time.OffsetDateTime, java.time.LocalDateTime]]] =
+    if (ts.isEmpty) Right(None)
+    else if (ts.length == 1) Right(Some(ts.head))
+    else {
+      val odts = ts.collect{ case Left(odt) => odt }
+      val ldts = ts.collect{ case Right(ldt) => ldt }
+      if (odts.length > 0 && ldts.length > 0) Left("Incompatible timestamps: mixture of local and with-offset")
+      else if (odts.length > 0) {
+        if (odts.exists(oi => oi isBefore odts.head)) Left("Time stamps out of order")
+        Right(Some(Left(odts.head)))
+      }
+      else if (ldts.length > 0) {
+        if (ldts.exists(li => li isBefore ldts.head)) Left("Time stamps out of order")
+        else Right(Some(Right(ldts.head)))
+      }
+      else Left("Malformed timestamp found (neither local nor with-offset)")
+    }
+
+  private def numericJoin(numbers: Array[Option[Double]]): Option[Double] = {
+    val vs = numbers.flatten
+    if (vs.length == 0) None
+    else if (vs.length == 1) Some(vs(0))
+    else if (vs.forall(_ == vs(0))) Some(vs(0))
+    else Some((vs.sum / vs.length))
+  }
+
+  def join(mds: Array[Metadata]): Either[String, Metadata] = {
+    def VNil[A] = Vector.empty[A]
+    val id = genericJoin(mds)(_.id)("", "IDs")                       match { case Right(x) => x; case Left(e) => return Left(e) }
+    val lab = genericJoin(mds)(_.lab)(VNil, "labs")                  match { case Right(x) => x; case Left(e) => return Left(e) }
+    val who = genericJoin(mds)(_.who)(VNil, "who")                   match { case Right(x) => x; case Left(e) => return Left(e) }
+    val time = joinTimestamps(mds.flatMap(_.timestamp))              match { case Right(x) => x; case Left(e) => return Left(e) }
+    val temp = numericJoin(mds.map(_.temperature))
+    val humid = numericJoin(mds.map(_.humidity))
+    val arena = genericJoin(mds)(_.arena)(None, "arenas")            match { case Right(x) => x; case Left(e) => return Left(e) }
+    val food = genericJoin(mds)(_.food)(None, "food")                match { case Right(x) => x; case Left(e) => return Left(e) }
+    val media = genericJoin(mds)(_.media)(None, "media")             match { case Right(x) => x; case Left(e) => return Left(e) }
+    val sex = genericJoin(mds)(_.sex)(None, "sex")                   match { case Right(x) => x; case Left(e) => return Left(e) }
+    val stage = genericJoin(mds)(_.stage)(None, "stage")             match { case Right(x) => x; case Left(e) => return Left(e) }
+    val age = genericJoin(mds)(_.age)(None, "age")                   match { case Right(x) => x; case Left(e) => return Left(e) }
+    val strain = genericJoin(mds)(_.strain)(None, "strain")          match { case Right(x) => x; case Left(e) => return Left(e) }
+    val prot = genericJoin(mds)(_.protocol)(VNil, "protocol")        match { case Right(x) => x; case Left(e) => return Left(e) }
+    val inp = genericJoin(mds)(_.interpolate)(VNil, "interpolation") match { case Right(x) => x; case Left(e) => return Left(e) }
+    val soft = genericJoin(mds)(_.software)(VNil, "software")        match { case Right(x) => x; case Left(e) => return Left(e) }
+    val custom = Custom.accumulate(mds.map(_.custom)) match { case Some(x) => x; case None => return Left("Inconsistent custom metadata") }
+    Right(new Metadata(id, lab, who, time, temp, humid, arena, food, media, sex, stage, age, strain, prot, inp, soft, custom))
+  }
+
   def parse(j: Json): Either[JastError, Metadata] = {
     val o = j match {
       case jo: Json.Obj => jo

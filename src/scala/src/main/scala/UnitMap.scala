@@ -170,6 +170,28 @@ object UnitMap extends FromJson[UnitMap] {
     )
   }
 
+  def join(ums: Array[UnitMap]): Either[String, UnitMap] = {
+    val m = new collection.mutable.AnyRefMap[String, units.Convert]
+    ums.foreach{ um =>
+      um.lookup.foreach{ case (k, conv) =>
+        m.get(k) match {
+          case None => m(k) = conv
+          case Some(c2) =>
+            if (c2 ne conv) {
+              val e1 = c2.toInternal(conv.toExternal(1)) - 1
+              val e2 = conv.toInternal(c2.toExternal(1)) - 1
+              val e3 = c2.toExternal(conv.toInternal(10))/10 - 1
+              val e4 = conv.toExternal(c2.toInternal(10))/10 - 1
+              val esq = e1*e1 + e2*e2 + e3*e3 + e4*e4
+              if (esq > 1e-6) return Left("Inconsistent unit specification for "+k)
+            }
+        }
+      }
+    }
+    val custom = Custom.accumulate(ums.map(_.custom)) match { case None => return Left("Inconsistent custom units"); case Some(x) => x }
+    Right(new UnitMap(m.toMap, custom))
+  }
+
   def parse(j: Json): Either[JastError, UnitMap] = j match {
     case o: Json.Obj =>
       o.filter((k,_) => !k.startsWith("@")).to[Map[String, Convert]] match {

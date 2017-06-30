@@ -87,13 +87,14 @@ object ReadWrite {
             if (depth >= 2) SKIP_SUBTREE
             else { depth += 1; CONTINUE }
           }
-          override def postVisitDirectory(dir: Path, ioe: java.io.IOException) = { 
+          override def postVisitDirectory(dir: Path, ioe: java.io.IOException) = {
             if (depth > 0) depth -= 1
             CONTINUE
           }
           override def visitFile(file: Path, attr: BfAttr) = {
-            if (file.getFileName.endsWith(".wcon")) pb += file
-            else if (zippy.isEmpty && file.getFileName.endsWith(".wcon.zip")) pb += file
+            val name: String = file.getFileName.toString
+            if (name.endsWith(".wcon")) pb += file
+            else if (zippy.isEmpty && name.endsWith(".wcon.zip")) pb += file
             CONTINUE
           }
         })
@@ -110,13 +111,21 @@ object ReadWrite {
       val fses = dses.map(ds => ds.files.current -> ds).toMap
       if (fses.size != dses.length) return Left(f"Duplicate filenames found in files in ${f.getPath}")
       val fsone = FileSet.join(dses.map(_.files)) match {
-        case Left(e) => return Left("Error while reading .wcon files in ${f.getPath}\n" + e)
+        case Left(e) => return Left(f"Error while reading .wcon files in ${f.getPath}\n" + e)
         case Right(fs) => fs
       }
       Right(fsone.iterator.toArray.map(fs => fses(fs)))
     }
     finally {
       zippy.foreach(fs => try { fs.close } catch { case NonFatal(_) => })
+    }
+  }
+
+  def readChunkedZip(f: java.io.File): Either[String, DataSet] = {
+    if (!f.getName.endsWith(".zip")) Left("Not a zip file (must end with .zip): " + f.getPath)
+    readAll(f) match {
+      case Left(e) => return Left(e)
+      case Right(dses) => DataSet.join(dses)
     }
   }
 
@@ -136,7 +145,10 @@ object ReadWrite {
       case Failure(e) => return Left("Could not open output file " + fout)
     }
     try { pw.print( PrettyJson(ds.json) ); Right(()) }
-    catch { case NonFatal(e) => e.printStackTrace; Left("Error while writing file " + fout + "\n" + e.toString + Option(e.getMessage).getOrElse("")) }
+    catch { case NonFatal(e) =>
+      e.printStackTrace
+      Left("Error while writing file " + fout + "\n" + e.toString + Option(e.getMessage).getOrElse(""))
+    }
     finally Try { pw.close }
   }
 
@@ -235,8 +247,9 @@ object ReadWrite {
       finally fos.close
       Right(())
     }
-    catch {
-      case NonFatal(e) => Left("Error while writing zip file " + zip + "\n" + e.toString + Option(e.getMessage).getOrElse(""))
+    catch { case NonFatal(e) =>
+      e.printStackTrace
+      Left("Error while writing zip file " + zip + "\n" + e.toString + Option(e.getMessage).getOrElse(""))
     }
   }
 
@@ -285,6 +298,7 @@ object ReadWrite {
               )).json
             ))
             previousFname = fname
+            i += 1
             zos.closeEntry
           }
         }
@@ -293,9 +307,10 @@ object ReadWrite {
       finally fos.close
       Right(())
     }
-    catch {
-      case NonFatal(e) => Left("Error while writing zip file " + zip + "\n" + e.toString + Option(e.getMessage).getOrElse(""))
-    }    
+    catch { case NonFatal(e) =>
+      e.printStackTrace
+      Left("Error while writing zip file " + zip + "\n" + e.toString + Option(e.getMessage).getOrElse(""))
+    }
   }
 
   def writeAllZip(zip: java.io.File, sets: Iterable[(DataSet, String)]): Either[String, Unit] = writeAllZip(zip, sets.iterator)

@@ -329,7 +329,13 @@ object OldMwtToWcon {
         m = m.setAge(age.toDouble).setTemp(temp.toDouble)
       case _ => 
     }
-    var wcon = Create.wcon().setCustom(events).setMeta(m).addData(datas.head)
+    val custom = events.asMap match {
+      case m =>
+        val xjOld = m.get("@XJ") match { case Some(o: Json.Obj) => o.asMap; case _ => Map.empty[String, Json] }
+        Json.Obj(m + (("@XJ", Json.Obj(xjOld + (("mm_per_pixel", Json(opts.mm_per_pixel)))))))
+    }
+
+    var wcon = Create.wcon().setCustom(custom).setMeta(m).addData(datas.head)
     var i = 1; while (i < datas.length) { wcon = wcon.addData(datas(i)); i += 1 }
     val ans = wcon.setUnits().setOnlyFile(new File(""))
     var inMemory = ans.result
