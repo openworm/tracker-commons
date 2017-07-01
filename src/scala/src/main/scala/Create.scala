@@ -458,9 +458,9 @@ object Create {
       if (jm eq null) jm = new collection.mutable.AnyRefMap[String, JArB]
       jm.getOrElseUpdate(key, new JArB).add(value, i)
     }
-    private[this] def jGet = Json.Obj.empty/*
+    private[this] def jGet =
       if (jm eq null) Json.Obj.empty
-      else Json.Obj(jm.mapValues(b => Json(b.result)).toMap)*/
+      else Json.Obj(jm.mapValues{ b => val br = b.result; if (br.length == 1) br.head else Json(br) }.toMap)
 
     def validate: Either[DataBuilder[NoData], DataBuilder[YesData]] =
       if (i == 0) Left(this.asInstanceOf[DataBuilder[NoData]])
