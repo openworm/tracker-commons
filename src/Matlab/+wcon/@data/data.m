@@ -1,9 +1,20 @@
 classdef data < json.objs.dict
     %
     %   Class:
-    %   wcon.loaded_data
+    %   wcon.data
+    %
+    %   Parent:
+    %   wcon.dataset
     %
     %   https://github.com/openworm/tracker-commons/blob/master/WCON_format.md#data   
+    %
+    %
+    %   Properties
+    %   ----------
+    %   id : string
+    %   t
+    %   x
+    %   y
     %
     %   Improvements:
     %   -------------
@@ -33,6 +44,15 @@ classdef data < json.objs.dict
     %}
     
     methods
+        function verify(obj)
+            error('Not yet implemented')
+            
+            %1) all data has id, t, x, & y
+            %2) units are specified for t, x, & y
+            %3) time is ordered
+            %4) x and y have matching sizes at each time point
+            %5) length of t matches length of the array
+        end
         function plotWorm(obj,varargin)
             
            in.step_size = 1;
@@ -111,127 +131,47 @@ classdef data < json.objs.dict
     end
 
     methods (Static)
-        function objs = fromFile(t,options)
+        function objs = fromFile(t,parent,options)
             %
             %
             %   Inputs
             %   ------
             %   t : json.objs.token.array OR? json.objs.token.object
-            %   options : struct
-            %       See wcon.loadDataset
-            %
+            %   options : wcon.load_options
+            %       See wcon.load
             
-            %OPTIONS
-            %-------
-%             	in.max_numeric_collapse_depth = [];
-%                 in.max_string_collape_depth = [];
-%                 in.max_bool_collapse_depth = [];
-%                 in.column_major = [];
-%                 in.collapse_objects = [];
+            COLUMN_MAJOR = true;
             
-            keyboard
-            
-            %JAH: At this point.
-            
-            
-            %? Can this ever be an object or is it always an array?
-            
-            %Parsing strategy?
-            %--------------------------------------
-            %1) pass options to getParsedData
+            if options.merge_data
+                max_numeric_collapse_depth = 2;
+            else
+                max_numeric_collapse_depth = 1;
+            end
             
             temp = t.getParsedData(...
                 'collapse_objects',false,... %
                 'column_major',true,...
-                'max_numeric_collapse_depth',1);
+                'max_numeric_collapse_depth',max_numeric_collapse_depth);
             
-            if strcmp(t.type,'array')
-                n_objs = t.n_elements;
-                data_json_objs = t.getObjectArray;
-            else
-                n_objs = 1;
-                data_json_objs = t;
-            end
+            n_objs = length(temp);
             
             objs(n_objs) = wcon.data();
             for iObj = 1:n_objs
                 cur_obj = objs(iObj);
-                props = cur_obj.props;
-                cur_json = data_json_objs(iObj);
-                
-                names = cur_json.key_names;
-                                
-                for iName = 1:length(names)
-                   cur_name = names{iName};
-                   switch cur_name
-                       case 'id'
-                           props.('id') = cur_json.getToken('id');
-                       case 't'
-                           props.('t') = h__getNumericArray(cur_json,'t',options);
-                       case 'x'
-                           props.('x') = h__getNumericArray(cur_json,'x',options);
-                       case 'y'
-                           props.('y') = h__getNumericArray(cur_json,'y',options);
-                       otherwise
-                           %TODO: We need to get a static method to the
-                           %generic parser ...
-
-                           value = cur_json.getParsedData('index',iName);
-                           
-                           %Ideally we would be able to use the addProp
-                           %method, but I'm holding onto the props value
-                           %here so I would need:
-                           %
-                           %    cur_obj.props = props;
-                           %    cur_obj.addProp()
-                           %    props = cur_obj.props
-                           %
-                           %    :/ This is not great
-                           %
-                           %    TODO: Will we support arbitrary field names
-                           %    ...
-                           
-                           
-                           props = json.setField(props,cur_name,value);
-% % % % %                            addProp(obj,name,value)
-% % % % %                            %What do we want to do here ????
-% % % % %                            %We might need to change this ....
-% % % % %                            props.(cur_name) = h__getNumericArray(cur_json,cur_name,options);
-                   end
-                   cur_obj.props = props;
-                end
+                cur_obj.props = temp{iObj};
+                cur_obj.props.parent = parent;
+                %TODO: Units conversion ...
             end 
+        end
+    end
+    methods
+        function s = struct(obj)
+            if length(obj) > 1
+                error('Not yet implemeneted')
+            end
+            s = obj.props;
+            s = wcon.utils.rmfield(s,'parent');
         end
     end
     
 end
-
-function output = h__getNumericArray(cur_json,field_name,options)
-%
-%   Inputs:
-%   -------
-%   options:
-%       See wcon.loadDataset
-%
-%   See Also:
-%   ---------
-%   json.token_info.array_token_info
-
-    temp = cur_json.getArrayToken(field_name);
-    switch temp.array_depth
-        case 1
-            output = temp.get1dNumericArray();
-%             if ~options.merge_data
-%                output = {output}; 
-%             end
-        case 2
-            if options.merge_data
-                output = temp.get2dNumericArray();
-            else
-                output = temp.getArrayOf1dNumericArrays();
-            end
-        otherwise
-            error('Unhandled case')
-    end
-end
-

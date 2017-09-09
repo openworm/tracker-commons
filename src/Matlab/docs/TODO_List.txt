@@ -1,0 +1,15 @@
+Outstanding Tasks:
+
+1) Verify that the temporary writer supports utf-8 conversion
+2) Multiple file support
+
+Issues:
+https://github.com/openworm/tracker-commons/issues/129
+https://github.com/openworm/tracker-commons/issues/128
+
+Lastly:
+https://github.com/openworm/tracker-commons/issues/129
+
+A function to create each structure (arena, software, etc.)--optionally with whatever language-specific features make it most convenient (named arguments, default values, whatever)
+A function to create a single data entry from numbers
+A function to merge data entries into array form

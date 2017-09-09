@@ -1,4 +1,4 @@
-function test_files
+function test_shared_files
 
 %{
     %Testing code

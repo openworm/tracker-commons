@@ -15,14 +15,13 @@ function obj = fromFile(file_path,options)
 %   ---------
 %   wcon.load
 
-%REQUIRED_BASE_PROP_NAMES = {'units','data'};
-%STANDARD_BASE_PROP_NAMES = {'units','metadata','data'};
-
 obj = wcon.dataset;
 
 %Parse the JSON data
 %-------------------
-%This needs to be changed ...
+%This needs to be changed, see:
+%https://github.com/openworm/tracker-commons/issues/128
+
 [~,~,ext] = fileparts(file_path);
 if strcmp(ext,'.zip')
     %1) Get zip data
@@ -39,9 +38,9 @@ if strcmp(ext,'.zip')
     %This is temporary, char conversion back and forth kills performance
     temp_char_data = char(data_in_zip_file);
     
-    tic;
+    %tic;
     root = json.tokens.parse(temp_char_data);
-    toc;
+    %toc;
 else
     root = json.tokens.load(file_path);
 end
@@ -52,7 +51,8 @@ props = root.parseExcept({'units','data','metadata'});
 if ~isfield(props,'units')
     error('WCON file must contain units')
 end
-props.units = wcon.units.fromFile(root.getToken('units'));
+units_token = root.getToken('units');
+props.units = wcon.units.fromFile(units_token,obj,options);
 
 if ~isfield(props,'data') 
     error('WCON file must contain data')
@@ -61,8 +61,10 @@ end
 %TODO: We could make this lazy again ...
 %This needs to go at the end ...
 %obj.addLazyField('data',@()wcon.data.fromFile(root.getToken('data'),options));
-props.data = wcon.data.fromFile(root.getToken('data'));
+data_token = root.getToken('data');
+props.data = wcon.data.fromFile(data_token,obj,options);
 
+%meta-data is optional
 if isfield(props,'metadata')
     props.metadata = wcon.metadata.fromFile(root.getToken('metadata'));
 end

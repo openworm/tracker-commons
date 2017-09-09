@@ -1,0 +1,4 @@
+Design Decisions
+-----------------
+
+1) For worm data, should time be across rows or columns?

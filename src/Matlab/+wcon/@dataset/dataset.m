@@ -9,17 +9,20 @@ classdef dataset < json.objs.lazy_dict
     %   2) Loading from multiple files
     %
     %   See Also
+    %   -----------
     %   wcon.load()
+    %
+    %   WCON Properties
+    %   ---------------
+    %   units : wcon.units
+    %   data : wcon.data 
+    %   meta : wcon.metadata
+    
     
     %{
     WCON Properties
     ----------
-    units : wcon.units
-    
-    data : wcon.data 
-    Loaded lazily
-    
-    meta : wcon.metadata
+
     
     Additional Properties
     ----------------------    
@@ -32,11 +35,12 @@ classdef dataset < json.objs.lazy_dict
     end
     
     methods
-        function s = getPropertiesStruct(obj)
-           s = getPropertiesStruct@wcon.utils.lazy_dict(obj);
-           if isfield(s,'files')
-              s = rmfield(s,'files');
-           end
+        function s = struct(obj)
+            %
+            %   This method is called when saving. We exclude the files
+            %   property
+            s = obj.props;
+            s = wcon.utils.rmfield(s,{'files'});
         end
     end
     

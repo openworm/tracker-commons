@@ -11,10 +11,22 @@ classdef units < json.objs.dict
     %   mm
     
     %{
-    Standard Properties:
-        t
-        x
-        y
+    Any numeric quantity followed on a per-animal or per-timepoint basis
+    must have its units defined in an object.
+    
+    Standard units:
+    ---------------
+    - seconds
+    - millimeters
+    
+    Data properties that must have units
+    ------------------------------------
+    - t
+    - x
+    - y
+    
+    
+    Standard Properties: t x y
     %}
     
     %{
@@ -30,19 +42,28 @@ classdef units < json.objs.dict
     %}
     
     methods (Static)
-        function obj = fromFile(t)
+        function obj = fromFile(t,parent,options)
             %
             %   obj = wcon.units.fromFile(t)
             %
             %   Input
             %   -----
-            %   t : json.objs.token.object
+            %   t: json.objs.token.object
+            %   parent: wcon.dataset
+            %   options: wcon.load_options
             
             obj = wcon.units;
             obj.props = t.getParsedData();
-            
+            obj.props.parent = parent;
         end
     end
     
+    methods
+      	function s = struct(obj)
+            %disp('I ran')
+            s = obj.props;
+            s = wcon.utils.rmfield(s,'parent');
+        end 
+    end
 end
 

@@ -13,6 +13,8 @@ function save(obj,file_path)
 
 
 temp = h__process_object(obj);
+turtle_json_write_v0(temp);
+keyboard
 
 wcon.utils.savejson('',temp,'FileName',file_path);
 
@@ -27,13 +29,14 @@ output = cell(1,n_objs);
 for iObj = 1:n_objs
     input_object = objs(iObj);
     
-    if isa(input_object,'wcon.utils.lazy_dict') || isa(input_object,'wcon.sl.obj.dict')
-        s = input_object.getPropertiesStruct();
-    else
-        orig_state = warning('off','MATLAB:structOnObject');
+%     if isa(input_object,'wcon.utils.lazy_dict') || isa(input_object,'wcon.sl.obj.dict')
+%         s = input_object.getPropertiesStruct();
+%     else
+%         orig_state = warning('off','MATLAB:structOnObject');
         s = struct(input_object);
-        warning(orig_state);
-    end
+        %class(input_object)
+%         warning(orig_state);
+%     end
     
     output{iObj} = h__process_struct(s);
     
@@ -63,7 +66,7 @@ for iValue = 1:numel(output)
         value = h__process_cell(cur_input_value);
     elseif ischar(cur_input_value)
         value = cur_input_value;
-    elseif isnumeric(cur_input_value);
+    elseif isnumeric(cur_input_value)
         value = cur_input_value;
     else
         error('Unhandled data type')
@@ -91,7 +94,7 @@ for iField = 1:length(fn)
         value = h__process_cell(temp);
     elseif ischar(temp)
         value = temp;
-    elseif isnumeric(temp);
+    elseif isnumeric(temp)
         value = temp;
     else
         error('Unhandled data type')
