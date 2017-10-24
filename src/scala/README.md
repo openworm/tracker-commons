@@ -7,7 +7,7 @@ the behavior of the Scala implementation should be presumed to be authoritative.
 
 ## Requirements
 
-This project requires Java 8 and [Scala 2.11](http://scala-lang.org).  You do
+This project requires Java 8 and [Scala 2.12](http://scala-lang.org).  You do
 not need to install Scala explicitly, as the build process is managed by
 [SBT](http://www.scala-sbt.org/).  SBT must be installed to build the project,
 and it will take care of downloading Scala and any needed libraries.
@@ -38,32 +38,6 @@ error message if it cannot.  The code above extracts the correct data if
 there (the `Right` case), and prints the error and throws an exception if
 not.  (If you don't care about error-handling, replace the `match` and following
 statements with `.right.get`.)
-
-The Scala reader/writer does its best to preserve the underlying structure
-of the data file.  However, this may not be the most convenient form in which
-to browse the data.  The `DataSet` class can extract and merge all the data
-by ID, using the `combined()` method.  This method can take a map of functions
-that are used to merge data from custom tags, and these functions may fail,
-so the entire operation may fail.  Thus, the function returns an `Either`, from
-which you can extract your data:
-
-```scala
-val data = worms.combined() match {
-  case Right(ds) => ds
-  case Left(err) => println(err); throw new Exception
-}
-```
-
-You should see something like so (except formatted on a single line):
-
-```
-res0: Array[org.openworm.trackercommons.Data] =
-  Array({ "id": 1, "ox": [0.6, 0.9], "oy": [0, -0.04], "t": [0, 1],
-      "x": [ [-0.6, -0.3, 0, 0.3, 0.6], [-0.6, -0.3, 0, 0.3, 0.6] ],
-      "y": [ [0, -0.2, 0, 0.2, 0], [-0.16, 0.04, 0.24, 0.04, -0.16] ] },
-    { "id": 2, "ox": [0], "oy": [1.5], "t": [1], "x": [ [0, 0.2, 0, -0.2, 0] ],
-      "y": [ [-0.5, -0.25, 0, 0.25, 0.5] ] })
-```
 
 ## Using the reference implementation to create data
 

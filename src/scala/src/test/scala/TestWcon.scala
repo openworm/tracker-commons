@@ -189,11 +189,22 @@ class TestWcon {
   ): String =
     if (a == b) "" else " timestamp:(" + a + ", " + b + ")"
 
-  def same(a: Either[(Double, Double), Double], b: Either[(Double, Double), Double], where: String): String = (a, b) match {
-    case (Right(ar), Right(br)) => same(ar, br, where)
-    case (Left(al), Left(bl)) => same(al._1, bl._1, where+".axis_1") + same(al._2, bl._2, where+".axis_2")
-    case (Right(ar), lb @ Left(_)) => same(Left((ar, ar)): Either[(Double, Double), Double], lb, where)
-    case (la @ Left(_), Right(br)) => same(la, Left((br, br)): Either[(Double, Double), Double], where)
+  def same[A](
+    a: Option[Either[(Double, Double), Double]],
+    b: Option[Either[(Double, Double), Double]],
+    where: String
+  )(implicit ev: A <:< Any): String = (a, b) match {
+    case (None, None) => ""
+    case (Some(Right(ar)), None) => if (!ar.finite) "" else where + ".only_one_size("+ar+", _)"
+    case (Some(Left(al)), None)  => if (!al._1.finite && !al._2.finite) "" else where + ".only_one_size("+al+", _)"
+    case (None, Some(Right(br))) => if (!br.finite) "" else where + ".only_one_size(_, "+br+")"
+    case (None, Some(Left(bl)))  => if (!bl._1.finite && !bl._2.finite) "" else where + ".only_one_size(_, "+bl+")"
+    case (Some(l), Some(r)) => (l, r) match {
+      case (Right(ar), Right(br)) => same(ar, br, where)
+      case (Left(al), Left(bl))   => same(al._1, bl._1, where+".axis_1") + same(al._2, bl._2, where+".axis_2")
+      case (Right(ar), Left(bl))  => same(ar,    bl._1, where+".axis_1") + same(ar,    bl._2, where+".axis_2")
+      case (Left(al), Right(br))  => same(al._1, br,    where+".axis_1") + same(al._2, br,    where+".axis_2")
+    }
   }
 
   def sameA(a: Option[Arena], b: Option[Arena]): String = (a, b) match {
@@ -201,8 +212,8 @@ class TestWcon {
     case (Some(aa), None) => " arena-mismatch(" + aa + ", _) "
     case (None, Some(ba)) => " arena-mismatch(_, " + ba + ") "
     case (Some(aa), Some(ba)) =>
-      same(aa.kind, ba.kind, "arena.type") +
-      same(aa.diameter, ba.diameter, "arena.diam") +
+      same(aa.style, ba.style, "arena.style") +
+      same(aa.size, ba.size, "arena.size") +
       same(aa.custom, ba.custom, "arena.custom")
   }
 
@@ -287,8 +298,9 @@ class TestWcon {
     else (a zip b).zipWithIndex.map{ case ((ai, bi), i) => same(ai, bi, "data[" + i + "]") }.filter(_.length > 0).mkString("\n")
 
   def same(a: FileSet, b: FileSet): String =
-    same(a.me, b.me, "fileset.this") +
-    same(a.names, b.names, "fileset.names") +
+    same(a.current, b.current, "fileset.current") +
+    same(a.next, b.next, "fileset.next") +
+    same(a.prev, b.prev, "fileset.prev") +
     same(a.custom, b.custom, "fileset.custom")
 
   def same(a: DataSet, b: DataSet): String =
@@ -388,12 +400,12 @@ class TestWcon {
       genFish(r),
       {
         val a, b = (r.nextInt(100000)+100)/1000.0
-        r.nextInt(4) match { case 0 => Right(a); case 1 => Left((a, a)); case 2 => Left((a, b)); case _ => Right(Double.NaN) }
+        r.nextInt(4) match { case 0 => Some(Right(a)); case 1 => Some(Left((a, a))); case 2 => Some(Left((a, b))); case _ => None }
       },
       genFish(r),
       genCustom(r)
     )
-  }.dropWhile(x => x.kind.isEmpty && x.diameter.fold(y => y._1.isNaN && y._2.isNaN, _.isNaN)).next
+  }.dropWhile(x => x.style.isEmpty && x.size.forall(_.fold(y => y._1.isNaN && y._2.isNaN, _.isNaN))).next
 
   def genAge(r: R): Double = r.nextBoolean match {
     case false => Double.NaN
@@ -420,6 +432,11 @@ class TestWcon {
     }.dropWhile(x => x.name.isEmpty && x.version.isEmpty && x.featureID.isEmpty).next
 
   def genMetadata(r: R): Metadata = if (r.nextDouble < 0.33) Metadata.empty else Metadata(
+    r.nextInt(3) match {
+      case 0 => ""
+      case 1 => "apple"
+      case _ => java.util.UUID.randomUUID.toString
+    },
     Vector.fill(r.nextInt(3))(genLab(r)),
     Vector.fill(r.nextInt(3))(genFish(r)),
     opt(r)(genLDT(r)),
@@ -516,8 +533,19 @@ class TestWcon {
         PixelWalk(w, n, x0, y0, s, t)(0, 0).globalizeFrom(rx, ry)
       })
     }
+    val List(heds, vnts) = List("L", "CCW").map{ text =>
+      if (ts.length == 0) new Array[String](0)
+      else {
+        r.nextInt(6) match {
+          case 0 => Array("?")
+          case 1 => Array(genFish(r))
+          case 2 => Array.tabulate(ts.length)(i => (i%3) match { case 0 => text; case 1 => genFish(r); case _ => "?" })
+          case _ => new Array[String](0)
+        }
+      }
+    }
     Data(
-      id, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, prms, wlks, genCustom(r)
+      id, ts, xsb.result, ysb.result, cxs, cys, oxs, oys, prms, wlks, heds, vnts, genCustom(r)
     )(
       new Array[Double](ts.length), new Array[Double](ts.length)
     )
@@ -534,7 +562,7 @@ class TestWcon {
     val before = ((n-1) to 0 by -1).map("_" + _)
     val me = "_"+n
     val after = ((n+1) to m).map("_" + _)
-    FileSet((before.reverse.toVector :+ me) ++ after, before.length, genCustom(r))
+    FileSet(me, after.toArray, before.toArray, genCustom(r))
   }
 
   def genDataSet(r: R) = {
@@ -642,10 +670,7 @@ class TestWcon {
 
     val wcons: Array[DataSet] = (jsons.map(_.to(DataSet)) zip paths).map{
       case (Left(je), p) => println(je); println(p); fail("Error reading WCON data from JSON"); throw new Exception("Never here")
-      case (Right(ds), p) =>
-       val dsi = if (ds.files.names.length == 0) ds.copy(files = FileSet(Vector(p.getName), 0, Json.Obj.empty)) else ds
-       dsi.files.setRootFile(p)
-       dsi
+      case (Right(ds), p) => if (ds.files.prev.length + ds.files.next.length == 0) ds.copy(files = FileSet.empty) else ds
     }
 
     assertTrue("All coordinates not the same", {
@@ -661,10 +686,10 @@ class TestWcon {
             println("ISN'T")
             println(vi)
             println(f"Mismatch at data index $i; note rxs/rys")
-            println(f"In ${w.files.me}:")            
+            println(f"In ${w.files.current}:")            
             println(f"  ${wi.rxs.mkString(", ")}")
             println(f"  ${wi.rys.mkString(", ")}")
-            println(f"In ${v.files.me}:")
+            println(f"In ${v.files.current}:")
             println(f"  ${vi.rxs.mkString(", ")}")
             println(f"  ${vi.rys.mkString(", ")}")
           }
@@ -694,5 +719,10 @@ class TestWcon {
         j.to(DataSet) match { case Right(ds) => true; case Left(je) => println(je); false }
       })
     }
+  }
+
+  @Test
+  def run_all_examples() {
+    org.openworm.trackercommons.examples.CountAnimals.run(Array.empty[String]) // Expect failure for now, so don't test return value
   }
 }

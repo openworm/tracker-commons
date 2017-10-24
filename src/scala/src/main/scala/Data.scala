@@ -4,6 +4,7 @@ import kse.jsonal._
 import kse.jsonal.JsonConverters._
 
 import WconImplicits._
+import Custom.{Magic, Unshaped}
 
 /** Trait to specify the perimeter of a single animal. */
 trait Perimeter {
@@ -34,12 +35,7 @@ extends Perimeter with AsJson {
   private[this] var myI = 0
   def tailIndex = if (tail >= 0) Some(tail) else None
   def size = n
-  def step(i: Int) = {
-    if (i>=4*path.length || i < 0) {
-      println(f"This isn't going to work; asking for $i when length is ${path.length}")
-    }
-    ((path(i >>> 2) & 0xFF) >>> (i & 0x3)) & 0x3
-  }
+  def step(i: Int) = (path(i >>> 2) >>> (2*(i & 0x3))) & 0x3
   private[this] def findI(i: Int) {
     if (myI < i) {
       while (myI < i) { 
@@ -98,8 +94,8 @@ object PixelWalk extends FromJson[PixelWalk] {
       val j = i/4
       val shift = (i & 0x3)*2
       val bits = s(i) match {
-        case '>' => 0x0
-        case '<' => 0x1
+        case '<' => 0x0
+        case '>' => 0x1
         case '^' => 0x2
         case 'v' => 0x3
       }
@@ -117,8 +113,8 @@ object PixelWalk extends FromJson[PixelWalk] {
       val shift = (i & 0x3)*2
       val bits = ((bs(j) & 0xFF) >>> shift) & 0x3
       val c = bits match {
-        case 0 => '>'
-        case 1 => '<'
+        case 0 => '<'
+        case 1 => '>'
         case 2 => '^'
         case 3 => 'v'
       }
@@ -187,11 +183,12 @@ case class Data(
   oxs: Array[Double], oys: Array[Double],
   perims: Option[Array[PerimeterPoints]],
   walks: Option[Array[PixelWalk]],
+  headAt: Array[String], ventralAt: Array[String],
   custom: Json.Obj
 )(
   val rxs: Array[Double], val rys: Array[Double]
 )
-extends AsJson {
+extends AsJson with Customizable[Data] {
   assert(
     (ts ne null) && (xDatas ne null) && (yDatas ne null) &&
     (cxs ne null) && (cys ne null) && (oxs ne null) && (oys ne null) && (rxs ne null) && (rys ne null) &&
@@ -212,8 +209,12 @@ extends AsJson {
       good
     } &&
     perims.forall(_.length == ts.length) &&
-    walks.forall(_.length == ts.length)
+    walks.forall(_.length == ts.length) &&
+    (headAt.length == 0 || headAt.length == 1 || headAt.length == ts.length) &&
+    (ventralAt.length == 0 || ventralAt.length == 1 || ventralAt.length == ts.length)
   )
+
+  def customFn(f: Json.Obj => Json.Obj) = copy(custom = f(custom))(rxs, rys)
 
   def n: Int = ts.length
 
@@ -266,8 +267,36 @@ extends AsJson {
     Array(if (oys.length == 0) Double.NaN else oys(i)),
     perims.flatMap(pms => if (pms(i).size == 0) None else Some(Array(pms(i)))),
     walks.flatMap(pws => if (pws(i).size == 0) None else Some(Array(pws(i)))),
-    custom
+    if (headAt.length == 0) Array("?") else { Array(headAt(if (headAt.length == 1) 0 else i)) },
+    if (ventralAt.length == 0) Array("?") else { Array(ventralAt(if (ventralAt.length == 1) 0 else i)) },
+    if ((i == 0 && ts.length == 1) || custom.size == 0) custom
+    else Custom.reshape(custom, Reshape.single(i, ts.length))
   )(Array(rxs(i)), Array(rys(i)))
+
+  def timeWindow(start: Double, end: Double, unshaped: Option[Unshaped] = None): Option[Data] = {
+    val r = Reshape.select(ts.map(t => start <= t && t <= end))
+    reshaped(r, unshaped = unshaped)
+  }
+
+  def reshaped(reshaper: Reshape, magic: Magic = Magic.expand, unshaped: Option[Unshaped] = None): Option[Data] = {
+    if (reshaper.sizes.length != 1) return None
+    val nts = reshaper(Array(ts))
+    if (nts.length == 0) return None
+    val nxd = reshaper(Array(xDatas))
+    val nyd = reshaper(Array(yDatas))
+    val nrx = reshaper(Array(rxs))
+    val nry = reshaper(Array(rys))
+    val ncx = if (cxs.length > 0) reshaper(Array(cxs)) else cxs
+    val ncy = if (cys.length > 0) reshaper(Array(cys)) else cys
+    val nox = if (oxs.length > 0) reshaper(Array(oxs)) else oxs
+    val noy = if (oys.length > 0) reshaper(Array(oys)) else oys
+    val npm = perims.map(pms => reshaper(Array(pms)))
+    val nwk = walks.map(wks => reshaper(Array(wks)))
+    val nhd = if (headAt.length > 1) reshaper(Array(headAt)) else headAt
+    val nvn = if (ventralAt.length > 1) reshaper(Array(ventralAt)) else ventralAt
+    val cst = Custom.reshape(custom, reshaper, magic, unshaped)
+    Some(new Data(id, nts, nxd, nyd, ncx, ncy, nox, noy, npm, nwk, nhd, nvn, cst)(nrx, nry))
+  }
 
   private def externalize(coords: Array[Float], r: Double, has: Boolean, oc: Double): Array[Double] = {
     val ext = new Array[Double](coords.length)
@@ -356,6 +385,14 @@ extends AsJson {
         b ~ ("walk", Json(wks))
       case _ =>
     }
+    if (headAt.length > 0) {
+      if (headAt.length == 1) b ~ ("head", headAt(0))
+      else b ~ ("head", Json(headAt))
+    }
+    if (ventralAt.length > 0) {
+      if (ventralAt.length == 1) b ~ ("ventral", ventralAt(0))
+      else b ~ ("ventral", Json(ventralAt))
+    }
     b ~~ custom ~ Json
   }
 
@@ -440,16 +477,17 @@ object Data extends FromJson[Data] {
 
   private def BAD(msg: String): Either[JastError, Nothing] = Left(JastError("Invalid data entries: " + msg))
   private def IBAD(id: String, msg: String): Either[JastError, Nothing] =
-    BAD("Data points for " + id + " have " + msg)
+    BAD("Data points for " + id + " are wrong because " + msg)
   private def MYBAD(id: String, t: Double, msg: String): Either[JastError, Nothing] =
-    BAD("Data point for " + id + " at time " + t + " has " + msg)
+    BAD("Data point for " + id + " at time " + t + " is wrong because " + msg)
 
   private[trackercommons] val emptyD = new Array[Double](0)
   private[trackercommons] val zeroD = Array(0.0)
   private[trackercommons] val emptyFF = new Array[Array[Float]](0)
+  private[trackercommons] val emptyS = new Array[String](0)
 
   val empty = new Data(
-    "", emptyD, emptyFF, emptyFF, emptyD, emptyD, emptyD, emptyD, None, None, Json.Obj.empty
+    "", emptyD, emptyFF, emptyFF, emptyD, emptyD, emptyD, emptyD, None, None, emptyS, emptyS, Json.Obj.empty
   )(emptyD, emptyD)
 
   private val someSingles = Option(Set("id", "t", "x", "y", "cx", "cy", "ox", "oy", "px", "py", "ptail", "walk"))
@@ -599,6 +637,48 @@ object Data extends FromJson[Data] {
       }
       else None
 
+    val headAt =
+      o.get("headAt").flatMap{_ match {
+        case Json.Null      => None
+        case Json.Str(text) => Some(Array(text))
+        case jaa: Json.Arr.All if jaa.size == t.length =>
+          val sa = new Array[String](t.length)
+          var i = 0
+          while (i < sa.length) {
+            sa(i) = jaa.values(i) match {
+              case Json.Null      => "?"
+              case Json.Str(text) => text
+              case _              => return IBAD(id, "head contains a non-string in slot " + (i+1))
+            }
+            i += 1
+          }
+          i = 1
+          while (i < sa.length && sa(i) == sa(0)) i += 1
+          Some(if (i == sa.length) Array(sa(0)) else sa)
+      }}.
+      getOrElse(Data.emptyS)
+
+    val ventralAt =
+      o.get("ventralAt").flatMap{_ match {
+        case Json.Null      => None
+        case Json.Str(text) => Some(Array(text))
+        case jaa: Json.Arr.All if jaa.size == t.length =>
+          val sa = new Array[String](t.length)
+          var i = 0
+          while (i < sa.length) {
+            sa(i) = jaa.values(i) match {
+              case Json.Null      => "?"
+              case Json.Str(text) => text
+              case _              => return IBAD(id, "ventral contains a non-string in slot " + (i+1))
+            }
+            i += 1
+          }
+          i = 1
+          while (i < sa.length && sa(i) == sa(0)) i += 1
+          Some(if (i == sa.length) Array(sa(0)) else sa)
+      }}.
+      getOrElse(Data.emptyS)
+
     val x, y = new Array[Array[Float]](t.length)
     val rx, ry = new Array[Double](t.length)
     val opms = Option(if (px0 ne null) new Array[PerimeterPoints](t.length) else null)
@@ -625,6 +705,89 @@ object Data extends FromJson[Data] {
       }
       i += 1
     }
-    Right(new Data(id, t, x, y, cx, cy, ox, oy, opms, walk, o.filter((k,_) => k.startsWith("@")))(rx, ry))
+    Right(new Data(id, t, x, y, cx, cy, ox, oy, opms, walk, headAt, ventralAt, Custom(o))(rx, ry))
   }
+
+  def join(
+    reshaper: Reshape, datas: Array[Data],
+    magic: Magic = Magic.expand, unshaped: Option[Unshaped] = None
+  ): Option[Data] = {
+    if (datas.isEmpty) return None
+    if (!datas.forall(_.id == datas(0).id))
+      throw new IllegalArgumentException("Cannot join data with different IDs: " + datas.map(_.id).toSet.mkString(", "))
+    if (!datas.indices.forall(i => datas(i).ts.length == reshaper.sizes(i)))
+      throw new IllegalArgumentException("Reshaper does not reflect data sizes")
+    val nts = reshaper(datas.map(_.ts))
+    val nxd = reshaper(datas.map(_.xDatas))
+    val nyd = reshaper(datas.map(_.yDatas))
+    val nrx = reshaper(datas.map(_.rxs))
+    val nry = reshaper(datas.map(_.rys))
+    val ncx = 
+      if (datas.forall(_.cxs.length == 0)) Data.empty.cxs
+      else reshaper(datas.map(di => if (di.cxs.length == 0) Array.fill(di.ts.length)(Double.NaN) else di.cxs))
+    val ncy = 
+      if (datas.forall(_.cys.length == 0)) Data.empty.cys
+      else reshaper(datas.map(di => if (di.cys.length == 0) Array.fill(di.ts.length)(Double.NaN) else di.cys))
+    val nox =
+      if (datas.forall(_.oxs.length == 0)) Data.empty.oxs
+      else reshaper(datas.map(di => if (di.oxs.length == 0) Array.fill(di.ts.length)(Double.NaN) else di.oxs))
+    val noy =
+      if (datas.forall(_.oys.length == 0)) Data.empty.oys
+      else reshaper(datas.map(di => if (di.oys.length == 0) Array.fill(di.ts.length)(Double.NaN) else di.oys))
+    val npm =
+      if (datas.forall(_.perims.isEmpty)) Data.empty.perims
+      else Some(reshaper(datas.map(di => di.perims getOrElse Array.fill(di.ts.length)(PerimeterPoints.empty))))
+    val nwk =
+      if (datas.forall(_.walks.isEmpty)) Data.empty.walks
+      else Some(reshaper(datas.map(di => di.walks getOrElse Array.fill(di.ts.length)(PixelWalk.empty))))
+    val nhd =
+      if (datas.forall(_.headAt.isEmpty)) Data.empty.headAt
+      else reshaper(datas.map(di => 
+        if (di.headAt.length == 0) Array.fill(di.ts.length)("?")
+        else if (di.headAt.length == 1 && di.ts.length > 1) Array.fill(di.ts.length)(di.headAt(0))
+        else di.headAt
+      ))
+    val nvn =
+      if (datas.forall(_.ventralAt.isEmpty)) Data.empty.ventralAt
+      else reshaper(datas.map(di => 
+        if (di.ventralAt.length == 0) Array.fill(di.ts.length)("?")
+        else if (di.ventralAt.length == 1 && di.ts.length > 1) Array.fill(di.ts.length)(di.ventralAt(0))
+        else di.ventralAt
+      ))
+    val cst = Custom.reshape(datas.map(_.custom), reshaper, magic, unshaped)
+    Some(new Data(datas.head.id, nts, nxd, nyd, ncx, ncy, nox, noy, npm, nwk, nhd, nvn, cst)(nrx, nry))
+  }
+
+  def concat(datas: Array[Data], magic: Magic = Magic.expand, unshaped: Option[Unshaped] = None): Data = {
+    val r = {
+      var simple = true
+      var i = 1
+      while (i < datas.length) {
+        val dit = datas(i).ts
+        val djt = datas(i-1).ts
+        simple = dit.length == 0 || djt.length == 0 || dit(0) < djt(djt.length - 1)
+        i += 1
+      }
+      if (simple) Reshape.concatSet(datas.map(_.ts.length))
+      else Reshape.sortSet(datas.map(_.ts), true)
+    }
+    join(r, datas, magic, unshaped).getOrElse(throw new Exception("Concat failed for unknown reasons."))
+  }
+
+  def concatByID(
+    datas: Array[Data],
+    magic: Magic = Magic.expand,
+    unshaped: Option[collection.mutable.ArrayBuffer[Unshaped]] = None
+  ): Map[String, Data] =
+    datas.groupBy(_.id).toArray.map{ case (id, ds) =>
+      unshaped match {
+        case Some(us) =>
+          val u = new Unshaped
+          val ans = concat(ds, magic, Some(u))
+          if (u.mistakes.nonEmpty) us += u
+          id -> ans
+        case _ =>
+          id -> concat(ds, magic)
+      }
+    }.toMap
 }

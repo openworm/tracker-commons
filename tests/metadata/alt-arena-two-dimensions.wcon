@@ -3,7 +3,7 @@
   "data":[{"id":"0", "t":[0], "x":[0], "y":[0]}],
   "metadata":{ 
     "arena":{
-      "type":"island", "orientation":"toward",
+      "style":"island", "orientation":"toward",
       "size":[6000000, 9000000]
     } 
   }

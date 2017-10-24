@@ -4,7 +4,33 @@ import kse.jsonal._
 import kse.jsonal.JsonConverters._
 
 case class DataSet(meta: Metadata, unitmap: UnitMap, data: Array[Data], files: FileSet = FileSet.empty, custom: Json.Obj = Json.Obj.empty)
-extends AsJson {
+extends AsJson with Customizable[DataSet] {
+  def foreach[U](f: Data => U) { data.foreach(f) }
+  def map(f: Data => Data) = new DataSet(meta, unitmap, data.map(f), files, custom)
+  def flatMap(f: Data => Option[Data]) = new DataSet(meta, unitmap, data.flatMap(x => f(x)), files, custom)
+
+  def groupByIDs(unshaped: Option[collection.mutable.ArrayBuffer[Custom.Unshaped]] = None): DataSet = {
+    val groups = data.zipWithIndex.groupBy(_._1.id).toMap
+    if (groups.size == data.length) this
+    else {
+      val groupedData = groups.map{ case (_, vs) => 
+        val ix = vs.map(_._2).min
+        val ds = vs.map(_._1)
+        val re = Reshape.sortSet(ds.map(_.ts), deduplicate = true)
+        if (unshaped.nonEmpty) {
+          val u = new Custom.Unshaped
+          val join = Data.join(re, ds, unshaped = Some(u))
+          if (u.mistakes.nonEmpty) unshaped.get += u
+          ix -> join
+        }
+        else ix -> Data.join(re, ds)
+      }.toArray.sortBy(_._1).flatMap(_._2)
+      this.copy(data = groupedData)
+    }
+  }
+
+  def customFn(f: Json.Obj => Json.Obj) = copy(custom = f(custom))
+
   def json = unitmap.unfix(
     Json
     ~ ("units", unitmap)
@@ -22,7 +48,7 @@ object DataSet extends FromJson[DataSet] {
   val convertedParts = UnitMap.Nested(Map(
     ("files", UnitMap.OnlyCustom),
     ("data", UnitMap.Leaves(Set("walk"))),
-    ("metadata", UnitMap.Leaves(Set("lab", "arena", "software")))
+    ("metadata", UnitMap.Leaves(Set("lab", "arena", "software", "interpolate")))
   ))
 
   def parse(j: Json): Either[JastError, DataSet] = {

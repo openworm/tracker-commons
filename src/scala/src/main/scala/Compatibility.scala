@@ -82,33 +82,36 @@ object Laboratory {
 class Arena(val underlying: original.Arena)
 extends WrapsScalaWcon[original.Arena]
 {
-  /** The type of media, e.g. NGM agar, agarose, etc..
+  /** The style of media, e.g. NGM agar, agarose, etc.; is it a plate or slide or what, etc..
     *
     * Non-circular/elliptical shapes should be noted here also.
     */
-  def kind = underlying.kind
-  /** Sets the type of the media (returns a new copy) */
-  def kind(k: String) = new Arena(underlying.copy(kind = k))
+  def style = underlying.style
+  /** Sets the style of the arena (returns a new copy) */
+  def style(s: String) = new Arena(underlying.copy(style = s))
 
   /** The long axis of the arena (diameter if circular).*/
-  def majorDiameter = underlying.diameter match { case Right(d) => d;          case Left((d1, d2)) => d1 }
+  def majorSize = underlying.size match {
+    case None => Double.NaN
+    case Some(Right(d)) => d
+    case Some(Left((d1, d2))) => d1
+  }
   /** Sets the long axis of the arena (returns a new copy) */
-  def majorDiameter(d: Double) = new Arena(underlying.diameter match {
-    case Right(_) => underlying.copy(diameter = Right(d))
-    case Left((_, d2)) => underlying.copy(diameter = Left((d, d2)))
+  def majorSize(d: Double) = new Arena(underlying.size match {
+    case Some(Left((_, d2))) => underlying.copy(size = Some(Left((d, d2))))
+    case _                   => underlying.copy(size = if (!d.finite) None else Some(Right(d)))
   })
 
   /** The short axis of the arena; may be `NaN` if the arena is circular or square. */
-  def minorDiameter = underlying.diameter match { case Right(_) => Double.NaN; case Left((_, d2))  => d2 }
+  def minorSize = underlying.size match { 
+    case Some(Left((_, d2))) => d2
+    case _                   => Double.NaN
+  }
   /** Sets the short axis of the arena (returns a new copy) */
-  def minorDiameter(d: Double) = underlying.diameter match {
-    case Right(d1) => 
-      if (d.finite) new Arena(underlying.copy(diameter = Left((d1, d))))
-      else this
-    case Left((d1, d2)) =>
-      new Arena(underlying.copy(
-        diameter = if (d.finite) Left((d1, d)) else Right(d1)
-      ))
+  def minorSize(d: Double) = underlying.size match {
+    case Some(Left((d1, _))) => underlying.copy(size = Some(if (d.finite) Left((d1, d)) else Right(d1)))
+    case Some(Right(d1))     => if (d.finite) underlying.copy(size = Some(Left(d1, d))) else underlying
+    case None                => if (d.finite) underlying.copy(size = Some(Left(Double.NaN, d))) else underlying
   }
 
   /** The orientation of the arena relative to the camera.
@@ -118,9 +121,9 @@ extends WrapsScalaWcon[original.Arena]
     * briefly.  For example, an animal between two cover slips might be `"symmetric"` (but
     * it's less likely that an automatic parser will understand what is going on).
     */
-  def orient = underlying.orient
+  def orientation = underlying.orientation
   /** Specifies the orientation of the arena relative to the camera (returns a new copy) */
-  def orient(o: String) = new Arena(underlying.copy(orient = o))
+  def orientation(o: String) = new Arena(underlying.copy(orientation = o))
 
 
   /** Custom arena information (as a `Json.Obj`) */
@@ -135,21 +138,29 @@ object Arena {
   /** Wraps a standard Scala `Arena` in this compatibility object */
   def from(underlying: original.Arena) = new Arena(underlying)
 
-  /** Creates a new arena given a known type and diameter */
-  def from(kind: String, diameter: Double): Arena =
-    new Arena(original.Arena(kind, Right(diameter), "", Json.Obj.empty))
+  /** Creates a new arena given a known style */
+  def from(style: String): Arena =
+    new Arena(original.Arena(style, None, "", Json.Obj.empty))
 
-  /** Creates a new arena given a known type and major and minor axes */
-  def from(kind: String, dmajor: Double, dminor: Double) =
-    new Arena(original.Arena(kind, Left((dmajor, dminor)), "", Json.Obj.empty))
+  /** Creates a new arena given a known style and size */
+  def from(style: String, size: Double): Arena =
+    new Arena(original.Arena(style, Some(Right(size)), "", Json.Obj.empty))
 
-  /** Creates a new arena given a known type, diameter, and orientation */
-  def from(kind: String, diameter: Double, orient: String) =
-    new Arena(original.Arena(kind, Right(diameter), orient, Json.Obj.empty))
+  /** Creates a new arena given a known style and major and minor axes */
+  def from(style: String, major: Double, minor: Double) =
+    new Arena(original.Arena(style, Some(Left((major, minor))), "", Json.Obj.empty))
 
-  /** Creates a new arena given a known type, major and minor axes, and orientation */
-  def from(kind: String, dmajor: Double, dminor: Double, orient: String) =
-    new Arena(original.Arena(kind, Left((dmajor, dminor)), orient, Json.Obj.empty))
+  /** Creates a new arena given a known style and orientation */
+  def from(style: String, orientation: String) =
+    new Arena(original.Arena(style, None, orientation, Json.Obj.empty))
+
+  /** Creates a new arena given a known style, size, and orientation */
+  def from(style: String, size: Double, orientation: String) =
+    new Arena(original.Arena(style, Some(Right(size)), orientation, Json.Obj.empty))
+
+  /** Creates a new arena given a known style, major and minor axes, and orientation */
+  def from(style: String, major: Double, minor: Double, orientation: String) =
+    new Arena(original.Arena(style, Some(Left((major, minor))), orientation, Json.Obj.empty))
 }
 
 /** Represents information about the software that gathered and/or processed the data */
@@ -201,6 +212,11 @@ object Software {
 /** Represents information associated with an experiment. */
 class Metadata(val underlying: original.Metadata)
 extends WrapsScalaWcon[original.Metadata] {
+  /** An identifying string for the experiment */
+  def id: String = underlying.id
+  /** Sets the identifying string for the experiment */
+  def id(s: String): Metadata = new Metadata(underlying.copy(id = s))
+
   /** An array of the labs involved. */
   def labs: Array[Laboratory] = underlying.lab.map(l => new Laboratory(l)).toArray
   /** Sets the labs involved (returns a new copy) */
@@ -392,6 +408,8 @@ class Data(
       Data.emptyDoubleArray,
       None,
       None,
+      Data.emptyStringArray,
+      Data.emptyStringArray,
       custom
     )(rxs,rys)
   }
@@ -411,6 +429,8 @@ object Data {
   val emptyDoubleArrayArray = new Array[Array[Double]](0)
   /** A generator that produces an empty array of arrays of Doubles */
   val emptyDoublessGen = () => emptyDoubleArrayArray
+  /** An empty array of Strings (used for missing data) */
+  val emptyStringArray = new Array[String](0)
 
   /** A data set containing no data. */
   def empty = new Data("", emptyDoublesGen, emptyDoublesGen, emptyDoublesGen, emptyDoublessGen, emptyDoublessGen, Json.Obj.empty)
@@ -450,65 +470,69 @@ class Wcon(
   myMeta: Metadata,
   myDatas: Array[Data],
   val units: original.UnitMap,
-  myPreviousFiles: Array[String],
-  myNextFiles: Array[String],
   myOwnFile: String,
+  myNextFiles: Array[String],
+  myPreviousFiles: Array[String],
   myFileCustom: Json.Obj,
   myCustom: Json.Obj
 ) {
   /** The metadata associated with the experiment */
   def meta: Metadata = myMeta
   /** Sets the metadata for this experiment (returns a new copy) */
-  def meta(m: Metadata): Wcon = new Wcon(m, myDatas, units, myPreviousFiles, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def meta(m: Metadata): Wcon = new Wcon(m, myDatas, units, myOwnFile, myNextFiles, myPreviousFiles, myFileCustom, myCustom)
 
   /** The array of data associated with the experiment */
   def datas: Array[Data] = myDatas
   /** Sets the array of data associated with the experiment (returns a new copy) */
-  def datas(ds: Array[Data]): Wcon = new Wcon(myMeta, ds, units, myPreviousFiles, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def datas(ds: Array[Data]): Wcon = new Wcon(myMeta, ds, units, myOwnFile, myNextFiles, myPreviousFiles, myFileCustom, myCustom)
   /** Adds data for a single tracked object to the experiment (returns a new copy) */
-  def addData(d: Data): Wcon = new Wcon(myMeta, myDatas :+ d, units, myPreviousFiles, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def addData(d: Data): Wcon = new Wcon(myMeta, myDatas :+ d, units, myOwnFile, myNextFiles, myPreviousFiles, myFileCustom, myCustom)
 
   /** The names of files in the same experiment gathered before this one (most recent first) */
   def previousFiles = myPreviousFiles
   /** Set the names of files in the same experiment that were before this one (returns a new copy) */
-  def previousFiles(pf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, pf, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def previousFiles(pf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles, pf, myFileCustom, myCustom)
   /** Adds a new oldest previous file to the list (returns a new copy) */
-  def addPreviousFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles :+ f, myNextFiles, myOwnFile, myFileCustom, myCustom)
+  def addPreviousFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles, myPreviousFiles :+ f, myFileCustom, myCustom)
 
   /** The names of files in the same experiment gathered after this one (next one first) */
   def nextFiles = myNextFiles
   /** Set the names of files in the same experiment that were after this one (returns a new copy) */
-  def nextFiles(nf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, nf, myOwnFile, myFileCustom, myCustom)
+  def nextFiles(nf: Array[String]): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, nf, myPreviousFiles, myFileCustom, myCustom)
   /** Adds a new next file after all the others (returns a new copy) */
-  def addNextFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles :+ f, myOwnFile, myFileCustom, myCustom)
+  def addNextFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles :+ f, myPreviousFiles, myFileCustom, myCustom)
 
   /** The name of this file (or the portion used to discriminate this from other files in the experiment) */
   def myFile: String = myOwnFile
   /** Sets the name of this file */
-  def myFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles, f, myFileCustom, myCustom)
+  def myFile(f: String): Wcon = new Wcon(myMeta, myDatas, units, f, myNextFiles, myPreviousFiles, myFileCustom, myCustom)
 
   /** Custom information about the files in this experiment (as a Json.Obj) */
   def fileCustom = myFileCustom
   /** Sets custom information about files in this experiment (returns a new copy) */
-  def fileCustom(fc: Json.Obj): Wcon = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles, myOwnFile, fc, myCustom)
+  def fileCustom(fc: Json.Obj): Wcon = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles, myPreviousFiles, fc, myCustom)
 
   /** Custom information about this experiment (in a Json.Obj) */
   def custom = myCustom
   /** Sets the custom information about this experiment (returns a new copy) */
-  def custom(c: Json.Obj) = new Wcon(myMeta, myDatas, units, myPreviousFiles, myNextFiles, myOwnFile, myFileCustom, c)
+  def custom(c: Json.Obj) = new Wcon(myMeta, myDatas, units, myOwnFile, myNextFiles, myPreviousFiles, myFileCustom, c)
 
   /** Converts to standard Scala form for data */
-  def toUnderlying: original.DataSet = new original.DataSet(
-    meta.underlying,
-    units,
-    myDatas.map(_.toUnderlying),
-    original.FileSet(
-      previousFiles.reverse.toVector ++ (if (myFile.isEmpty) Vector() else Vector(myFile)) ++ nextFiles.toVector,
-      previousFiles.length,
-      myFileCustom
-    ),
-    myCustom
-  )
+  def toUnderlying: original.DataSet = {
+    val f = if (myFile eq null) null else new java.io.File(myFile)
+    new original.DataSet(
+      meta.underlying,
+      units,
+      myDatas.map(_.toUnderlying),
+      original.FileSet(
+        if (f eq null) "" else f.getName,
+        nextFiles,
+        previousFiles,
+        myFileCustom
+      ),
+      myCustom
+    )
+  }
 }
 object Wcon {
   /** An empty array of data */
@@ -517,7 +541,13 @@ object Wcon {
   val emptyStringArray = new Array[String](0)
 
   /** An empty experiment (no data, no metadata, no files, just a map for units) */
-  def empty = new Wcon(Metadata.empty, emptyDataArray, original.UnitMap.default, emptyStringArray, emptyStringArray, "", Json.Obj.empty, Json.Obj.empty)
+  def empty = new Wcon(
+    Metadata.empty,
+    emptyDataArray,
+    original.UnitMap.default,
+    "", emptyStringArray, emptyStringArray, Json.Obj.empty,
+    Json.Obj.empty
+  )
 
   /** Creates a view of this data set from a standard Scala data set.
     *
@@ -529,9 +559,9 @@ object Wcon {
       Metadata from u.meta,
       u.data.map{ da => Data from da },
       u.unitmap,
-      if (u.files.names.length > 0) u.files.names.take(u.files.index).reverse.toArray else emptyStringArray,
-      if (u.files.names.length > 0) u.files.names.drop(u.files.index+1).toArray else emptyStringArray,
-      u.files.me,
+      u.files.current,
+      u.files.next,
+      u.files.prev,
       u.files.custom,
       u.custom
     )

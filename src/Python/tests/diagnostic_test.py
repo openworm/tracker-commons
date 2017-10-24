@@ -35,6 +35,7 @@ def timing_function():
     else:
         return time.time()
 
+
 if __name__ == '__main__':
     # def test_big_file():
     print("BIG TEST: Test load and save and load and save")
