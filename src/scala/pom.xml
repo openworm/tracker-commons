@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.scijava</groupId>
+    <artifactId>pom-scijava</artifactId>
+    <version>23.2.0</version>
+    <relativePath />
+  </parent>
+
+  <groupId>openworm</groupId>
+  <artifactId>tracker-commons-scala</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+
+  <name>tracker-commons-scala</name>
+  <description>Tracker Commons Scala Reference Implementation</description>
+  <url>https://github.com/openworm/tracker-commons/tree/master/src/scala</url>
+  <inceptionYear>2018</inceptionYear>
+  <organization>
+    <name>OpenWorm</name>
+    <url>http://openworm.org/</url>
+  </organization>
+  <licenses>
+    <license>
+      <name>MIT-License</name>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>N/A</id>
+      <name>N/A</name>
+      <roles>
+        <role>maintainer</role>
+      </roles>
+    </developer>
+  </developers>
+  <contributors>
+    <contributor>
+      <name>None</name>
+    </contributor>
+  </contributors>
+
+  <mailingLists>
+    <mailingList>
+      <name>N/A</name>
+    </mailingList>
+  </mailingLists>
+
+  <scm>
+    <connection>scm:git:git://github.com/openworm/tracker-commons</connection>
+    <url>https://github.com/openworm/tracker-commons</url>
+    <tag>HEAD</tag>
+  </scm>
+  <issueManagement>
+    <system>GitHub Issues</system>
+    <url>https://github.com/openworm/tracker-commons/issues</url>
+  </issueManagement>
+  <ciManagement>
+    <system>N/A</system>
+    <url>N/A</url>
+  </ciManagement>
+
+  <properties>
+    <license.licenseName>mit</license.licenseName>
+    <license.copyrightOwners>Andre Brown, Rex Kerr, Calico Life Sciences, Michael Currie, Chee Wai Lee, OpenWorm Foundation (Delaware #5787527)</license.copyrightOwners>
+    <scala.version>2.12.4</scala.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>${scala.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>com.lihaoyi</groupId>
+      <artifactId>fastparse_2.12</artifactId>
+      <version>0.4.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.ichoran</groupId>
+      <artifactId>kse_2.12</artifactId>
+      <version>0.6-SNAPSHOT</version>
+    </dependency>
+
+    <!-- Test dependencies -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+    </dependency>
+  </dependencies>
+
+  <repositories>
+    <repository>
+      <id>Sonatype OSS Snapshots</id>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </repository>
+  </repositories>
+
+  <build>
+    <sourceDirectory>src/main/scala</sourceDirectory>
+    <testSourceDirectory>src/test/scala</testSourceDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.scala-tools</groupId>
+        <artifactId>maven-scala-plugin</artifactId>
+        <version>2.15.0</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>compile</goal>
+              <goal>testCompile</goal>
+            </goals>
+            <configuration>
+              <args>
+                <arg>-dependencyfile</arg>
+                <arg>${project.build.directory}/.scala_dependencies</arg>
+              </args>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
