@@ -37,12 +37,12 @@ extends AsJson with Customizable[FileSet] { self =>
 
   def pathed(parent: Path, i: Int): Option[Path] = apply(i).map(parent resolve _)
 
-  def firstIndex = 0 - next.length
-  def lastIndex = prev.length
+  def firstIndex = -prev.length
+  def lastIndex = next.length
 
   def iterator: Iterator[String] = new scala.collection.AbstractIterator[String] {
-    private var i = firstIndex - 1
-    def hasNext = i < lastIndex
+    private var i = self.firstIndex - 1
+    def hasNext = i < self.lastIndex
     def next = { i += 1; self(i).get }
   }
 
@@ -80,50 +80,68 @@ object FileSet extends FromJson[FileSet] {
     Right(new FileSet(current, next, prev, o.filter((k, _) => k.startsWith("@"))))
   }
 
+  def linked(fses: Array[FileSet]): Option[FileSet] =
+    if (fses.length == 0) None
+    else if (fses.forall(_ == empty)) Some(empty)
+    else {
+      val names = fses.map(_.current)
+      if (names.toSet.size != names.length) None
+      else Custom.accumulate(fses.map(_.custom)).map(c => new FileSet(names.head, names.tail, noFiles, c))
+    }
+
   def join(sets: Array[FileSet]): Either[String, FileSet] = {
     if (sets.isEmpty) Left("No files")
     else if (sets.length == 1) Right(sets.head)
     else {
-      val ordered =
+      val canonical: Array[FileSet] =
         if (sets.zip(sets.tail).forall{case (l, r) => l(0) == r(-1) && l(1) == r(0) }) sets
         else {
-          val m = sets.map(si => si(0) -> si).toMap
+          val m = sets.map(si => si.current -> si).toMap
+          val mentioned = sets.flatMap(_.prev).toSet ++ sets.flatMap(_.next).toSet
           if (m.size < sets.size) return Left(f"List of FileSets contains duplicate 'current' filenames!")
-          val v0 = sets.head
-          val vfwd = Iterator.
-            iterate(Option(v0))(si => si.flatMap(x => m get x(1))).
+          if (!m.forall{ case (k, _) => mentioned contains k})
+            return Left(f"Read files that no other file knows about: " + m.map(_._1).filterNot(mentioned).mkString("\n  ", "\n  ", ""))
+          if (!mentioned.forall(x => m contains x))
+            return Left(f"Files mentioned that were not read: " + mentioned.filterNot(m contains _).mkString("\n  ", "\n  ", ""))
+          val head: FileSet = sets.filter(_.prev.isEmpty).toList match {
+            case x :: Nil       => x
+            case Nil            => return Left(f"FileSets contain cyclical references.")
+            case x :: y :: more => return Left(f"Both $x and $y think they should be the first data file")
+          }
+          Iterator.iterate(Option(head))(si => si.flatMap(x => x.next.headOption.flatMap(m get _))).
             takeWhile(_.isDefined).
-            flatten.drop(1).toArray
-          val vbkw = Iterator.
-            iterate(Option(v0))(si => si.flatMap(x => m get x(-1))).
-            takeWhile(_.isDefined).
-            flatten.drop(1).toArray
-          vbkw.reverse ++ Array(v0) ++ vfwd
+            take(sets.size + 1).   // If there's some sort of loop, this will cut it short while still signaling it
+            flatten.toArray
         }
-      if (!(ordered.length == sets.size)) return Left(f"Only found ${ordered.length} of ${sets.size} self-consistent file sets")
-      val ozi = ordered.zipWithIndex
-      val earliest = ozi.map{ case (o, i) => o.firstIndex + i }.min
-      val latest   = ozi.map{ case (o, i) => o.lastIndex  + i }.max
-      val canonical = new Array[String](1 + latest - earliest)
-      val oit = ozi.iterator
-      while (oit.hasNext) {
-        val (o, i) = oit.next
-        var j = o.firstIndex
-        while (j <= o.lastIndex) {
-          val k = i + j - earliest
-          if (canonical(k) eq null) canonical(k) = o(j).get
-          else if (o(j).get != canonical(k)) return Left("Mismatch in file sets.  ${o.current} claims file should be ${o(j).get} but ${canonical(k)} already found")
-          j += 1
+      if (!(canonical.length == sets.size)) return Left(f"Found a chain of ${canonical.length} file sets but expected ${sets.size}")
+      canonical.zipWithIndex.foreach{ case (fs, i) =>
+        if (i > 0) {
+          if (fs.prev.isEmpty) return Left(f"${fs.current} is missing link to previous file ${canonical(i-1).current}")
+          fs.prev.zipWithIndex.foreach{ case (ps, j) =>
+            if (i-j < 1)
+              return Left(f"${fs.current} claims $ps should be before ${canonical.head.current}")
+            else if (ps != canonical(i-j-1).current)
+              return Left(f"Disagreement about whether file #${i-j} is $ps or ${canonical(i-j-1).current}")
+          }
+        }
+        if (i+1 < canonical.length) {
+          if (fs.next.isEmpty) return Left(f"${fs.current} is missing link to next file ${canonical(i+1).current}")
+          fs.next.zipWithIndex.foreach{ case (ns, j) =>
+            if (i+j+1 >= canonical.length)
+              return Left(f"${fs.current} claims $ns should be before ${canonical.last.current}")
+            else if (ns != canonical(i+j+1).current)
+              return Left(f"Disagreement about whether file #${i+j+2} is $ns or ${canonical(i+j+1).current}")
+          }
         }
       }
       val customMap = collection.mutable.AnyRefMap.empty[String, Json]
-      ordered.foreach(o => o.custom.iterator.foreach{ case (k, v) => 
+      canonical.foreach(o => o.custom.iterator.foreach{ case (k, v) => 
         if (customMap contains k) {
           if (customMap(k) != v) customMap(k) = Json.Null
         }
         else customMap(k) = v
       })
-      Right(new FileSet(canonical.head, canonical.tail, Array.empty, Json.Obj(customMap)))
+      Right(new FileSet(canonical.head.current, canonical.tail.map(_.current), Array.empty, Json.Obj(customMap)))
     }
   }
 }

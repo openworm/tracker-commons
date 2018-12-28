@@ -260,11 +260,151 @@ object Metadata extends FromJson[Metadata] {
   private def BAD(msg: String, because: JastError): Either[JastError, Nothing] =
     Left(JastError("Invalid metadata: " + msg, because = because))
 
+  val semanticOrder = new math.Ordering[String] {
+    import java.lang.{Character => C, Integer => I}
+    private[this] def verifyNumericalDifference(a: String, b: String, i: Int): Boolean = {
+      var j = i+1
+      while (j < a.length && j < b.length && C.isDigit(a.charAt(j)) && C.isDigit(b.charAt(j))) j += 1
+      !(j < b.length && C.isDigit(b.charAt(j)))
+    }
+    private[this] def compareNonzeroFrom(a: String, j: Int, b: String, k: Int, tiebreak: Int): Int = {
+      var da = C.digit(a.charAt(j), 10)
+      var db = C.digit(b.charAt(k), 10)
+      var bigger = I.compare(da, db)
+      var n = 1
+      while (da >= 0 && db >= 0 && j+n < a.length && k+n < b.length) {
+        da = C.digit(a.charAt(j+n), 10)
+        db = C.digit(b.charAt(k+n), 10)
+        if (bigger == 0) bigger = I.compare(da, db)
+        n += 1
+      }
+      if (da < 0 && db < 0) { if (bigger == 0) tiebreak else bigger }  // Ran out of numbers at the same time
+      else if (da < 0 && db >= 0) -1           // Second number is longer, so clearly bigger
+      else if (db < 0 && da >= 0) 1            // First number is longer, so clearly bigger
+      else {
+        // Stopped due to length criteria
+        if      (j+n+1 < a.length && C.isDigit(a.charAt(j+n+1))) 1   // First number is longer, so clearly bigger
+        else if (k+n+1 < b.length && C.isDigit(b.charAt(k+n+1))) -1  // Second number longer, so clearly bigger
+        else { if (bigger == 0) tiebreak else bigger }               // Same size, so use numeric/lexicographic order already found
+      }
+    }
+    private[this] def compareNumericalFrom(a: String, b: String, i: Int, tiebreak: Int): Int = {
+      var j = i-1
+      while (j >= 0 && C.digit(a.charAt(j), 10) == 0) j -= 1
+      if (j < 0 || C.digit(a.charAt(j), 10) < 0) {
+        // Leading part is zeros
+        j = i
+        var k = i
+        while (j < a.length && C.digit(a.charAt(j), 10) == 0) j += 1
+        while (k < b.length && C.digit(b.charAt(k), 10) == 0) k += 1
+        val aAllZero = (j >= a.length || !C.isDigit(a.charAt(j)))
+        val bAllZero = (k >= b.length || !C.isDigit(b.charAt(k)))
+        if (aAllZero && bAllZero) tiebreak
+        else if (aAllZero) -1
+        else if (bAllZero) 1
+        else {
+          // There's some nonzero stuff, so we can compare it numerically or lexicographically
+          compareNonzeroFrom(a, j, b, k, tiebreak)
+        }
+      }
+      else {
+        // One number is either numerically or lexicographically bigger than the other
+        compareNonzeroFrom(a, i, b, i, tiebreak)
+      }
+    }
+    private[this] def compareFrom(a: String, b: String, i: Int): Int = {
+      if (i >= a.length && i >= b.length) 0  // Ran out of both at the same time.  Identical
+      else if (i >= a.length) -1  // Everything was identical until we ran out of a.  b wins
+      else if (i >= b.length) 1   // Everything was identical until we ran out of b.  a wins
+      else if (a.charAt(i) == b.charAt(i)) compareFrom(a, b, i+1)  // Same.  Keep going
+      else {
+        // There is a difference!  The two strings cannot possibly be the same.
+        var ca = a.charAt(i)
+        var cb = b.charAt(i)
+        var da = C.digit(ca, 10)
+        var db = C.digit(cb, 10)
+        if (da < 0 || db < 0) {
+          // Not both digits
+          if (da < 0 && db < 0) C.compare(ca, cb)   // Neither is a digit--lexicographical order
+          else if (i == 0 || C.digit(a.charAt(i-1), 10) < 0)  C.compare(ca , cb)  // Not part of a bigger number, lexical again
+          else if (db < 0) 1  // b was the shorter number with same prefix, a wins
+          else -1             // a was the shorter number with same prefix, b wins
+        }
+        else if (da > 0 && db > 0 && da != db) {
+          // Numbers are different and no worries about leading zeros
+          if (da > db) { if (verifyNumericalDifference(a, b, i)) 1 else -1 }
+          else {         if (verifyNumericalDifference(b, a, i)) -1 else 1 }
+        }
+        else  {
+          // Compare numerically with possible fallback to lexicographical differences
+          compareNumericalFrom(a, b, i, C.compare(ca, cb))
+        }
+      }
+    }
+    def compare(a: String, b: String): Int = compareFrom(a, b, 0)
+  }
+
   val empty = new Metadata(
     "", Vector.empty, Vector.empty,
     None, None, None, None, None, None, None, None, None, None,
     Vector.empty, Vector.empty, Vector.empty, Json.Obj.empty
   )
+
+  private def genericJoin[A, B](as: Array[A])(f: A => B)(z: B, msg: String): Either[String, B] =
+    Right(as.foldLeft(z){ (c, a) =>
+      val b = f(a)
+      if (c == z) b else if (b == z) c else if (b != c) return Left("Inconsistent " + msg) else c
+    })
+
+  private def joinTimestamps(
+    ts: Array[Either[java.time.OffsetDateTime, java.time.LocalDateTime]]
+  ): Either[String, Option[Either[java.time.OffsetDateTime, java.time.LocalDateTime]]] =
+    if (ts.isEmpty) Right(None)
+    else if (ts.length == 1) Right(Some(ts.head))
+    else {
+      val odts = ts.collect{ case Left(odt) => odt }
+      val ldts = ts.collect{ case Right(ldt) => ldt }
+      if (odts.length > 0 && ldts.length > 0) Left("Incompatible timestamps: mixture of local and with-offset")
+      else if (odts.length > 0) {
+        if (odts.exists(oi => oi isBefore odts.head)) Left("Time stamps out of order")
+        Right(Some(Left(odts.head)))
+      }
+      else if (ldts.length > 0) {
+        if (ldts.exists(li => li isBefore ldts.head)) Left("Time stamps out of order")
+        else Right(Some(Right(ldts.head)))
+      }
+      else Left("Malformed timestamp found (neither local nor with-offset)")
+    }
+
+  private def numericJoin(numbers: Array[Option[Double]]): Option[Double] = {
+    val vs = numbers.flatten
+    if (vs.length == 0) None
+    else if (vs.length == 1) Some(vs(0))
+    else if (vs.forall(_ == vs(0))) Some(vs(0))
+    else Some((vs.sum / vs.length))
+  }
+
+  def join(mds: Array[Metadata]): Either[String, Metadata] = {
+    def VNil[A] = Vector.empty[A]
+    val id = genericJoin(mds)(_.id)("", "IDs")                       match { case Right(x) => x; case Left(e) => return Left(e) }
+    val lab = genericJoin(mds)(_.lab)(VNil, "labs")                  match { case Right(x) => x; case Left(e) => return Left(e) }
+    val who = genericJoin(mds)(_.who)(VNil, "who")                   match { case Right(x) => x; case Left(e) => return Left(e) }
+    val time = joinTimestamps(mds.flatMap(_.timestamp))              match { case Right(x) => x; case Left(e) => return Left(e) }
+    val temp = numericJoin(mds.map(_.temperature))
+    val humid = numericJoin(mds.map(_.humidity))
+    val arena = genericJoin(mds)(_.arena)(None, "arenas")            match { case Right(x) => x; case Left(e) => return Left(e) }
+    val food = genericJoin(mds)(_.food)(None, "food")                match { case Right(x) => x; case Left(e) => return Left(e) }
+    val media = genericJoin(mds)(_.media)(None, "media")             match { case Right(x) => x; case Left(e) => return Left(e) }
+    val sex = genericJoin(mds)(_.sex)(None, "sex")                   match { case Right(x) => x; case Left(e) => return Left(e) }
+    val stage = genericJoin(mds)(_.stage)(None, "stage")             match { case Right(x) => x; case Left(e) => return Left(e) }
+    val age = genericJoin(mds)(_.age)(None, "age")                   match { case Right(x) => x; case Left(e) => return Left(e) }
+    val strain = genericJoin(mds)(_.strain)(None, "strain")          match { case Right(x) => x; case Left(e) => return Left(e) }
+    val prot = genericJoin(mds)(_.protocol)(VNil, "protocol")        match { case Right(x) => x; case Left(e) => return Left(e) }
+    val inp = genericJoin(mds)(_.interpolate)(VNil, "interpolation") match { case Right(x) => x; case Left(e) => return Left(e) }
+    val soft = genericJoin(mds)(_.software)(VNil, "software")        match { case Right(x) => x; case Left(e) => return Left(e) }
+    val custom = Custom.accumulate(mds.map(_.custom)) match { case Some(x) => x; case None => return Left("Inconsistent custom metadata") }
+    Right(new Metadata(id, lab, who, time, temp, humid, arena, food, media, sex, stage, age, strain, prot, inp, soft, custom))
+  }
 
   def parse(j: Json): Either[JastError, Metadata] = {
     val o = j match {
