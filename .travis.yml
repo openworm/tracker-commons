@@ -6,7 +6,7 @@ python:
     - 2.7
     # test_save_and_load fails on minimax.wcon with Python 3.3, haven't had change to look into it
     #- 3.3  
-    - 3.4.1
+    - 3.4
     - 3.5
     # The current release requires scipy 0.17.1 and earlier, which in turn depends on python 3.5
     #   and earlier.
@@ -19,35 +19,39 @@ before_install:
     - pip install --upgrade pip
     - pip install six
     - pip install pep8
-    #- pip install scipy==0.17.1
+    - pip install scipy==0.17.1
+    - pip install numpy
+    - pip install pandas
+    - pip install jsonschema
+    - pip install psutil
     #- pip install -r src/Python/requirements.txt
 
     - which python
     - python --version
 
     # Anaconda installation
-    - |
-        if [[ ($TRAVIS_PYTHON_VERSION == 2.6) || ($TRAVIS_PYTHON_VERSION == 2.7) ]]; then
-            MINICONDA_DIR=/home/travis/miniconda2
-            wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
-        else
-            MINICONDA_DIR=/home/travis/miniconda3
-            wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
-        fi
-    - chmod +x miniconda.sh
-    - ./miniconda.sh -b
-    - export PATH=$MINICONDA_DIR/bin:$PATH
+    #- |
+    #    if [[ ($TRAVIS_PYTHON_VERSION == 2.6) || ($TRAVIS_PYTHON_VERSION == 2.7) ]]; then
+    #        MINICONDA_DIR=/home/travis/miniconda2
+    #        wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh
+    #    else
+    #        MINICONDA_DIR=/home/travis/miniconda3
+    #        wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+    #    fi
+    #- chmod +x miniconda.sh
+    #- ./miniconda.sh -b
+    #- export PATH=$MINICONDA_DIR/bin:$PATH
   
     # Need to install the actual Python version, does this work?
     # To get the correct version you have to do a conda install
     # Old versions are at: http://repo.continuum.io/miniconda/ but don't 
     # match Python versions and it seems like continuum doesn't want you 
     # to try and match
-    - conda install --yes python=$TRAVIS_PYTHON_VERSION -c conda-forge scipy=0.17.1 numpy pandas jsonschema psutil
+    #- conda install --yes python=$TRAVIS_PYTHON_VERSION -c conda-forge scipy=0.17.1 numpy pandas jsonschema psutil
  
      # Diagnostic information
-    - which python
-    - python --version
+    #- which python
+    #- python --version
     - pydoc modules
 
 before_script:
