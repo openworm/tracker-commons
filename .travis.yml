@@ -19,9 +19,9 @@ before_install:
     - pip install --upgrade pip
     - pip install six
     - pip install pep8
-    - pip install scipy<=0.17.1
+    - pip install scipy==0.17.1
     - pip install numpy
-    - pip install pandas<=0.19.0
+    - pip install pandas==0.19.0
     - pip install jsonschema
     - pip install psutil
     #- pip install -r src/Python/requirements.txt
