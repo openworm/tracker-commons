@@ -19,6 +19,7 @@ before_install:
     - pip install --upgrade pip
     - pip install six
     - pip install pep8
+    - pip install -r requirements.txt
 
     - which python
     - python --version
@@ -41,7 +42,7 @@ before_install:
     # Old versions are at: http://repo.continuum.io/miniconda/ but don't 
     # match Python versions and it seems like continuum doesn't want you 
     # to try and match
-    - conda install --yes python=$TRAVIS_PYTHON_VERSION --file src/Python/requirements.txt
+    - conda install --yes python=$TRAVIS_PYTHON_VERSION
  
      # Diagnostic information
     - which python
