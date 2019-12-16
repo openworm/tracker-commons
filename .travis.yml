@@ -8,7 +8,9 @@ python:
     #- 3.3  
     - 3.4
     - 3.5
-    - 3.6
+    # The current release requires scipy 0.17.1 and earlier, which in turn depends on python 3.5
+    #   and earlier.
+    #- 3.6
 
 notifications:
   email: false
@@ -39,7 +41,7 @@ before_install:
     # Old versions are at: http://repo.continuum.io/miniconda/ but don't 
     # match Python versions and it seems like continuum doesn't want you 
     # to try and match
-    - conda install --yes python=$TRAVIS_PYTHON_VERSION numpy scipy pandas jsonschema psutil
+    - conda install --yes python=$TRAVIS_PYTHON_VERSION --file src/Python/requirements.txt pandas jsonschema psutil
  
      # Diagnostic information
     - which python
