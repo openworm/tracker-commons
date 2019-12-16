@@ -19,7 +19,7 @@ before_install:
     - pip install --upgrade pip
     - pip install six
     - pip install pep8
-    - pip install -r requirements.txt
+    - pip install -r src/Python/requirements.txt
 
     - which python
     - python --version
