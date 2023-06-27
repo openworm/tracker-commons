@@ -31,5 +31,6 @@ jobs:
     - name: Install Python package
       run: |
         cd src/Python
-        pip install .
+        python setup.py install
+        
 
