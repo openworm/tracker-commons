@@ -52,7 +52,7 @@ setup(
     keywords='C. elegans worm tracking',
     packages=['wcon'],
     package_data={'': ['../../wcon_schema.json']},
-    install_requires=['jsonschema', 'six', 'numpy', 'scipy']
+    install_requires=['jsonschema', 'six', 'numpy', 'scipy<=0.17.1']
     # Actually also requires numpy, scipy and numpy but I don't want to force
     # pip to install these since pip is bad at that for those packages.
 )
