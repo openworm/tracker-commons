@@ -4,11 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+pandas = "*"
 six = "*"
-jsonschema = "*"
 numpy = "*"
 psutil = "*"
-pandas = "*"
+jsonschema = "*"
+scipy = "*"
 
 [dev-packages]
 

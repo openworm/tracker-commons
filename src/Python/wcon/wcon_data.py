@@ -116,8 +116,8 @@ def df_upsert(src, dest):
                         src.columns.isin(dest.columns)]
 
             # Sort our slices so they will be lined up for comparison
-            dest_sliced.sort_index(inplace=True)
-            src_sliced.sort_index(inplace=True)
+            dest_sliced.sort_index(axis=1, inplace=True)
+            src_sliced.sort_index(axis=1, inplace=True)
 
             # Obtain a mask of the conflicts in the current segment
             # as compared with all previously loaded data.  That is:
@@ -218,13 +218,13 @@ def convert_origin(df):
 
                 # Now reset our 'ox' values to zero.
                 if offset in cur_worm.columns.get_level_values(0):
-                    df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape)
+                    df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape, dtype=pd.Int64Dtype)
 
     # Drop the offset columns entirely from the dataframe.
     # This is so DataFrames with and without offsets
     # will show as comparing identically.
     for offset_key in offset_keys:
-        df.drop(offset_key, axis=1, level='key', inplace=True)
+        df.drop(offset_key, axis=1, level='key', inplace=True, errors='ignore')
 
     # Because of a known issue in Pandas
     # (https://github.com/pydata/pandas/issues/2770), the dropped columns

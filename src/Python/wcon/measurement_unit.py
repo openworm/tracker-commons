@@ -24,13 +24,13 @@ import operator as op
 from scipy.constants import convert_temperature, pi
 
 def F2C(val):
-    convert_temperature(val, 'F', 'C')
+    return convert_temperature(val, 'F', 'C')
 def C2F(val):
-    convert_temperature(val, 'C', 'F')
+    return convert_temperature(val, 'C', 'F')
 def K2C(val):
-    convert_temperature(val, 'K', 'C')
+    return convert_temperature(val, 'K', 'C')
 def C2K(val):
-    convert_temperature(val, 'C', 'K')
+    return convert_temperature(val, 'C', 'K')
 
 def C2C(x):
     """
@@ -637,8 +637,8 @@ class MeasurementUnit():
             The expression to be transformed into a MeasurementUnit
 
         """
-        if isinstance(node, ast.Num):  # <number>
-            n = node.n
+        if isinstance(node, ast.Constant):  # <number>
+            n = node.value
             assert(n != 0)  # A unit cannot have zero in the expression
 
             u = cls()

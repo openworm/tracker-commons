@@ -1,6 +1,6 @@
 [project]
-name = "example_package_YOUR_USERNAME_HERE"
-version = "0.0.1"
+name = "wcon"
+version = "1.1.0"
 authors = [
   { name="Kerr, R; Brown, A; Currie, M; OpenWorm", email="ichoran@gmail.com" },
 ]

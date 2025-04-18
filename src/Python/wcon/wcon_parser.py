@@ -822,7 +822,7 @@ def pd_equals(df1, df2):
         return False
 
     try:
-        pd.util.testing.assert_frame_equal(df1, df2)
+        pd.testing.assert_frame_equal(df1, df2)
     except AssertionError:
         return False
 
