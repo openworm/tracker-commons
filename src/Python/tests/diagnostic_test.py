@@ -19,7 +19,8 @@ idx = pd.IndexSlice
 import numpy as np
 import time
 
-sys.path.append('..')
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(dir_path, '..'))
 from wcon import WCONWorms, MeasurementUnit
 from wcon.measurement_unit import MeasurementUnitAtom
 
