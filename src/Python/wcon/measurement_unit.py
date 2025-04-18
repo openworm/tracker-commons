@@ -21,8 +21,16 @@ Two classes:  (only the second of which is generally public-facing)
 import six
 import ast
 import operator as op
-from scipy.constants import F2C, K2C, C2F, C2K, pi
+from scipy.constants import convert_temperature, pi
 
+def F2C(val):
+    convert_temperature(val, 'F', 'C')
+def C2F(val):
+    convert_temperature(val, 'C', 'F')
+def K2C(val):
+    convert_temperature(val, 'K', 'C')
+def C2K(val):
+    convert_temperature(val, 'C', 'K')
 
 def C2C(x):
     """

@@ -1,5 +1,6 @@
 # Random editor stuff
 *~
+*.swp
 
 # Python byte-compiled / optimized / DLL files
 *.pyc
@@ -9,9 +10,12 @@ src/Python/dist/*
 src/Python/tests/test_chunk*
 src/Python/wcon.egg*
 .pypirc
+openworm/
 
 #Matlab
 *.asv
 
 # Scala
 src/scala/target/*
+src/scala/**/target/*
+

@@ -389,7 +389,7 @@ def _obtain_time_series_data_frame(time_series_data):
             for i in range(len(cur_timeframes)):
                 data_segment[k][i] = (
                     data_segment[k][i] +
-                    [np.NaN] * (max_aspect_size - len(data_segment[k][i])))
+                    [np.nan] * (max_aspect_size - len(data_segment[k][i])))
 
         num_timeframes = len(cur_timeframes)
 
@@ -402,7 +402,7 @@ def _obtain_time_series_data_frame(time_series_data):
         cur_df = pd.DataFrame(cur_data, columns=cur_columns)
 
         cur_df.index = cur_timeframes
-        cur_df.index.names = 't'
+        cur_df.index.name = 't'
 
         # We want the index (time) to be in order.
         cur_df.sort_index(axis=0, inplace=True)
@@ -466,7 +466,7 @@ def _obtain_time_series_data_frame(time_series_data):
         with warnings.catch_warnings():
             warnings.filterwarnings(action="ignore", category=FutureWarning)
             df_odict[worm_id] = \
-                df_odict[worm_id].convert_objects(convert_numeric=True)
+                df_odict[worm_id].convert_dtypes(convert_floating=True)
 
         # If 'head' or 'ventral' is NaN, we must specify '?' since
         # otherwise, when saving this object, to specify "no value" we would

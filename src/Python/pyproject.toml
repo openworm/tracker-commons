@@ -1,0 +1,21 @@
+[project]
+name = "example_package_YOUR_USERNAME_HERE"
+version = "0.0.1"
+authors = [
+  { name="Kerr, R; Brown, A; Currie, M; OpenWorm", email="ichoran@gmail.com" },
+]
+description = "Worm tracker Commons Object Notation"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Science/Research',
+    'Topic :: Scientific/Engineering :: Bio-Informatics',
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "MIT"
+
+[project.urls]
+Homepage = "https://github.com/openworm/tracker-commons"
+Issues = "https://github.com/openworm/tracker-commons/issues"
