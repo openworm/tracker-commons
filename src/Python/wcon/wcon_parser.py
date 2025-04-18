@@ -396,10 +396,10 @@ class WCONWorms():
                 try:
                     # Apply across all worm ids and all aspects
                     mu_slice = \
-                        w._data[worm_id].loc[:, idx[:, data_key, :]].copy()
+                        w._data[worm_id].loc[:, idx[:, data_key, :]].copy().astype('float64')
 
                     w._data[worm_id].loc[:, idx[:, data_key, :]] = \
-                        mu_slice.applymap(mu.to_canon)
+                        mu_slice.map(mu.to_canon)
                 except KeyError:
                     # Just ignore cases where there are "units" entries but no
                     # corresponding data

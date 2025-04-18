@@ -190,10 +190,10 @@ def convert_origin(df):
 
             if offset in cur_worm.columns.get_level_values(0):
                 # Consider offset as 0 if not available in a certain frame
-                ox_column = cur_worm.loc[:, (offset)].fillna(0)
+                ox_column = cur_worm.loc[:, (offset)].fillna(0).astype('float64')
 
                 # Shift our 'x' values by offset
-                all_x_columns = cur_worm.loc[:, (coord)]
+                all_x_columns = cur_worm.loc[:, (coord)].fillna(0).astype('float64')
                 ox_affine_change = (np.array(ox_column) *
                                     np.ones(all_x_columns.shape))
                 all_x_columns += ox_affine_change
@@ -219,6 +219,9 @@ def convert_origin(df):
                 # Now reset our 'ox' values to zero.
                 if offset in cur_worm.columns.get_level_values(0):
                     df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape, dtype=pd.Int64Dtype)
+            else:
+                all_x_columns = cur_worm.loc[:, (coord)].fillna(0).astype('float64')
+                df.loc[:, (worm_id, coord)] = all_x_columns.values
 
     # Drop the offset columns entirely from the dataframe.
     # This is so DataFrames with and without offsets
