@@ -385,12 +385,8 @@ class WCONWorms():
         for data_key in self.units:
             mu = self.units[data_key]
 
-            # Don't bother to "convert" units that are already in their
-            # canonical form.
-            if mu.unit_string == mu.canonical_unit_string:
-                continue
-
             tmu = self.units['t']
+            already_canonical = (mu.unit_string == mu.canonical_unit_string)
             for worm_id in w.worm_ids:
 
                 try:
@@ -398,8 +394,21 @@ class WCONWorms():
                     mu_slice = \
                         w._data[worm_id].loc[:, idx[:, data_key, :]].copy()
 
-                    w._data[worm_id].loc[:, idx[:, data_key, :]] = \
-                        mu_slice.applymap(mu.to_canon)
+                    # The parser can leave numeric columns with object
+                    # dtype (e.g. mixed int/str entries from how segments
+                    # are merged). Coerce so downstream arithmetic and
+                    # JSON serialization treat them as numbers, even when
+                    # the unit is already canonical and no conversion is
+                    # otherwise required.
+                    mu_slice = mu_slice.apply(pd.to_numeric,
+                                              errors='coerce')
+
+                    if already_canonical:
+                        w._data[worm_id].loc[:, idx[:, data_key, :]] = \
+                            mu_slice
+                    else:
+                        w._data[worm_id].loc[:, idx[:, data_key, :]] = \
+                            mu_slice.applymap(mu.to_canon)
                 except KeyError:
                     # Just ignore cases where there are "units" entries but no
                     # corresponding data
