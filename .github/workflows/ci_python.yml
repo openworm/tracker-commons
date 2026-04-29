@@ -36,8 +36,8 @@ jobs:
     - name: Run tests
       run: |
         cd src/Python/tests
-        python diagnostic_test.py ../../../tests/minimax.wcon 
         python tests.py 
+        python diagnostic_test.py ../../../tests/minimax.wcon 
 
     - name: Final version info
       run: |
