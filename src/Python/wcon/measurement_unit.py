@@ -637,12 +637,15 @@ class MeasurementUnit():
     @classmethod
     def _create_from_node(cls, node):
         """
-        node: is ast.Num or ast.BinOp or ast.UnaryOp or ast.Str or ast.Name
+        node: is ast.Constant (numeric) or ast.BinOp or ast.UnaryOp or ast.Name
             The expression to be transformed into a MeasurementUnit
 
         """
-        if isinstance(node, ast.Num):  # <number>
-            n = node.n
+        # ast.Num was deprecated in Python 3.8 and removed in 3.14;
+        # ast.Constant now represents all literal values.
+        if isinstance(node, ast.Constant) and isinstance(
+                node.value, (int, float)):  # <number>
+            n = node.value
             assert(n != 0)  # A unit cannot have zero in the expression
 
             u = cls()

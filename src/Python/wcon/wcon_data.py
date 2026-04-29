@@ -403,7 +403,7 @@ def _obtain_time_series_data_frame(time_series_data):
             for i in range(len(cur_timeframes)):
                 data_segment[k][i] = (
                     data_segment[k][i] +
-                    [np.NaN] * (max_aspect_size - len(data_segment[k][i])))
+                    [np.nan] * (max_aspect_size - len(data_segment[k][i])))
 
         num_timeframes = len(cur_timeframes)
 
