@@ -15,3 +15,5 @@ src/Python/wcon.egg*
 
 # Scala
 src/scala/target/*
+/src/Python/example_saved_file.WCON
+/src/Python/wcon/wcon_schema.json

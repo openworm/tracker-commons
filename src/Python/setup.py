@@ -12,6 +12,7 @@ from setuptools import setup
 from codecs import open
 from os import path
 import os
+import shutil
 exec(open('wcon/version.py').read())
 
 here = path.abspath(path.dirname(__file__))
@@ -24,7 +25,13 @@ if path.exists(readme_path):
     with open(readme_path, encoding='utf-8') as f:
         long_description += f.read()
 
-print(os.listdir('.'))  # DEBUG
+# The canonical wcon_schema.json lives at the repository root so it can be
+# shared by every language implementation. setuptools cannot package files
+# from outside the package directory, so copy it into wcon/ at build time.
+repo_schema = path.join(here, '..', '..', 'wcon_schema.json')
+pkg_schema = path.join(here, 'wcon', 'wcon_schema.json')
+if path.exists(repo_schema):
+    shutil.copyfile(repo_schema, pkg_schema)
 
 setup(
     name='wcon',
@@ -51,8 +58,9 @@ setup(
     ],
     keywords='C. elegans worm tracking',
     packages=['wcon'],
-    package_data={'': ['../../wcon_schema.json']},
-    install_requires=['jsonschema', 'six', 'numpy', 'scipy<=0.17.1']
+    package_data={'wcon': ['wcon_schema.json']},
+    include_package_data=True,
+    install_requires=['jsonschema', 'six', 'scipy', 'pandas', 'psutil'],
     # Actually also requires numpy, scipy and numpy but I don't want to force
     # pip to install these since pip is bad at that for those packages.
 )
