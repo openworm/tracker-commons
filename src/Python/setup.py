@@ -60,7 +60,7 @@ setup(
     packages=['wcon'],
     package_data={'wcon': ['wcon_schema.json']},
     include_package_data=True,
-    install_requires=['jsonschema', 'six', 'scipy', 'pandas']
+    install_requires=['jsonschema', 'six', 'scipy', 'pandas', 'psutil'],
     # Actually also requires numpy, scipy and numpy but I don't want to force
     # pip to install these since pip is bad at that for those packages.
 )
