@@ -16,20 +16,20 @@ import collections
 import shutil
 from scipy.constants import pi
 
-sys.path.append('..')
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(os.path.join(dir_path, '..'))
 from wcon import WCONWorms, MeasurementUnit
 from wcon.measurement_unit import MeasurementUnitAtom
-
 
 def setUpModule():
     # If the wcon module is installed via pip, wcon_schema.json is included
     # in the proper place.  In the git repo it is not, however, so to test
-    # we must copy it over temporarily, then remove it once tests are done.
-    shutil.copyfile('../../../wcon_schema.json', '../wcon/wcon_schema.json')
+    # we must copy it over temporarily, then remove it once tests are done.    
+    shutil.copyfile(os.path.join(dir_path, '..', '..', '..', 'wcon_schema.json'), os.path.join(dir_path, '..', 'wcon', 'wcon_schema.json'))
 
 
 def tearDownModule():
-    os.remove('../wcon/wcon_schema.json')
+    os.remove(os.path.join(dir_path, '..', 'wcon', 'wcon_schema.json'))
 
 
 def flatten(list_of_lists):
@@ -192,7 +192,9 @@ class TestWCONParser(unittest.TestCase):
         except AttributeError:
             # Only load _wcon_schema if this method gets called.  Once
             # it's loaded, though, persist it in memory and don't lose it
-            with open("../../../wcon_schema.json", "r") as wcon_schema_file:
+            wcon_schema_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                '..', '..', '..', 'wcon_schema.json'))
+            with open(wcon_schema_path, "r") as wcon_schema_file:
                 self._wcon_schema = json.loads(wcon_schema_file.read())
 
             # Now that the schema has been loaded, we can try again
@@ -204,7 +206,8 @@ class TestWCONParser(unittest.TestCase):
         self._validate_from_schema(basic_wcon)
 
     def test_equality_operator(self):
-        JSON_path = '../../../tests/minimax.wcon'
+        JSON_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                                '..', '..', '..', 'tests', 'minimax.wcon'))
         w2 = WCONWorms.load_from_file(JSON_path)
         w2.units['y'] = MeasurementUnit.create('m')
         w2data = w2.data.copy()
