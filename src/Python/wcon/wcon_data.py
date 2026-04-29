@@ -116,8 +116,8 @@ def df_upsert(src, dest):
                         src.columns.isin(dest.columns)]
 
             # Sort our slices so they will be lined up for comparison
-            dest_sliced.sort_index(inplace=True)
-            src_sliced.sort_index(inplace=True)
+            dest_sliced.sort_index(axis=1, inplace=True)
+            src_sliced.sort_index(axis=1, inplace=True)
 
             # Align src_sliced's row/column labels to dest_sliced. The two
             # were built with independent .isin() masks so column order may
@@ -231,7 +231,10 @@ def convert_origin(df):
 
                 # Now reset our 'ox' values to zero.
                 if offset in cur_worm.columns.get_level_values(0):
-                    df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape)
+                    df.loc[:, (worm_id, offset)] = np.zeros(ox_column.shape, dtype=pd.Int64Dtype)
+            else:
+                all_x_columns = cur_worm.loc[:, (coord)].fillna(0).astype('float64')
+                df.loc[:, (worm_id, coord)] = all_x_columns.values
 
     # Drop the offset columns entirely from the dataframe.
     # This is so DataFrames with and without offsets
