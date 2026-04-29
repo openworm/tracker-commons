@@ -1,0 +1,46 @@
+name: Test Python
+
+on:
+  push:
+    branches: [ master, development, experimental, test* ]
+  pull_request:
+    branches: [ master, development, experimental, test* ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+
+    - uses: actions/checkout@v6
+    - name: Set up Python  ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version:  ${{ matrix.python-version }}
+
+    - name: Print refs
+      run: |
+        echo "github.ref is: ${{ github.ref }}"
+        echo "github.base_ref is: ${{ github.base_ref }}"
+
+    - name: Install Python package
+      run: |
+        cd src/Python
+        pip install .
+
+    - name: Run tests
+      run: |
+        cd src/Python/tests
+        python tests.py 
+        python diagnostic_test.py ../../../tests/minimax.wcon 
+
+    - name: Final version info
+      run: |
+        pip list
+        
+

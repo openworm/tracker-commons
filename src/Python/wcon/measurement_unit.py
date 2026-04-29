@@ -21,7 +21,7 @@ Two classes:  (only the second of which is generally public-facing)
 import six
 import ast
 import operator as op
-from scipy.constants import F2C, K2C, C2F, C2K, pi
+from scipy.constants import convert_temperature, pi
 
 
 def C2C(x):
@@ -31,6 +31,18 @@ def C2C(x):
     """
     return x
 
+def F2C(x):
+    return convert_temperature(x,'F','C')
+def C2F(x):
+    return convert_temperature(x,'C','F')
+def K2F(x):
+    return convert_temperature(x,'K','F')
+def C2K(x):
+    return convert_temperature(x,'C','K')
+def K2C(x):
+    return convert_temperature(x,'K','C')
+def F2K(x):
+    return convert_temperature(x,'F','K')
 
 class MeasurementUnitAtom():
     """
@@ -625,12 +637,15 @@ class MeasurementUnit():
     @classmethod
     def _create_from_node(cls, node):
         """
-        node: is ast.Num or ast.BinOp or ast.UnaryOp or ast.Str or ast.Name
+        node: is ast.Constant (numeric) or ast.BinOp or ast.UnaryOp or ast.Name
             The expression to be transformed into a MeasurementUnit
 
         """
-        if isinstance(node, ast.Num):  # <number>
-            n = node.n
+        # ast.Num was deprecated in Python 3.8 and removed in 3.14;
+        # ast.Constant now represents all literal values.
+        if isinstance(node, ast.Constant) and isinstance(
+                node.value, (int, float)):  # <number>
+            n = node.value
             assert(n != 0)  # A unit cannot have zero in the expression
 
             u = cls()
