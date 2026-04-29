@@ -502,11 +502,14 @@ def _obtain_time_series_data_frame(time_series_data):
                 df_odict[worm_id].loc[:, idx[:, k, :]] = \
                     cur_slice.fillna(value=np.nan)
 
-        # Make sure aspect_size is a float, since only floats are nullable:
+        # Make sure aspect_size is a float, since only floats are nullable.
+        # Replace the column whole rather than assigning via .loc[]; pandas
+        # 2.x preserves the parent column's existing (object/str) dtype on
+        # .loc[] assignment and raises TypeError on non-string values.
         if 'aspect_size' in df_keys:
-            df_odict[worm_id].loc[:, idx[:, 'aspect_size', :]] = \
-                df_odict[worm_id].loc[:, idx[:, 'aspect_size', :]] \
-                .astype(float)
+            df = df_odict[worm_id]
+            for col in [c for c in df.columns if c[1] == 'aspect_size']:
+                df[col] = df[col].astype(float)
 
     return sort_odict(df_odict)
 
