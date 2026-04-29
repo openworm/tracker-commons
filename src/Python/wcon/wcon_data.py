@@ -119,6 +119,13 @@ def df_upsert(src, dest):
             dest_sliced.sort_index(axis=1, inplace=True)
             src_sliced.sort_index(axis=1, inplace=True)
 
+            # Align src_sliced's row/column labels to dest_sliced. The two
+            # were built with independent .isin() masks so column order may
+            # differ; pandas >=1.x refuses to compare DataFrames whose
+            # labels are not identical.
+            src_sliced = src_sliced.reindex(index=dest_sliced.index,
+                                            columns=dest_sliced.columns)
+
             # Obtain a mask of the conflicts in the current segment
             # as compared with all previously loaded data.  That is:
             # NaN NaN = False
@@ -189,24 +196,30 @@ def convert_origin(df):
             # `for` loop loops through both `x` and `y`.
 
             if offset in cur_worm.columns.get_level_values(0):
-                # Consider offset as 0 if not available in a certain frame
-                ox_column = cur_worm.loc[:, (offset)].fillna(0).astype('float64')
+                # Consider offset as 0 if not available in a certain frame.
+                # Coerce to numeric: the parser can leave the offset column
+                # with object dtype (mixed str/int entries) when offsets
+                # are present in some segments but not others.
+                ox_column = cur_worm.loc[:, (offset)].apply(
+                    pd.to_numeric, errors='coerce').fillna(0)
 
                 # Shift our 'x' values by offset
-                all_x_columns = cur_worm.loc[:, (coord)].fillna(0).astype('float64')
-                ox_affine_change = (np.array(ox_column) *
+                all_x_columns = cur_worm.loc[:, (coord)].apply(
+                    pd.to_numeric, errors='coerce')
+                ox_affine_change = (np.array(ox_column, dtype=float) *
                                     np.ones(all_x_columns.shape))
                 all_x_columns += ox_affine_change
 
                 if centroid in cur_worm.columns.get_level_values(0):
-                    cx_column = cur_worm.loc[:, (centroid)]
+                    cx_column = cur_worm.loc[:, (centroid)].apply(
+                        pd.to_numeric, errors='coerce')
                     # Shift the centroid by the offset
                     cx_column += ox_column
 
                     # Now make the centroid our new offset, since the rule
                     # is that if the offset exists, the centroid is not
                     # the offset, but we want it to be.
-                    cx_affine_change = (np.array(cx_column) *
+                    cx_affine_change = (np.array(cx_column, dtype=float) *
                                         np.ones(all_x_columns.shape))
                     all_x_columns -= cx_affine_change
 
@@ -227,7 +240,8 @@ def convert_origin(df):
     # This is so DataFrames with and without offsets
     # will show as comparing identically.
     for offset_key in offset_keys:
-        df.drop(offset_key, axis=1, level='key', inplace=True, errors='ignore')
+        df.drop(offset_key, axis=1, level='key', inplace=True,
+                errors='ignore')
 
     # Because of a known issue in Pandas
     # (https://github.com/pydata/pandas/issues/2770), the dropped columns
@@ -405,7 +419,7 @@ def _obtain_time_series_data_frame(time_series_data):
         cur_df = pd.DataFrame(cur_data, columns=cur_columns)
 
         cur_df.index = cur_timeframes
-        cur_df.index.name = 't'
+        cur_df.index.names = ['t']
 
         # We want the index (time) to be in order.
         cur_df.sort_index(axis=0, inplace=True)
@@ -469,7 +483,7 @@ def _obtain_time_series_data_frame(time_series_data):
         with warnings.catch_warnings():
             warnings.filterwarnings(action="ignore", category=FutureWarning)
             df_odict[worm_id] = \
-                df_odict[worm_id].convert_dtypes(convert_floating=True)
+                df_odict[worm_id].infer_objects()
 
         # If 'head' or 'ventral' is NaN, we must specify '?' since
         # otherwise, when saving this object, to specify "no value" we would
@@ -481,21 +495,27 @@ def _obtain_time_series_data_frame(time_series_data):
 
         # We must replace NaN with None, otherwise the JSON encoder will
         # save 'NaN' as the string and this will get rejected by our schema
-        # on any subsequent loads
-        # Note we can't use .fillna(None) due to this issue:
-        # https://github.com/pydata/pandas/issues/1972
+        # on any subsequent loads.
+        # Pandas 3.0 infers 'str' dtype for these columns, and assigning
+        # NaN on a str-dtype column coerces to the string 'nan'. Force
+        # object dtype and map both real NaN and stringified 'nan' back
+        # to None so downstream JSON serialization writes null.
         df_keys = set(df_odict[worm_id].columns.get_level_values('key'))
         for k in ['head', 'ventral']:
             if k in df_keys:
-                cur_slice = df_odict[worm_id].loc[:, idx[:, k, :]]
-                df_odict[worm_id].loc[:, idx[:, k, :]] = \
-                    cur_slice.fillna(value=np.nan)
+                df = df_odict[worm_id]
+                for col in [c for c in df.columns if c[1] == k]:
+                    s = df[col].astype(object)
+                    df[col] = s.where(s.notna() & (s != 'nan'), None)
 
-        # Make sure aspect_size is a float, since only floats are nullable:
+        # Make sure aspect_size is a float, since only floats are nullable.
+        # Replace the column whole rather than assigning via .loc[]; pandas
+        # 2.x preserves the parent column's existing (object/str) dtype on
+        # .loc[] assignment and raises TypeError on non-string values.
         if 'aspect_size' in df_keys:
-            df_odict[worm_id].loc[:, idx[:, 'aspect_size', :]] = \
-                df_odict[worm_id].loc[:, idx[:, 'aspect_size', :]] \
-                .astype(float)
+            df = df_odict[worm_id]
+            for col in [c for c in df.columns if c[1] == 'aspect_size']:
+                df[col] = df[col].astype(float)
 
     return sort_odict(df_odict)
 
