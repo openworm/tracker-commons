@@ -492,15 +492,18 @@ def _obtain_time_series_data_frame(time_series_data):
 
         # We must replace NaN with None, otherwise the JSON encoder will
         # save 'NaN' as the string and this will get rejected by our schema
-        # on any subsequent loads
-        # Note we can't use .fillna(None) due to this issue:
-        # https://github.com/pydata/pandas/issues/1972
+        # on any subsequent loads.
+        # Pandas 3.0 infers 'str' dtype for these columns, and assigning
+        # NaN on a str-dtype column coerces to the string 'nan'. Force
+        # object dtype and map both real NaN and stringified 'nan' back
+        # to None so downstream JSON serialization writes null.
         df_keys = set(df_odict[worm_id].columns.get_level_values('key'))
         for k in ['head', 'ventral']:
             if k in df_keys:
-                cur_slice = df_odict[worm_id].loc[:, idx[:, k, :]]
-                df_odict[worm_id].loc[:, idx[:, k, :]] = \
-                    cur_slice.fillna(value=np.nan)
+                df = df_odict[worm_id]
+                for col in [c for c in df.columns if c[1] == k]:
+                    s = df[col].astype(object)
+                    df[col] = s.where(s.notna() & (s != 'nan'), None)
 
         # Make sure aspect_size is a float, since only floats are nullable.
         # Replace the column whole rather than assigning via .loc[]; pandas
