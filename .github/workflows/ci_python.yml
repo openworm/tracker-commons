@@ -31,6 +31,16 @@ jobs:
     - name: Install Python package
       run: |
         cd src/Python
-        python setup.py install
+        pip install .
+
+    - name: Run tests
+      run: |
+        cd src/Python/tests
+        python diagnostic_test.py ../../../tests/minimax.wcon 
+        python tests.py 
+
+    - name: Final version info
+      run: |
+        pip list
         
 
