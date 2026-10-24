@@ -385,21 +385,30 @@ class WCONWorms():
         for data_key in self.units:
             mu = self.units[data_key]
 
-            # Don't bother to "convert" units that are already in their
-            # canonical form.
-            if mu.unit_string == mu.canonical_unit_string:
-                continue
-
             tmu = self.units['t']
+            already_canonical = (mu.unit_string == mu.canonical_unit_string)
             for worm_id in w.worm_ids:
 
                 try:
-                    # Apply across all worm ids and all aspects
-                    mu_slice = \
-                        w._data[worm_id].loc[:, idx[:, data_key, :]].copy()
+                    df = w._data[worm_id]
+                    target_cols = [c for c in df.columns
+                                   if c[1] == data_key]
+                    if not target_cols:
+                        raise KeyError(data_key)
 
-                    w._data[worm_id].loc[:, idx[:, data_key, :]] = \
-                        mu_slice.applymap(mu.to_canon)
+                    # The parser can leave numeric columns with object
+                    # dtype (e.g. mixed int/str entries from how segments
+                    # are merged). Coerce so downstream arithmetic and
+                    # JSON serialization treat them as numbers, even when
+                    # the unit is already canonical and no conversion is
+                    # otherwise required. Replace each column whole rather
+                    # than via .loc[] assignment, which would preserve the
+                    # parent column's existing (object) dtype.
+                    for col in target_cols:
+                        new_col = pd.to_numeric(df[col], errors='coerce')
+                        if not already_canonical:
+                            new_col = new_col.apply(mu.to_canon)
+                        df[col] = new_col
                 except KeyError:
                     # Just ignore cases where there are "units" entries but no
                     # corresponding data
@@ -822,7 +831,8 @@ def pd_equals(df1, df2):
         return False
 
     try:
-        pd.util.testing.assert_frame_equal(df1, df2)
+        # pd.util.testing was removed in pandas 2.0; use pd.testing.
+        pd.testing.assert_frame_equal(df1, df2)
     except AssertionError:
         return False
 

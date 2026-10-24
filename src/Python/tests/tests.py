@@ -41,7 +41,7 @@ def flatten(list_of_lists):
     for element in list_of_lists:
         # If it's iterable but not a string or bytes, then recurse, otherwise
         # we are at a "leaf" node of our traversal
-        if(isinstance(element, collections.Iterable) and
+        if(isinstance(element, collections.abc.Iterable) and
            not isinstance(element, (str, bytes))):
             for sub_element in flatten(element):
                 yield sub_element

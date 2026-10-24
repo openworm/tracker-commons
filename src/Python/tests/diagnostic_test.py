@@ -18,6 +18,7 @@ import pandas as pd
 idx = pd.IndexSlice
 import numpy as np
 import time
+import pprint as pp
 
 sys.path.append('..')
 from wcon import WCONWorms, MeasurementUnit
@@ -51,6 +52,12 @@ if __name__ == '__main__':
                                           validate_against_schema=False)
             print("Time to load w1: " + str(timing_function() - start_time))
 
+            print(" ------- W1 has " + str(len(w1.data)) + " rows and " +
+                  str(len(w1.data.columns)) + " columns")
+
+            print(pp.pformat(w1.data_as_odict))
+            print (' -------- ')
+
             # Save these worm tracks to a file, then load that file
             test_path = 'test.wcon'
             start_time = timing_function()
@@ -61,6 +68,12 @@ if __name__ == '__main__':
             w2 = WCONWorms.load_from_file(test_path,
                                           validate_against_schema=False)
             print("Time to load w2: " + str(timing_function() - start_time))
+
+            print(" ------- W2 has " + str(len(w2.data)) + " rows and " +
+                  str(len(w2.data.columns)) + " columns")
+
+            print(pp.pformat(w2.data_as_odict))
+            print (' -------- ')
 
             # x1 = w1.data.loc[:, idx[0, 'x', 0]].fillna(0)
             # x2 = w2.data.loc[:, idx[0, 'x', 0]].fillna(0)
@@ -76,6 +89,14 @@ if __name__ == '__main__':
             # "id" first in a data segment, etc.)
             w3 = WCONWorms.load_from_file(test_path,
                                           validate_against_schema=False)
+            
+
+            print(" ------- W3 has " + str(len(w3.data)) + " rows and " +
+                  str(len(w3.data.columns)) + " columns")
+
+            print(pp.pformat(w3.data_as_odict))
+            print (' -------- ')
+
             assert(w2 == w3)
             assert(w1 == w2)
             assert(w1 == w3)
