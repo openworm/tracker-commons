@@ -23,6 +23,14 @@ import ast
 import operator as op
 from scipy.constants import convert_temperature, pi
 
+def F2C(val):
+    return convert_temperature(val, 'F', 'C')
+def C2F(val):
+    return convert_temperature(val, 'C', 'F')
+def K2C(val):
+    return convert_temperature(val, 'K', 'C')
+def C2K(val):
+    return convert_temperature(val, 'C', 'K')
 
 def C2C(x):
     """

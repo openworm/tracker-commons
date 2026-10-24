@@ -1,0 +1,6 @@
+six
+jsonschema
+numpy
+pandas
+psutil
+scipy
